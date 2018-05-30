@@ -11,6 +11,7 @@ import (
 var (
 	NewProposalIDKey = []byte{0x00} //
 	ProposalQueueKey = []byte{0x01} //
+	ProposalListKey  = []byte{0x01}
 	ProposalTypes    = []string{"TextProposal"}
 )
 
@@ -189,4 +190,81 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal *Proposal) {
 	}
 
 	keeper.ProposalQueuePush(ctx, *proposal)
+}
+
+func (keeper Keeper) getProposalList(ctx sdk.Context) ProposalList {
+	store := ctx.KVStore(keeper.proposalStoreKey)
+	bz := store.Get(ProposalListKey)
+	if bz == nil {
+		return nil
+	}
+
+	proposalList := &ProposalList{}
+	err := keeper.cdc.UnmarshalBinary(bz, proposalList) // TODO: switch to UnmarshalBinaryBare when new go-amino gets added
+	if err != nil {
+		panic(err)
+	}
+
+	return *proposalList
+}
+
+func (keeper Keeper) setProposalList(ctx sdk.Context, proposalList ProposalList) {
+	store := ctx.KVStore(keeper.proposalStoreKey)
+
+	bz, err := keeper.cdc.MarshalBinary(proposalList) // TODO: switch to MarshalBinaryBare when new go-amino gets added
+	if err != nil {
+		panic(err)
+	}
+
+	store.Set(ProposalListKey, bz)
+}
+
+func (keeper Keeper) ProposalListPeek(ctx sdk.Context) *Proposal {
+	proposalList := keeper.getProposalList(ctx)
+	if len(proposalList) == 0 {
+		return nil
+	}
+	return keeper.GetProposal(ctx, proposalList[0])
+}
+
+func (keeper Keeper) ProposalListPop(ctx sdk.Context) *Proposal {
+	proposalList := keeper.getProposalList(ctx)
+	if len(proposalList) == 0 {
+		return nil
+	}
+	frontElement, proposalList := proposalList[0], proposalList[1:]
+	keeper.setProposalList(ctx, proposalList)
+	return keeper.GetProposal(ctx, frontElement)
+}
+
+
+func (keeper Keeper) ProposalListAppend(ctx sdk.Context, proposal Proposal) {
+	store := ctx.KVStore(keeper.proposalStoreKey)
+
+	proposalList := append(keeper.getProposalList(ctx), proposal.ProposalID)
+	bz, err := keeper.cdc.MarshalBinary(proposalList)
+	if err != nil {
+		panic(err)
+	}
+	store.Set(ProposalListKey, bz)
+}
+
+func (keeper Keeper) ProposalListDelete(ctx sdk.Context, proposal Proposal) {
+	store := ctx.KVStore(keeper.proposalStoreKey)
+	proposalList := keeper.getProposalList(ctx)
+
+	for index,proposalID :=range keeper.getProposalList(ctx){
+		if proposalID == proposal.ProposalID{
+			proposalList = append(proposalList[:index],proposalList[index+1:]...)
+			index = index
+			break
+		}
+
+	}
+	bz, err := keeper.cdc.MarshalBinary(proposalList)
+	if err != nil {
+		panic(err)
+	}
+	store.Set(ProposalListKey, bz)
+
 }

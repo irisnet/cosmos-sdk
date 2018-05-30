@@ -131,3 +131,4 @@ type Delegation struct {
 }
 
 type ProposalQueue []int64
+type ProposalList []int64
