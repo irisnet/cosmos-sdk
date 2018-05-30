@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
 	stake "github.com/cosmos/cosmos-sdk/x/stake"
+	"fmt"
 )
 
 var (
@@ -191,7 +192,8 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal *Proposal) {
 
 	keeper.ProposalQueuePush(ctx, *proposal)
 	keeper.ProposalListDelete(ctx, *proposal)
-	ctx.Logger().Info("Mikexu ", "Delete Deposit", keeper.getProposalList(ctx))
+	fmt.Print("mikexu--Delete--")
+	fmt.Println(keeper.getProposalList(ctx))
 }
 
 func (keeper Keeper) getProposalList(ctx sdk.Context) ProposalList {

@@ -3,6 +3,7 @@ package gov
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"reflect"
+	"fmt"
 )
 
 // Handle all "gov" type messages.
@@ -71,7 +72,8 @@ func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg MsgSubmitPropos
 	}
     //
 	keeper.ProposalListAppend(ctx,proposal)
-	ctx.Logger().Info("Mikexu ", "Deposit Append", keeper.getProposalList(ctx))
+	fmt.Print("mikexu-Append---")
+	fmt.Println(keeper.getProposalList(ctx))
 	//
 	keeper.SetProposal(ctx, proposal)
 
@@ -98,9 +100,9 @@ func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg MsgDeposit) sdk.Result
 		return ErrAlreadyActiveProposal(msg.ProposalID).Result()
 	}
 
-	if proposal.isExpired(ctx.BlockHeight()) {
-		return ErrProposalIsOver(msg.ProposalID).Result()
-	}
+	//if proposal.isExpired(ctx.BlockHeight()) {
+	//	return ErrProposalIsOver(msg.ProposalID).Result()
+	//}
 
 	if ctx.IsCheckTx() {
 		return sdk.Result{}

@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/abci/types"
+	"fmt"
 )
 
 func NewBeginBlocker(gm Keeper) sdk.BeginBlocker {
@@ -61,9 +62,10 @@ func NewBeginBlocker(gm Keeper) sdk.BeginBlocker {
 				gm.ProposalListPop(ctx)
 
 				// Refund deposits
-				refund(ctx, proposal, gm)
+				refund(ctx, proposalDeposit, gm)
 
-				ctx.Logger().Info("Timeout ", "Deposit Pop", gm.getProposalList(ctx))
+				fmt.Println("mikexu--timeoutPop--")
+				fmt.Println(gm.getProposalList(ctx))
 
 			}else{
 				break
