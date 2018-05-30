@@ -2,11 +2,10 @@ package gov
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	wire "github.com/cosmos/cosmos-sdk/wire"
+	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	stake "github.com/cosmos/cosmos-sdk/x/stake"
-	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
 var (
@@ -192,8 +191,8 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal *Proposal) {
 
 	keeper.ProposalQueuePush(ctx, *proposal)
 	keeper.ProposalListDelete(ctx, *proposal)
-	fmt.Print("mikexu--Delete--")
-	fmt.Println(keeper.getProposalList(ctx))
+	//fmt.Print("mikexu--Delete--")
+	//fmt.Println(keeper.getProposalList(ctx))
 }
 
 func (keeper Keeper) getProposalList(ctx sdk.Context) ProposalList {

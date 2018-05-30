@@ -72,8 +72,8 @@ func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg MsgSubmitPropos
 	}
     //
 	keeper.ProposalListAppend(ctx,proposal)
-	fmt.Print("mikexu-Append---")
-	fmt.Println(keeper.getProposalList(ctx))
+	//fmt.Print("mikexu-Append---")
+	//fmt.Println(keeper.getProposalList(ctx))
 	//
 	keeper.SetProposal(ctx, proposal)
 
