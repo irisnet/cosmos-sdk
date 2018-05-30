@@ -71,7 +71,7 @@ func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg MsgSubmitPropos
 	}
     //
 	keeper.ProposalListAppend(ctx,proposal)
-
+	ctx.Logger().Info("Mikexu ", "Deposit Append", keeper.getProposalList(ctx))
 	//
 	keeper.SetProposal(ctx, proposal)
 

@@ -11,7 +11,7 @@ import (
 var (
 	NewProposalIDKey = []byte{0x00} //
 	ProposalQueueKey = []byte{0x01} //
-	ProposalListKey  = []byte{0x01}
+	ProposalListKey  = []byte{0x02}
 	ProposalTypes    = []string{"TextProposal"}
 )
 
@@ -191,6 +191,7 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal *Proposal) {
 
 	keeper.ProposalQueuePush(ctx, *proposal)
 	keeper.ProposalListDelete(ctx, *proposal)
+	ctx.Logger().Info("Mikexu ", "Delete Deposit", keeper.getProposalList(ctx))
 }
 
 func (keeper Keeper) getProposalList(ctx sdk.Context) ProposalList {

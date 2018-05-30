@@ -57,16 +57,20 @@ func NewBeginBlocker(gm Keeper) sdk.BeginBlocker {
 		for{
 			proposalDeposit := gm.ProposalListPeek(ctx)
 			if proposalDeposit!=nil &&ctx.BlockHeight() >= proposalDeposit.SubmitBlock + proposalDeposit.Procedure.MaxDepositPeriod{
+
 				gm.ProposalListPop(ctx)
 
 				// Refund deposits
 				refund(ctx, proposal, gm)
+
+				ctx.Logger().Info("Timeout ", "Deposit Pop", gm.getProposalList(ctx))
 
 			}else{
 				break
 			}
 
 		}
+
 		return abci.ResponseBeginBlock{}
 	}
 }
