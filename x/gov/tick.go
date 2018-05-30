@@ -52,6 +52,8 @@ func NewBeginBlocker(gm Keeper) sdk.BeginBlocker {
 				//	TODO proposal.execute
 				// check next proposal recursively
 				//checkProposal()
+			}else{
+			    ctx.Logger().Info("Not Execute proposal", "proposal", proposal)
 			}
 
 		}
