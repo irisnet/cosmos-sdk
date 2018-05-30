@@ -69,7 +69,10 @@ func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg MsgSubmitPropos
 	if proposal.TotalDeposit.IsGTE(proposal.Procedure.MinDeposit) {
 		keeper.activateVotingPeriod(ctx, &proposal)
 	}
+    //
+	keeper.ProposalListAppend(ctx,proposal)
 
+	//
 	keeper.SetProposal(ctx, proposal)
 
 	return sdk.Result{

@@ -190,6 +190,7 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal *Proposal) {
 	}
 
 	keeper.ProposalQueuePush(ctx, *proposal)
+	keeper.ProposalListDelete(ctx, *proposal)
 }
 
 func (keeper Keeper) getProposalList(ctx sdk.Context) ProposalList {

@@ -52,6 +52,20 @@ func NewBeginBlocker(gm Keeper) sdk.BeginBlocker {
 				// check next proposal recursively
 				//checkProposal()
 			}
+
+		}
+		for{
+			proposalDeposit := gm.ProposalListPeek(ctx)
+			if proposalDeposit!=nil &&ctx.BlockHeight() >= proposalDeposit.SubmitBlock + proposalDeposit.Procedure.MaxDepositPeriod{
+				gm.ProposalListPop(ctx)
+
+				// Refund deposits
+				refund(ctx, proposal, gm)
+
+			}else{
+				break
+			}
+
 		}
 		return abci.ResponseBeginBlock{}
 	}
