@@ -3,7 +3,7 @@
 *.swp
 *.swo
 .vscode
-
+.idea
 # Build
 vendor
 build
