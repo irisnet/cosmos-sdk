@@ -3,7 +3,6 @@ package gov
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"reflect"
-	"fmt"
 )
 
 // Handle all "gov" type messages.
