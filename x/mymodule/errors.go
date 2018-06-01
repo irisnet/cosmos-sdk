@@ -13,3 +13,7 @@ const ( // TODO TODO TODO TODO TODO TODO
 func ErrAddrEmpty(codespace sdk.CodespaceType) sdk.Error {
 	return sdk.NewError(codespace, CodeAddrEmpty, "Is an empty addr")
 }
+
+func ErrValueNumEmpty(codespace sdk.CodespaceType) sdk.Error {
+	return sdk.NewError(codespace, CodeAddrEmpty, "Is an empty valuenum")
+}
