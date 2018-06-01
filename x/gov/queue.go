@@ -4,8 +4,20 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+
+type Data []int64
+
+func (data Data) contains(v int64) (bool,int){
+	for index, ele := range data {
+		if ele == v {
+			return true,index
+		}
+	}
+	return false,-1
+}
+
 type Queue struct {
-	value []int64
+	value Data
 	key   []byte
 	store sdk.KVStore
 	keeper Keeper
@@ -15,7 +27,7 @@ func GetQueue(keeper Keeper, store sdk.KVStore, key []byte) *Queue {
 	queueName, _ := keeper.cdc.MarshalBinary(key)
 	bz := store.Get(queueName)
 
-	var data []int64
+	var data Data
 	if len(bz) != 0 {
 		err := keeper.cdc.UnmarshalBinary(bz, &data)
 		if err != nil {
@@ -46,7 +58,7 @@ func (q *Queue) Peek() (*Proposal) {
 }
 
 func (q *Queue) Pop() (*Proposal) {
-	var newQ = []int64{}
+	var newQ = Data{}
 	var element int64
 	if len(q.value) == 0 {
 		return nil
@@ -64,15 +76,15 @@ func (q *Queue) Pop() (*Proposal) {
 	return q.get(element)
 }
 
-func (q *Queue) Remove(value int64) (removed bool){
-	for index, ele := range q.value {
-		if ele == value {
-			data := q.value[:index]
-			q.value = append(data, q.value[index+1:]...)
-			removed = true
-			break
-		}
+func (q *Queue) Remove(element int64) (removed bool){
+	if has,index := q.value.contains(element); has {
+		return q.RemoveByIndex(index)
 	}
+	return removed
+}
+
+func (q *Queue) RemoveByIndex(index int) (bool){
+	q.value = append(q.value[:index], q.value[index+1:]...)
 	bz, err := q.keeper.cdc.MarshalBinary(q.value)
 	if err != nil {
 		panic(err)
@@ -82,8 +94,7 @@ func (q *Queue) Remove(value int64) (removed bool){
 		panic(err)
 	}
 	q.store.Set(key, bz)
-
-	return removed
+	return true
 }
 
 func (q *Queue) GetAll() (list []*Proposal) {

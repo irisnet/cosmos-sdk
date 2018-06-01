@@ -3,6 +3,7 @@ package gov
 import (
 	"bytes"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
@@ -81,13 +82,22 @@ func (proposal Proposal) isDepositPeriodOver(height int64) bool {
 	return height > proposal.SubmitBlock + proposal.Procedure.MaxDepositPeriod
 }
 
-func (proposal Proposal) isExpired(height int64) sdk.Error {
-	if height > proposal.SubmitBlock + proposal.Procedure.MaxDepositPeriod {
-		return ErrDepositPeriodOver(proposal.ProposalID)
-	} else if height > proposal.VotingStartBlock + proposal.Procedure.VotingPeriod {
-		return ErrVotingPeriodOver(proposal.ProposalID)
+func (proposal Proposal) isFastPass() bool {
+	passV := types.NewRat(proposal.YesVotes, proposal.TotalVotingPower)
+	return passV.GT(proposal.Procedure.FastPassThreshold) || passV.Equal(proposal.Procedure.FastPassThreshold)
+}
+
+func (proposal Proposal) isTimeOutPass(height int64) bool {
+	if height >= proposal.VotingStartBlock+proposal.Procedure.VotingPeriod {
+		nonAbstainTotal := proposal.YesVotes + proposal.NoVotes + proposal.NoWithVetoVotes
+		if nonAbstainTotal <= 0 {
+			return false
+		}
+		yRat := types.NewRat(proposal.YesVotes, nonAbstainTotal)
+		vetoRat := types.NewRat(proposal.NoWithVetoVotes, nonAbstainTotal)
+		return  yRat.GT(proposal.Procedure.Threshold) && vetoRat.LT(proposal.Procedure.Veto)
 	}
-	return nil
+	return false
 }
 
 func (proposal *Proposal) updateTally(option string, amount int64) {

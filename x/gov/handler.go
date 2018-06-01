@@ -134,14 +134,18 @@ func handleMsgVote(ctx sdk.Context, keeper Keeper, msg MsgVote) sdk.Result {
 		return ErrInactiveProposal(msg.ProposalID).Result()
 	}
 
-	curProposal := keeper.getProposalQueue(ctx).Peek()
-	if curProposal == nil || proposal.ProposalID != curProposal.ProposalID {
-		return ErrInactiveProposal(msg.ProposalID).Result()//TODO
+	// TODO All enter into  Voting Period's proposal can be voted ?
+	//curProposal := keeper.getVoteQueue(ctx).Peek()
+	//if curProposal == nil || proposal.ProposalID != curProposal.ProposalID {
+	//	return ErrInactiveProposal(msg.ProposalID).Result()//TODO
+	//}
+
+	if  proposal.isVotingPeriodOver(ctx.BlockHeight()) {
+		return ErrVotingPeriodOver(proposal.ProposalID).Result()
 	}
 
-	err := proposal.isExpired(ctx.BlockHeight())
-	if  err != nil {
-		return err.Result()
+	if has,_ := keeper.getVoteQueue(ctx).value.contains(proposal.ProposalID);!has{
+		return ErrCodeVotingOver(proposal.ProposalID).Result()
 	}
 
 	validatorGovInfo := proposal.getValidatorGovInfo(msg.Voter)
@@ -194,9 +198,17 @@ func handleMsgVote(ctx sdk.Context, keeper Keeper, msg MsgVote) sdk.Result {
 		}
 		voteWeight += weight
 	}
+
+	ctx.Logger().Info("Execute Proposal Vote", "Vote", msg, "Proposal", proposal)
+
 	//save vote record
 	proposal.VoteList = append(proposal.VoteList, NewVote(msg.Voter, msg.ProposalID, msg.Option, voteWeight))
-	ctx.Logger().Info("Execute Proposal Vote", "Vote", msg, "Proposal", proposal)
 	keeper.SetProposal(ctx, *proposal)
+
+	if proposal.isFastPass(){
+		if keeper.getVoteQueue(ctx).Remove(proposal.ProposalID) {
+			keeper.getExecuteQueue(ctx).Push(proposal.ProposalID)
+		}
+	}
 	return sdk.Result{} // TODO
 }

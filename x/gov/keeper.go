@@ -10,8 +10,9 @@ import (
 
 var (
 	NewProposalIDKey = []byte{0x00} //
-	ProposalQueueKey = []byte{0x01} //
+	VoteQueueKey     = []byte{0x01} //
 	DepositQueueKey  = []byte{0x02} //
+	ExecuteQueueKey  = []byte{0x03} //
 	ProposalTypes    = []string{"TextProposal"}
 )
 
@@ -100,32 +101,50 @@ func (keeper Keeper) getNewProposalID(ctx sdk.Context) int64 {
 	return *proposalID
 }
 
-func (keeper Keeper) getProposalQueue(ctx sdk.Context) *Queue{
+func (keeper Keeper) getVoteQueue(ctx sdk.Context) *Queue {
 	store := ctx.KVStore(keeper.storeKey)
-	queue := GetQueue(keeper,store,ProposalQueueKey)
+	queue := GetQueue(keeper, store, VoteQueueKey)
 	return queue
 }
 
-func (keeper Keeper) getDepositQueue(ctx sdk.Context) *Queue{
+func (keeper Keeper) getDepositQueue(ctx sdk.Context) *Queue {
 	store := ctx.KVStore(keeper.storeKey)
-	queue := GetQueue(keeper,store, DepositQueueKey)
+	queue := GetQueue(keeper, store, DepositQueueKey)
 	return queue
 }
 
-func (keeper Keeper) popExpiredProposal(ctx sdk.Context) (list []*Proposal){
+func (keeper Keeper) getExecuteQueue(ctx sdk.Context) *Queue {
+	store := ctx.KVStore(keeper.storeKey)
+	queue := GetQueue(keeper, store, ExecuteQueueKey)
+	return queue
+}
+
+func (keeper Keeper) popExpiredProposal(ctx sdk.Context) (list []*Proposal) {
 	depositQueue := keeper.getDepositQueue(ctx)
-	for _,proposalID := range depositQueue.value {
-		proposal := keeper.GetProposal(ctx,proposalID)
-		if proposal.isDepositPeriodOver(ctx.BlockHeight()){
-			list = append(list,proposal)
-		}else {
+	var depositQueueNew = make(Data, len(depositQueue.value))
+	copy(depositQueueNew, depositQueue.value)
+
+	for index, proposalID := range depositQueueNew {
+		proposal := keeper.GetProposal(ctx, proposalID)
+		if proposal.isDepositPeriodOver(ctx.BlockHeight()) {
+			depositQueue.RemoveByIndex(index)
+			list = append(list, proposal)
+		} else {
 			break
 		}
 	}
 
-	for _,proposal := range list{
-		if !depositQueue.Remove(proposal.ProposalID) {
-			panic("should not happen")
+	voteQueue := keeper.getVoteQueue(ctx)
+	var voteQueueNew = make(Data, len(voteQueue.value))
+	copy(voteQueueNew, voteQueue.value)
+
+	for index, proposalID := range voteQueueNew {
+		proposal := keeper.GetProposal(ctx, proposalID)
+		if proposal.isVotingPeriodOver(ctx.BlockHeight()) {
+			voteQueue.RemoveByIndex(index)
+			list = append(list, proposal)
+		} else {
+			break
 		}
 	}
 	return list
@@ -165,5 +184,5 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal *Proposal) {
 	}
 
 	keeper.getDepositQueue(ctx).Remove(proposal.ProposalID)
-	keeper.getProposalQueue(ctx).Push(proposal.ProposalID)
+	keeper.getVoteQueue(ctx).Push(proposal.ProposalID)
 }
