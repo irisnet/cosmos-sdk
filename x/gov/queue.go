@@ -105,17 +105,21 @@ func (q *Queue) GetAll() (list []*Proposal) {
 }
 
 func (q *Queue) get(proposalID int64) *Proposal {
-	key, _ := q.keeper.cdc.MarshalBinary(proposalID)
-	bz := q.store.Get(key)
-	if bz == nil {
-		return nil
+	if has,_ := q.value.contains(proposalID); has {
+		key, _ := q.keeper.cdc.MarshalBinary(proposalID)
+		bz := q.store.Get(key)
+		if bz == nil {
+			panic(ErrUnknownProposal(proposalID).Result())
+		}
+
+		proposal := &Proposal{}
+		err := q.keeper.cdc.UnmarshalBinary(bz, proposal)
+		if err != nil {
+			panic(err)
+		}
+
+		return proposal
 	}
 
-	proposal := &Proposal{}
-	err := q.keeper.cdc.UnmarshalBinary(bz, proposal)
-	if err != nil {
-		panic(err)
-	}
-
-	return proposal
+	return nil
 }
