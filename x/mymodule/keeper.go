@@ -5,7 +5,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 
-	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
 var (
@@ -22,15 +21,18 @@ type Keeper struct {
 
 	// The wire codec for binary encoding/decoding.
 	cdc *wire.Codec
+
+	//
+	codespace sdk.CodespaceType
 }
 
 // NewGovernanceMapper returns a mapper that uses go-wire to (binary) encode and decode gov types.
-func NewKeeper(key sdk.StoreKey, ck bank.Keeper, sk stake.Keeper) Keeper {
-	cdc := wire.NewCodec()
+func NewKeeper(cdc *wire.Codec,key sdk.StoreKey, ck bank.Keeper,codespace sdk.CodespaceType) Keeper {
 	return Keeper{
 		mymoduleStoreKey: key,
 		ck:               ck,
 		cdc:              cdc,
+		codespace: codespace,
 	}
 }
 
