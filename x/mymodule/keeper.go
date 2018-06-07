@@ -55,7 +55,7 @@ func (keeper Keeper) GetCounter(ctx sdk.Context, addr sdk.Address) int64{
 	return  counter
 }
 
-func (keeper Keeper) SetCounter(ctx sdk.Context, addr sdk.Address,counter int16){
+func (keeper Keeper) SetCounter(ctx sdk.Context, addr sdk.Address,counter int64){
 	store := ctx.KVStore(keeper.mymoduleStoreKey)
 	bz,err := keeper.cdc.MarshalBinary(counter)
 

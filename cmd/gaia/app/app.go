@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 	"github.com/cosmos/cosmos-sdk/x/stake"
+	"github.com/cosmos/cosmos-sdk/x/mymodule"
 )
 
 const (
@@ -40,6 +41,7 @@ type GaiaApp struct {
 	keyIBC     *sdk.KVStoreKey
 	keyStake   *sdk.KVStoreKey
 	keyGov     *sdk.KVStoreKey
+	keyMymodule *sdk.KVStoreKey
 
 	// Manage getting and setting accounts
 	accountMapper sdk.AccountMapper
@@ -47,6 +49,7 @@ type GaiaApp struct {
 	ibcMapper     ibc.Mapper
 	stakeKeeper   stake.Keeper
 	govKeeper     gov.Keeper
+	mymoduleKeeper mymodule.Keeper
 }
 
 func NewGaiaApp(logger log.Logger, db dbm.DB) *GaiaApp {
@@ -61,6 +64,7 @@ func NewGaiaApp(logger log.Logger, db dbm.DB) *GaiaApp {
 		keyIBC:     sdk.NewKVStoreKey("ibc"),
 		keyStake:   sdk.NewKVStoreKey("stake"),
 		keyGov:     sdk.NewKVStoreKey("gov"),
+		keyMymodule: sdk.NewKVStoreKey("mymodule"),
 	}
 
 	// define the accountMapper
@@ -75,19 +79,19 @@ func NewGaiaApp(logger log.Logger, db dbm.DB) *GaiaApp {
 	app.ibcMapper = ibc.NewMapper(app.cdc, app.keyIBC, app.RegisterCodespace(ibc.DefaultCodespace))
 	app.stakeKeeper = stake.NewKeeper(app.cdc, app.keyStake, app.coinKeeper, app.RegisterCodespace(stake.DefaultCodespace))
 	app.govKeeper = gov.NewKeeper(app.keyGov, app.coinKeeper, app.stakeKeeper)
-
+    app.mymoduleKeeper = mymodule.NewKeeper(app.cdc, app.keyMymodule, app.coinKeeper,app.RegisterCodespace(mymodule.DefaultCodespace))
 	// register message routes
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
 		AddRoute("ibc", ibc.NewHandler(app.ibcMapper, app.coinKeeper)).
 		AddRoute("stake", stake.NewHandler(app.stakeKeeper)).
-		AddRoute("gov", gov.NewHandler(app.govKeeper))
+		AddRoute("gov", gov.NewHandler(app.govKeeper)).AddRoute("mymodule",mymodule.NewHandler(app.mymoduleKeeper))
 
 	// initialize BaseApp
 	app.SetInitChainer(app.initChainer)
 	app.SetBeginBlocker(gov.NewBeginBlocker(app.govKeeper))
 	app.SetEndBlocker(stake.NewEndBlocker(app.stakeKeeper))
-	app.MountStoresIAVL(app.keyMain, app.keyAccount, app.keyIBC, app.keyStake, app.keyGov)
+	app.MountStoresIAVL(app.keyMain, app.keyAccount, app.keyIBC, app.keyStake, app.keyGov,app.keyMymodule)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, stake.FeeHandler))
 	err := app.LoadLatestVersion(app.keyMain)
 	if err != nil {
@@ -107,6 +111,7 @@ func MakeCodec() *wire.Codec {
 	sdk.RegisterWire(cdc)
 	wire.RegisterCrypto(cdc)
 	gov.RegisterWire(cdc)
+	mymodule.RegisterWire(cdc)
 	return cdc
 }
 
