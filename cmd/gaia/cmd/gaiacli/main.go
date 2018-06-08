@@ -2,9 +2,7 @@ package main
 
 import (
 	"github.com/spf13/cobra"
-
 	"github.com/tendermint/tmlibs/cli"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/lcd"
@@ -16,7 +14,7 @@ import (
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	ibccmd "github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
 	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
-
+	mymodulecmd "github.com/cosmos/cosmos-sdk/x/mymodule/client/cli"
 	"github.com/cosmos/cosmos-sdk/cmd/gaia/app"
 )
 
@@ -64,6 +62,8 @@ func main() {
 			govcmd.SubmitProposalCmd(cdc),
 			govcmd.DepositCmd(cdc),
 			govcmd.VoteCmd(cdc),
+			mymodulecmd.GetCmdDo(cdc),
+			mymodulecmd.GetCmdUndo(cdc),
 		)...)
 
 	// add proxy, version and key info

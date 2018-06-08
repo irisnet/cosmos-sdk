@@ -65,13 +65,11 @@ func (msg MsgDo) ValidateBasic() sdk.Error {
 // MsgEditCandidacy - struct for editing a candidate
 type MsgUndo struct {
 	addr sdk.Address `json:"address"`
-	valueNum ValueNum
 }
 
-func NewMsgUndo(addr sdk.Address, valueNum ValueNum) MsgUndo {
+func NewMsgUndo(addr sdk.Address) MsgUndo {
 	return MsgUndo{
 		addr:   addr,
-		valueNum: valueNum,
 	}
 }
 
@@ -90,9 +88,6 @@ func (msg MsgUndo) GetSignBytes() []byte {
 
 // quick validity check
 func (msg MsgUndo) ValidateBasic() sdk.Error {
-	if msg.valueNum.num == 0 {
-		return ErrValueNumEmpty(DefaultCodespace)
-	}
 	if msg.addr == nil {
 		return ErrAddrEmpty(DefaultCodespace)
 	}
