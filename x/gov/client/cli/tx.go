@@ -48,6 +48,7 @@ func SubmitProposalCmd(cdc *wire.Codec) *cobra.Command {
 
 			// create the message
 			msg := gov.NewMsgSubmitProposal(title, description, proposalType, from, amount)
+			fmt.Println(msg)
 			// build and sign the transaction, then broadcast to Tendermint
 			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 

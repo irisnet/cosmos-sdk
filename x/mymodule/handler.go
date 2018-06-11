@@ -22,7 +22,7 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleMsgDo(ctx sdk.Context, keeper Keeper, msg MsgDo) sdk.Result{
-	_,_, err := keeper.ck.AddCoins(ctx,msg.addr,amt)
+	_,_, err := keeper.ck.AddCoins(ctx,msg.Addr,amt)
 	if err!= nil{
 		return err.Result()
 	}
@@ -31,24 +31,24 @@ func handleMsgDo(ctx sdk.Context, keeper Keeper, msg MsgDo) sdk.Result{
 	}
 	var i int64 =0
 	for{
-		_,_, err := keeper.ck.AddCoins(ctx,msg.addr,amt)
+		_,_, err := keeper.ck.AddCoins(ctx,msg.Addr,amt)
 		if err!= nil{
 			return err.Result()
 		}
 		i=i+1
-		if i < msg.valueNum.num{
+		if i < msg.ValueNum.Num{
 			break
 		}
 
 	}
 
-	keeper.SetCounter(ctx,msg.addr,keeper.GetCounter(ctx,msg.addr)+msg.valueNum.num)
+	keeper.SetCounter(ctx,msg.Addr,keeper.GetCounter(ctx,msg.Addr)+msg.ValueNum.Num)
 
 	return sdk.Result{}
 }
 
 func handleMsgUndo(ctx sdk.Context, keeper Keeper, msg MsgUndo) sdk.Result{
-	_,_, err := keeper.ck.SubtractCoins(ctx,msg.addr,amt)
+	_,_, err := keeper.ck.SubtractCoins(ctx,msg.Addr,amt)
 	if err!= nil{
 		return err.Result()
 	}
@@ -56,11 +56,11 @@ func handleMsgUndo(ctx sdk.Context, keeper Keeper, msg MsgUndo) sdk.Result{
 		return sdk.Result{}
 	}
 
-	num := keeper.GetCounter(ctx,msg.addr)
+	num := keeper.GetCounter(ctx,msg.Addr)
 
 	var i int64 =0
 	for{
-		_,_, err := keeper.ck.SubtractCoins(ctx,msg.addr,amt)
+		_,_, err := keeper.ck.SubtractCoins(ctx,msg.Addr,amt)
 		if err!= nil{
 			return err.Result()
 		}
@@ -70,6 +70,6 @@ func handleMsgUndo(ctx sdk.Context, keeper Keeper, msg MsgUndo) sdk.Result{
 		}
 
 	}
-	keeper.SetCounter(ctx,msg.addr,int64(0))
+	keeper.SetCounter(ctx,msg.Addr,int64(0))
 	return sdk.Result{}
 }

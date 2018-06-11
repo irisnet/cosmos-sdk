@@ -4,7 +4,6 @@ import (
 "encoding/json"
 
 sdk "github.com/cosmos/cosmos-sdk/types"
-"github.com/cosmos/cosmos-sdk/wire"
 )
 
 // name to idetify transaction types
@@ -19,63 +18,70 @@ const mymoduleToken = "steak"
 //Verify interface at compile time
 var _, _ sdk.Msg = &MsgDo{}, &MsgUndo{}
 
-var msgCdc = wire.NewCodec()
-
-func init() {
-	wire.RegisterCrypto(msgCdc)
-}
+//var msgCdc = wire.NewCodec()
+//
+//func init() {
+//	wire.RegisterCrypto(msgCdc)
+//}
 
 //______________________________________________________________________
 
-// MsgDeclareCandidacy - struct for unbonding transactions
 type MsgDo struct {
-	addr sdk.Address   `json:"address"`
-	valueNum ValueNum
+	Addr sdk.Address   `json:"address"`
+	ValueNum ValueNum
 }
 
 func NewMsgDo(addr sdk.Address,valueNum ValueNum) MsgDo {
 	return MsgDo{
-           addr :addr,
-		   valueNum: valueNum,
+           Addr :addr,
+		   ValueNum: valueNum,
 	}
 }
 
 //nolint
 func (msg MsgDo) Type() string              { return MsgType } //TODO update "stake/declarecandidacy"
-func (msg MsgDo) GetSigners() []sdk.Address { return []sdk.Address{msg.addr} }
+func (msg MsgDo) GetSigners() []sdk.Address { return []sdk.Address{msg.Addr} }
 
 // get the bytes for the message signer to sign on
 func (msg MsgDo) GetSignBytes() []byte {
-	return msgCdc.MustMarshalBinary(msg)
+	b, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 // quick validity check
 func (msg MsgDo) ValidateBasic() sdk.Error {
-	if msg.valueNum.num == 0 {
+	if msg.ValueNum.Num == 0 {
 		return ErrValueNumEmpty(DefaultCodespace)
 	}
-	if msg.addr == nil {
+	if msg.Addr == nil {
 		return ErrAddrEmpty(DefaultCodespace)
 	}
 	return nil
 }
 
+// Implements Msg.
+func (msg MsgDo) Get(key interface{}) (value interface{}) {
+	return nil
+}
 //______________________________________________________________________
 
 // MsgEditCandidacy - struct for editing a candidate
 type MsgUndo struct {
-	addr sdk.Address `json:"address"`
+	Addr sdk.Address `json:"address"`
 }
 
 func NewMsgUndo(addr sdk.Address) MsgUndo {
 	return MsgUndo{
-		addr:   addr,
+		Addr:   addr,
 	}
 }
 
 //nolint
 func (msg MsgUndo) Type() string              { return MsgType } //TODO update "stake/msgeditcandidacy"
-func (msg MsgUndo) GetSigners() []sdk.Address { return []sdk.Address{msg.addr} }
+func (msg MsgUndo) GetSigners() []sdk.Address { return []sdk.Address{msg.Addr} }
 
 // get the bytes for the message signer to sign on
 func (msg MsgUndo) GetSignBytes() []byte {
@@ -88,8 +94,12 @@ func (msg MsgUndo) GetSignBytes() []byte {
 
 // quick validity check
 func (msg MsgUndo) ValidateBasic() sdk.Error {
-	if msg.addr == nil {
+	if msg.Addr == nil {
 		return ErrAddrEmpty(DefaultCodespace)
 	}
+	return nil
+}
+
+func (msg MsgUndo) Get(key interface{}) (value interface{}) {
 	return nil
 }

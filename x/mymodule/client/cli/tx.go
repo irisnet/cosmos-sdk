@@ -24,7 +24,7 @@ func GetCmdDo(cdc *wire.Codec) *cobra.Command{
 			 num, err :=strconv.ParseInt(args[1],10,64)
 
 			 msg := mymodule.NewMsgDo(addr,mymodule.NewValueNum(num))
-
+			 fmt.Println(msg)
 			 ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
 			 res, err := ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, msg ,cdc)
