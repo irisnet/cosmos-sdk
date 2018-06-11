@@ -22,6 +22,7 @@ func NewHandler(keeper Keeper) sdk.Handler {
 }
 
 func handleMsgDo(ctx sdk.Context, keeper Keeper, msg MsgDo) sdk.Result{
+
 	_,_, err := keeper.ck.AddCoins(ctx,msg.Addr,amt)
 	if err!= nil{
 		return err.Result()
@@ -29,17 +30,19 @@ func handleMsgDo(ctx sdk.Context, keeper Keeper, msg MsgDo) sdk.Result{
 	if ctx.IsCheckTx() {
 		return sdk.Result{}
 	}
+	keeper.ck.SubtractCoins(ctx,msg.Addr,amt)
+
+
 	var i int64 =0
 	for{
+		if i >= msg.ValueNum.Num{
+			break
+		}
 		_,_, err := keeper.ck.AddCoins(ctx,msg.Addr,amt)
 		if err!= nil{
 			return err.Result()
 		}
 		i=i+1
-		if i < msg.ValueNum.Num{
-			break
-		}
-
 	}
 
 	keeper.SetCounter(ctx,msg.Addr,keeper.GetCounter(ctx,msg.Addr)+msg.ValueNum.Num)
@@ -48,27 +51,30 @@ func handleMsgDo(ctx sdk.Context, keeper Keeper, msg MsgDo) sdk.Result{
 }
 
 func handleMsgUndo(ctx sdk.Context, keeper Keeper, msg MsgUndo) sdk.Result{
+
 	_,_, err := keeper.ck.SubtractCoins(ctx,msg.Addr,amt)
+
 	if err!= nil{
 		return err.Result()
 	}
 	if ctx.IsCheckTx() {
 		return sdk.Result{}
 	}
+	keeper.ck.AddCoins(ctx,msg.Addr,amt)
+
 
 	num := keeper.GetCounter(ctx,msg.Addr)
 
 	var i int64 =0
 	for{
+		if i >= num{
+			break
+		}
 		_,_, err := keeper.ck.SubtractCoins(ctx,msg.Addr,amt)
 		if err!= nil{
 			return err.Result()
 		}
 		i=i+1
-		if i < num{
-			break
-		}
-
 	}
 	keeper.SetCounter(ctx,msg.Addr,int64(0))
 	return sdk.Result{}
