@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"unsafe"
+	"fmt"
 )
 
 func TestIsPositiveCoin(t *testing.T) {
@@ -353,4 +355,19 @@ func TestAmountOf(t *testing.T) {
 		assert.Equal(t, tc.amountOfMINERAL, tc.coins.AmountOf("MINERAL"))
 		assert.Equal(t, tc.amountOfTREE, tc.coins.AmountOf("TREE"))
 	}
+}
+
+
+
+func printStruct(x interface{}){
+	fmt.Println(unsafe.Sizeof(x))
+}
+func TestStruct(t *testing.T){
+
+	fmt.Println(unsafe.Sizeof(struct {
+		// type is always 'with'
+		gen   []int16
+		//key   interface{}
+		//value interface{}
+	}{}))
 }

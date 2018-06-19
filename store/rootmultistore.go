@@ -84,6 +84,7 @@ func (rs *rootMultiStore) LoadLatestVersion() error {
 func (rs *rootMultiStore) LoadVersion(ver int64) error {
 
 	// Special logic for version 0
+
 	if ver == 0 {
 		for key, storeParams := range rs.storesParams {
 			id := CommitID{}
@@ -105,6 +106,7 @@ func (rs *rootMultiStore) LoadVersion(ver int64) error {
 		return err
 	}
 
+
 	// Load each Store
 	var newStores = make(map[StoreKey]CommitStore)
 	for _, storeInfo := range cInfo.StoreInfos {
@@ -117,16 +119,30 @@ func (rs *rootMultiStore) LoadVersion(ver int64) error {
 		newStores[key] = store
 	}
 
+	//fmt.Println(ver,cInfo)
 	// If any CommitStoreLoaders were not used, return error.
-	for key := range rs.storesParams {
+	for key,storeParams := range rs.storesParams {
+		fmt.Println(key)
 		if _, ok := newStores[key]; !ok {
-			return fmt.Errorf("Unused CommitStoreLoader: %v", key)
+			fmt.Println(ok)
+			//return fmt.Errorf("Unused CommitStoreLoader: %v", key)
+
+			id := CommitID{}
+			store, err := rs.loadCommitStoreFromParams(id,storeParams)
+			if err != nil {
+				return fmt.Errorf("Failed to load rootMultiStore: %v", err)
+			}
+			rs.stores[key] = store
+
 		}
 	}
+
+
 
 	// Success.
 	rs.lastCommitID = cInfo.CommitID()
 	rs.stores = newStores
+
 	return nil
 }
 

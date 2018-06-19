@@ -84,8 +84,7 @@ func NewGaiaApp(logger log.Logger, db dbm.DB) *GaiaApp {
 	app.Router().
 		AddRoute("bank", bank.NewHandler(app.coinKeeper)).
 		AddRoute("ibc", ibc.NewHandler(app.ibcMapper, app.coinKeeper)).
-		AddRoute("stake", stake.NewHandler(app.stakeKeeper)).
-		AddRoute("gov", gov.NewHandler(app.govKeeper)).AddRoute("mymodule",mymodule.NewHandler(app.mymoduleKeeper))
+		AddRoute("stake", stake.NewHandler(app.stakeKeeper)).AddRoute("gov", gov.NewHandler(app.govKeeper)).AddRoute("mymodule",mymodule.NewHandler(app.mymoduleKeeper))
 
 	// initialize BaseApp
 	app.SetInitChainer(app.initChainer)
