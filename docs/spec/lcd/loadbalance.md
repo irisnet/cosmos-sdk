@@ -1,9 +1,9 @@
-# LoadBalance 
+# Load Balancing Module 
 
-This package is designed for the load balancing problem. Because the CosmosSDK LCD will connect with many servers in the future. It is bound to need a load balancing function that improves the distribution of workloads across many full nodes.
+This module is designed for the load balancing problem. Because the CosmosSDK LCD will connect with many servers in the future. It is bound to need a load balancing function that improves the distribution of workloads across many full nodes.
 
 ## Design
-This package need combine with client to realize the real load balancing. It can embed into the `HTTP`(Loc:"github.com/tendermint/tendermint/rpc/lib/client/httpclient.go"). In other words，we realize the new httpclient based on `HTTP`.
+This module need combine with client to realize the real load balancing. It can embed into the `HTTP`(Loc:"github.com/tendermint/tendermint/rpc/lib/client/httpclient.go"). In other words，we realize the new httpclient based on `HTTP`.
 
 From:
 
@@ -31,7 +31,9 @@ type HTTPLoadBalance struct {
 ### The Diagram of LCD RPC WorkFlow with LoadBalance
 ![The Diagram of LCD RPC WorkFlow](pics/loadbalanceDiagram.png)
 
-In the above sequence diagram, application calls the `Request()`, and LCD finally call the `HTTP.Request()` through the SecureClient `Wrapper`. In every `HTTP.Request()`,`Getclient()` selects the current working rpcclient by the load balancing algorithm,then run the `JSONRPCClient.Call()` to request from the Full Node, finally `UpdateClient()` updates the weight of the current rpcclient according to the status that is returned by the full node. 
+In the above sequence diagram, application calls the `Request()`, and LCD finally call the `HTTP.Request()` through the SecureClient `Wrapper`. In every `HTTP.Request()`,`Getclient()` selects the current working rpcclient by the load balancing algorithm,then run the `JSONRPCClient.Call()` to request from the Full Node, finally `UpdateClient()` updates the weight of the current rpcclient according to the status that is returned by the full node. The `GetAddr()` and `UpdateAddrWeight()` are realized  in the load balancing module.
+
+
 ### Add the remote address
 ### Delete the remote address
 ### Update the weights of the addresses
@@ -59,7 +61,7 @@ type  Balancer interface {
 }
 ```
 
-###NodeAddr
+### NodeAddr
 
 >in `balance/types.go`
 
@@ -80,9 +82,10 @@ func (p *NodeAddr) GetPort() int
 func (p *NodeAddr) GetWeight() int 
 func (p *NodeAddr) updateWeight(weight int)
 ```
+
 The `weight` is the important factor that schedules which full node the LCD calls. The weight can be changed by the information from the full node. So we have the function `updateWegiht`.
 
-###NodeAddrs
+### NodeAddrs
 >in `balance/types.go`
 
 `NodeAddrs` is the list of the full node address. This is the member variable in the BalanceManager(`BalancerMgr`)
@@ -90,6 +93,7 @@ The `weight` is the important factor that schedules which full node the LCD call
 ```go
 type NodeAddrs []*NodeAddr
 ```
+
 ## Load Balancing Algrithm
 ### Random
 >in `balance/random.go`
@@ -105,7 +109,6 @@ type NodeAddrs []*NodeAddr
 
 ### Hash
 > **Todo**
-
 
 ## Load Balancing Manager
 ### BalanceMgr
