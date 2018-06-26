@@ -132,13 +132,13 @@ func TestMsgSendValidation(t *testing.T) {
 	}{
 		{false, MsgSend{}},                           // no input or output
 		{false, MsgSend{Inputs: []Input{input1}}},    // just input
-		{false, MsgSend{Outputs: []Output{output1}}}, // just output
+		{false, MsgSend{Outputs: []Output{output1}}}, // just ouput
 		{false, MsgSend{
 			Inputs:  []Input{NewInput(emptyAddr, atom123)}, // invalid input
 			Outputs: []Output{output1}}},
 		{false, MsgSend{
 			Inputs:  []Input{input1},
-			Outputs: []Output{{emptyAddr, atom123}}}, // invalid output
+			Outputs: []Output{{emptyAddr, atom123}}}, // invalid ouput
 		},
 		{false, MsgSend{
 			Inputs:  []Input{input1},
