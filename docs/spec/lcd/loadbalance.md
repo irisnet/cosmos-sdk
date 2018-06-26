@@ -31,17 +31,20 @@ type HTTPLoadBalance struct {
 ### The Diagram of LCD RPC WorkFlow with LoadBalance
 ![The Diagram of LCD RPC WorkFlow](pics/loadbalanceDiagram.png)
 
-In the above sequence diagram, application calls the `Request()`, and LCD finally call the `HTTP.Request()` through the SecureClient `Wrapper`. In every `HTTP.Request()`,`Getclient()` selects the current working rpcclient by the load balancing algorithm,then run the `JSONRPCClient.Call()` to request from the Full Node, finally `UpdateClient()` updates the weight of the current rpcclient according to the status that is returned by the full node. The `GetAddr()` and `UpdateAddrWeight()` are realized  in the load balancing module.
+In the above sequence diagram, application calls the `Request()`, and LCD finally call the `HTTP.Request()` through the SecureClient `Wrapper`. In every `HTTP.Request()`, `Getclient()` selects the current working rpcclient by the load balancing algorithm,then run the `JSONRPCClient.Call()` to request from the Full Node, finally `UpdateClient()` updates the weight of the current rpcclient according to the status that is returned by the full node. The `GetAddr()` and `UpdateAddrWeight()` are realized  in the load balancing module.
+
+There are some abilities to do:
+
+* Add the Remote Address
+* Delete the Remote Address
+* Update the weights of the addresses
 
 
-### Add the remote address
-### Delete the remote address
-### Update the weights of the addresses
 ### Load balancing Strategies
 We can design some strategies like nginx to combine the different load balancing algorithms to get the final remote. We can also get the status of the remote server to add or delete the addresses and update weights of the addresses.
 
 In a word，it can make the entire LCD work more effective in actual conditions.
-
+We are working this module independently in this [Github Repository](https://github.com/MrXJC/GoLoadBalance).
 ## Interface And Type
 
 ### Balancer
@@ -94,18 +97,26 @@ The `weight` is the important factor that schedules which full node the LCD call
 type NodeAddrs []*NodeAddr
 ```
 
-## Load Balancing Algrithm
+## Load Balancing Algorithm
 ### Random
 >in `balance/random.go`
+
+Random Algorithm selects a remote address randomly to process the request. The probability of them being selected is the same. 
 
 ### RandomWeight
 >in `balance/random.go`
 
+RandomWeight Algorithm also selects a remote address randomly to process the request. But the higher the weight, the greater the probability.
+
 ### RoundRobin
 >in `balance/roundrobin.go`
 
+RoundRobin Algorithm selects a remote address orderly. Every remote address have the same probability to be selected.
+
 ### RoundRobinWeight
 >in `balance/roundrobin.go`
+
+RoundRobinWeight Algorthm selects a remote address orderly. But every remote address have different probability to be selected which are determined by their weight.
 
 ### Hash
 > **Todo**
@@ -114,9 +125,9 @@ type NodeAddrs []*NodeAddr
 ### BalanceMgr
 >in `balance/manager.go`
 
-* addrs: the list of 
-* balancers: 
-* change: 
+* addrs: the set of the remote full node addresses
+* balancers: map the string of balancer name to the specific balancer
+* change: record whether the machine reinitialize after the `addrs` changes
 
 `BalanceMgr` is the manager of many balancer. It is the access of load balancing. Its main function is to maintain the `NodeAddrs` and to call the specific load balancing algorithm above.
 
@@ -126,4 +137,32 @@ type BalanceMgr struct{
 	balancers map[string]Balancer
 	change map[string]bool
 }
+func (p *BalanceMgr) RegisterBalancer(name string,balancer Balancer)
+func (p *BalanceMgr) updateBalancer(name string)
+func (p *BalanceMgr) AddNodeAddr(addr *NodeAddr)
+func (p *BalanceMgr) DeleteNodeAddr(i int)
+func (p *BalanceMgr) UpdateWeightNodeAddr(i int,weight int)
+
+func (p *BalanceMgr) GetAddr(name string)(*NodeAddr,int,error) {
+   # if addrs change,update the balancer which we use.
+	if p.change[name]{
+		p.updateBalancer(name)
+	}
+   # get the balancer by name
+	balancer := p.balancers[name]
+	
+	# use the load balancing algorithm
+	addr,index,err := balancer.DoBalance(p.addrs)
+	return addr,index,err
+}
 ```
+
+* `RegisterBalancer`: register the basic balancer implementing the `Balancer` interface and initialize them.
+* `updateBalancer`: update the specific balancer after the `addrs` change.
+* `AddNodeAddr`: add the remote address and set all the values of the `change` to true.
+* `DeleteNodeAddr`: delete the remote address and set all the values of the `change` to true.
+* `UpdateWeightNodeAddr`: update the weight of the remote address and set all the values of the `change` to true.
+* `GetAddr`:select the address by the balancer the `name` decides.  
+
+
+
