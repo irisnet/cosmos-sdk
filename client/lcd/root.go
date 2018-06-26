@@ -20,8 +20,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/wire"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
+	gov "github.com/cosmos/cosmos-sdk/x/gov/client/rest"
 	ibc "github.com/cosmos/cosmos-sdk/x/ibc/client/rest"
 	stake "github.com/cosmos/cosmos-sdk/x/stake/client/rest"
+	"github.com/cosmos/cosmos-sdk/lcd/proxy"
 )
 
 // ServeCommand will generate a long-running rest server
@@ -57,6 +59,7 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().String(flagCORS, "", "Set to domains that can make CORS requests (* for all)")
 	cmd.Flags().StringP(client.FlagChainID, "c", "", "ID of chain we connect to")
 	cmd.Flags().StringP(client.FlagNode, "n", "tcp://localhost:26657", "Node to connect to")
+	cmd.Flags().StringP(client.FlagTrustStore, "t", "~/.lcd", "Directory for trust store")
 	return cmd
 }
 
@@ -68,7 +71,15 @@ func createHandler(cdc *wire.Codec) http.Handler {
 		panic(err)
 	}
 
-	ctx := context.NewCoreContextFromViper()
+	rootDir := viper.GetString(client.FlagTrustStore)
+	nodeAddr := viper.GetString(client.FlagNode)
+	chainID := viper.GetString(client.FlagChainID)
+
+	cert,err := proxy.GetCertifier(chainID, rootDir, nodeAddr)
+	if err != nil {
+		panic(err)
+	}
+	ctx := context.NewCoreContextFromViper().WithCert(cert)
 
 	// TODO make more functional? aka r = keys.RegisterRoutes(r)
 	r.HandleFunc("/version", CLIVersionRequestHandler).Methods("GET")
@@ -80,5 +91,6 @@ func createHandler(cdc *wire.Codec) http.Handler {
 	bank.RegisterRoutes(ctx, r, cdc, kb)
 	ibc.RegisterRoutes(ctx, r, cdc, kb)
 	stake.RegisterRoutes(ctx, r, cdc, kb)
+	gov.RegisterRoutes(ctx, r, cdc, kb)
 	return r
 }

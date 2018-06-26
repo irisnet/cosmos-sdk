@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/tmlibs/merkle"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/iavl"
 )
 
 const (
@@ -229,6 +230,49 @@ func (rs *rootMultiStore) Query(req abci.RequestQuery) abci.ResponseQuery {
 	// trim the path and make the query
 	req.Path = subpath
 	res := queryable.Query(req)
+	if ! req.Prove {
+		return res
+	}
+
+	//Load commit info from db
+	commitInfo, errMsg := getCommitInfo(rs.db,res.Height)
+	if errMsg != nil {
+		return sdk.ErrUnknownRequest(errMsg.Error()).QueryResult()
+	}
+
+	height,multiStoreProof,errMsg := BuildProofForMultiStore(commitInfo,storeName)
+	if errMsg != nil {
+		return sdk.ErrUnknownRequest(errMsg.Error()).QueryResult()
+	}
+
+	if len(res.Value) > 0 {
+		proof, err := iavl.ReadKeyProof(res.Proof)
+		if err != nil {
+			return sdk.ErrUnknownRequest("Error reading proof").QueryResult()
+		}
+		eproof, ok := proof.(*iavl.KeyExistsProof)
+		if !ok {
+			return sdk.ErrUnknownRequest("Expected KeyExistsProof for non-empty value").QueryResult()
+		}
+		eproof.StoreName = storeName
+		eproof.Height = height
+		eproof.SimpleProof = multiStoreProof
+		res.Proof = eproof.Bytes()
+	} else { //absence proof
+		// The key wasn't found, construct a proof of non-existence.
+		proof, err := iavl.ReadKeyProof(res.Proof)
+		if err != nil {
+			return sdk.ErrUnknownRequest("Error reading proof").QueryResult()
+		}
+		aproof, ok := proof.(*iavl.KeyAbsentProof)
+		if !ok {
+			return sdk.ErrUnknownRequest("Expected KeyAbsentProof for empty Value").QueryResult()
+		}
+		aproof.StoreName = storeName
+		aproof.Height = height
+		aproof.SimpleProof = multiStoreProof
+		res.Proof = aproof.Bytes()
+	}
 	return res
 }
 
