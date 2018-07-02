@@ -137,6 +137,13 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 	if err != nil {
 		return  nil, errors.Wrap(err, "Error in rangeProof verification")
 	}
+	// Validate absence proof
+	if resp.Value == nil {
+		err = rangeProof.VerifyAbsence(key)
+		if err != nil {
+			return  nil, errors.Wrap(err, "Error in absence verification")
+		}
+	}
 	// Validate the substore commit hash against trusted appHash
 	err =  store.VerifyProofForMultiStore(rangeProof.StoreName, rangeProof.RootHash, rangeProof.MultiStoreCommitInfo, commit.Header.AppHash)
 	if err != nil {
