@@ -107,7 +107,7 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 
 	_, subpath, err := parsePath(path)
 	if err != nil {
-		return res, errors.Wrap(err,"Error in getting subpath")
+		return res, errors.Wrap(err,"failed to get subpath")
 	}
 
 	// Data from trusted node or subspace doesn't need verification
@@ -116,7 +116,7 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 	}
 
 	if ctx.Cert == nil {
-		return resp.Value,errors.Errorf("Error: not providing valid certifier to verify data from untrusted node")
+		return resp.Value,errors.Errorf("missing valid certifier to verify data from untrusted node")
 	}
 
 	// AppHash for height H is in header H+1
@@ -129,25 +129,25 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 	cdc := wire.NewCodec()
 	err = cdc.UnmarshalBinary(resp.Proof, &rangeProof)
 	if err != nil {
-		return res, errors.Wrap(err, "Error in UnmarshalBinary rangeProof")
+		return res, errors.Wrap(err, "failed to unmarshalBinary rangeProof")
 	}
 
 	// Validate the proof to ensure data integrity.
 	err = rangeProof.Verify(rangeProof.RootHash)
 	if err != nil {
-		return  nil, errors.Wrap(err, "Error in rangeProof verification")
+		return  nil, errors.Wrap(err, "failed in verify rangeProof")
 	}
 	// Validate absence proof
 	if resp.Value == nil {
 		err = rangeProof.VerifyAbsence(key)
 		if err != nil {
-			return  nil, errors.Wrap(err, "Error in absence verification")
+			return  nil, errors.Wrap(err, "failed in absence verification")
 		}
 	}
 	// Validate the substore commit hash against trusted appHash
 	err =  store.VerifyProofForMultiStore(rangeProof.StoreName, rangeProof.RootHash, rangeProof.MultiStoreCommitInfo, commit.Header.AppHash)
 	if err != nil {
-		return  nil, errors.Wrap(err, "Invalid exist proof")
+		return  nil, errors.Wrap(err, "failed in verify substore root commit against appHash")
 	}
 
 	return resp.Value, nil
@@ -221,7 +221,7 @@ func (ctx CoreContext) BroadcastTransaction(txData []byte, signatures [][]byte, 
 	}
 
 	if len(signatures) != len(publicKeys) {
-		return nil, errors.New("Error: signatures length doesn't equal to publicKeys length")
+		return nil, errors.New("signatures length doesn't equal to publicKeys length")
 	}
 
 	var stdSignatures []auth.StdSignature

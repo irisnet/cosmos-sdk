@@ -11,7 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func VerifyProofForMultiStore(storeName string, substoreRootHash []byte, multiStoreCommitInfo []iavl.SubstoreCommitID,appHash []byte) (error){
+func VerifyProofForMultiStore(storeName string, substoreRootHash []byte, multiStoreCommitInfo []iavl.SubstoreCommitID, appHash []byte) (error){
 	found :=  false
 	var kvPairs cmn.KVPairs
 	for _,multiStoreCommitID := range multiStoreCommitInfo {
@@ -35,10 +35,10 @@ func VerifyProofForMultiStore(storeName string, substoreRootHash []byte, multiSt
 		})
 	}
 	if !found {
-		return cmn.NewError("Invalid proof, there is no matched multiStore in multiStoreCommitInfo")
+		return cmn.NewError("failed to get substore root commit by store name")
 	}
 	if kvPairs == nil {
-		return cmn.NewError("Error in extracting information from multiStoreCommitInfo")
+		return cmn.NewError("failed extract information from multiStoreCommitInfo")
 	}
 	//sort the kvPair list
 	kvPairs.Sort()
@@ -52,22 +52,10 @@ func VerifyProofForMultiStore(storeName string, substoreRootHash []byte, multiSt
 	}
 
 	if !bytes.Equal(appHash,simpleHashFromHashes(hashList)){
-		return cmn.NewError("AppHash doesn't match")
+		return cmn.NewError("appHash doesn't match to the merkle root of multiStoreCommitInfo")
 	}
 
 	return nil
-}
-
-func BuildStoreInfoAndReturnHash(storeName string, height int64, rootHash []byte) []byte {
-	storeInfo := storeInfo{
-		Core:storeCore{
-			CommitID:sdk.CommitID{
-				Version: height,
-				Hash: rootHash,
-			},
-		},
-	}
-	return kvPairHash(merkle.SimpleHashFromBytes([]byte(storeName)),storeInfo.Hash());
 }
 
 func simpleHashFromHashes(hashes [][]byte) []byte {
