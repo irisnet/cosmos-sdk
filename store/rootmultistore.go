@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/tmlibs/merkle"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/iavl"
 )
 
 const (
@@ -229,6 +230,39 @@ func (rs *rootMultiStore) Query(req abci.RequestQuery) abci.ResponseQuery {
 	// trim the path and make the query
 	req.Path = subpath
 	res := queryable.Query(req)
+
+	if !req.Prove || subpath == "/subspace" {
+		return res
+	}
+
+	//Load commit info from db
+	commitInfo, errMsg := getCommitInfo(rs.db,res.Height)
+	if errMsg != nil {
+		return sdk.ErrUnknownRequest(errMsg.Error()).QueryResult()
+	}
+
+	var multiStoreCommitInfo []iavl.SubstoreCommitID
+	for _,storeInfo := range commitInfo.StoreInfos {
+		commitId := iavl.SubstoreCommitID{
+			Name: storeInfo.Name,
+			Version:storeInfo.Core.CommitID.Version,
+			CommitHash:storeInfo.Core.CommitID.Hash,
+		}
+		multiStoreCommitInfo = append(multiStoreCommitInfo,commitId)
+	}
+
+	var rangeProof iavl.RangeProof
+
+	cdc.UnmarshalBinary(res.Proof,&rangeProof)
+	rangeProof.MultiStoreCommitInfo=multiStoreCommitInfo
+	rangeProof.StoreName=storeName
+
+	proof, errMsg := cdc.MarshalBinary(rangeProof)
+	if err != nil {
+		return sdk.ErrUnknownRequest(errMsg.Error()).QueryResult()
+	}
+	res.Proof = proof
+
 	return res
 }
 

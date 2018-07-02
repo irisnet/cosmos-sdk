@@ -82,10 +82,10 @@ func RandomOperation(r *rand.Rand) Operation {
 		OpBondOrUnbond,
 		OpAddTokens,
 		OpRemoveShares,
-	}
+	}/*
 	r.Shuffle(len(operations), func(i, j int) {
 		operations[i], operations[j] = operations[j], operations[i]
-	})
+	})*/
 	return operations[0]
 }
 

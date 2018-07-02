@@ -16,6 +16,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	tendermintLiteProxy "github.com/tendermint/tendermint/lite/proxy"
+	"github.com/tendermint/iavl"
+	"github.com/cosmos/cosmos-sdk/store"
+	"strings"
+	"github.com/tendermint/tendermint/crypto"
 )
 
 // Broadcast the transaction bytes to Tendermint
@@ -99,6 +104,45 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 	if resp.Code != uint32(0) {
 		return res, errors.Errorf("query failed: (%d) %s", resp.Code, resp.Log)
 	}
+
+	_, subpath, err := parsePath(path)
+	if err != nil {
+		return res, errors.Wrap(err,"Error in getting subpath")
+	}
+
+	// Data from trusted node or subspace doesn't need verification
+	if ctx.TrustNode || subpath == "/subspace" {
+		return resp.Value,nil
+	}
+
+	if ctx.Cert == nil {
+		return resp.Value,errors.Errorf("Error: not providing valid certifier to verify data from untrusted node")
+	}
+
+	// AppHash for height H is in header H+1
+	commit, err := tendermintLiteProxy.GetCertifiedCommit(resp.Height+1, node, ctx.Cert)
+	if err != nil {
+		return nil, err
+	}
+
+	var rangeProof iavl.RangeProof
+	cdc := wire.NewCodec()
+	err = cdc.UnmarshalBinary(resp.Proof, &rangeProof)
+	if err != nil {
+		return res, errors.Wrap(err, "Error in UnmarshalBinary rangeProof")
+	}
+
+	// Validate the proof to ensure data integrity.
+	err = rangeProof.Verify(rangeProof.RootHash)
+	if err != nil {
+		return  nil, errors.Wrap(err, "Error in rangeProof verification")
+	}
+	// Validate the substore commit hash against trusted appHash
+	err =  store.VerifyProofForMultiStore(rangeProof.StoreName, rangeProof.RootHash, rangeProof.MultiStoreCommitInfo, commit.Header.AppHash)
+	if err != nil {
+		return  nil, errors.Wrap(err, "Invalid exist proof")
+	}
+
 	return resp.Value, nil
 }
 
@@ -127,6 +171,81 @@ func (ctx CoreContext) GetFromAddress() (from sdk.Address, err error) {
 	}
 
 	return info.GetPubKey().Address(), nil
+}
+
+// build the transaction from the msg
+func (ctx CoreContext) BuildTransaction(accnum, sequence, gas int64, msg sdk.Msg, cdc *wire.Codec) ([]byte, error) {
+	chainID := ctx.ChainID
+	if chainID == "" {
+		return nil, errors.Errorf("chain ID required but not specified")
+	}
+	memo := ctx.Memo
+
+	signMsg := auth.StdSignMsg{
+		ChainID:       chainID,
+		AccountNumber: int64(accnum),
+		Sequence:      int64(sequence),
+		Msgs:          []sdk.Msg{msg},
+		Memo:          memo,
+		Fee:           auth.NewStdFee(gas, sdk.Coin{}),
+	}
+
+	return signMsg.Bytes(),nil
+}
+
+// build the transaction from the msg
+func (ctx CoreContext) BroadcastTransaction(txData []byte, signatures [][]byte, publicKeys [][]byte, cdc *wire.Codec) (*ctypes.ResultBroadcastTxCommit, error) {
+	var stdSignDoc auth.StdSignDoc//, transactionSigs []auth.StdSignature
+	err := cdc.UnmarshalBinary(txData,&stdSignDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	var msgs []sdk.Msg
+	err = cdc.UnmarshalBinary(stdSignDoc.MsgsBytes,&msgs)
+	if err != nil {
+		return nil, err
+	}
+
+	var fee auth.StdFee
+	err = cdc.UnmarshalBinary(stdSignDoc.FeeBytes,&fee)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(signatures) != len(publicKeys) {
+		return nil, errors.New("Error: signatures length doesn't equal to publicKeys length")
+	}
+
+	var stdSignatures []auth.StdSignature
+	for index,signature := range signatures {
+
+		public,err := crypto.PubKeyFromBytes(publicKeys[index])
+		if err != nil {
+			return nil, err
+		}
+
+		sig,err := crypto.SignatureFromBytes(signature)
+		if err != nil {
+			return nil, err
+		}
+
+		stdSignatures = append(stdSignatures,auth.StdSignature{
+			PubKey:        public,
+			Signature:     sig,
+			AccountNumber: stdSignDoc.AccountNumber,
+			Sequence:      stdSignDoc.Sequence,
+		})
+	}
+	// marshal bytes
+	tx := auth.NewStdTx(msgs, fee, stdSignatures, stdSignDoc.Memo)
+
+	txBytes,err := cdc.MarshalBinary(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return ctx.BroadcastTx(txBytes)
 }
 
 // sign and build the transaction from the msg
@@ -297,4 +416,17 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 		return nil, errors.New("must define node URI")
 	}
 	return ctx.Client, nil
+}
+
+func parsePath(path string) (storeName string, subpath string, err sdk.Error) {
+	if !strings.HasPrefix(path, "/") {
+		err = sdk.ErrUnknownRequest(fmt.Sprintf("invalid path: %s", path))
+		return
+	}
+	paths := strings.SplitN(path[1:], "/", 2)
+	storeName = paths[0]
+	if len(paths) == 2 {
+		subpath = "/" + paths[1]
+	}
+	return
 }
