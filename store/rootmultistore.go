@@ -231,7 +231,8 @@ func (rs *rootMultiStore) Query(req abci.RequestQuery) abci.ResponseQuery {
 	req.Path = subpath
 	res := queryable.Query(req)
 
-	if !req.Prove || subpath == "/subspace" {
+	// WARNING This should be consistent with query method in iavlstore.go
+	if !req.Prove || subpath != "/store" && subpath != "/key" {
 		return res
 	}
 

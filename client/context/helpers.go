@@ -105,13 +105,8 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 		return res, errors.Errorf("query failed: (%d) %s", resp.Code, resp.Log)
 	}
 
-	_, subpath, err := parsePath(path)
-	if err != nil {
-		return res, errors.Wrap(err,"failed to get subpath")
-	}
-
 	// Data from trusted node or subspace doesn't need verification
-	if ctx.TrustNode || subpath == "/subspace" {
+	if ctx.TrustNode || !isQueryStoreWithProof(path) {
 		return resp.Value,nil
 	}
 
@@ -425,15 +420,20 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 	return ctx.Client, nil
 }
 
-func parsePath(path string) (storeName string, subpath string, err sdk.Error) {
+// isQueryStoreWithProof expects a format like /<queryType>/<storeName>/<subpath>
+// queryType can be app or store
+// if subpath equals to store or key, then return true
+func isQueryStoreWithProof(path string) (bool) {
 	if !strings.HasPrefix(path, "/") {
-		err = sdk.ErrUnknownRequest(fmt.Sprintf("invalid path: %s", path))
-		return
+		return false
 	}
-	paths := strings.SplitN(path[1:], "/", 2)
-	storeName = paths[0]
-	if len(paths) == 2 {
-		subpath = "/" + paths[1]
+	paths := strings.SplitN(path[1:], "/", 3)
+	if len(paths) != 3 {
+		return false
 	}
-	return
+	// WARNING This should be consistent with query method in iavlstore.go
+	if paths[2] == "store" || paths[2] == "key" {
+		return true
+	}
+	return false
 }
