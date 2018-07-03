@@ -127,22 +127,14 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 		return res, errors.Wrap(err, "failed to unmarshalBinary rangeProof")
 	}
 
-	// Validate the proof to ensure data integrity.
-	err = rangeProof.Verify(rangeProof.RootHash)
-	if err != nil {
-		return  nil, errors.Wrap(err, "failed in verify rangeProof")
-	}
-	// Validate absence proof
-	if resp.Value == nil {
-		err = rangeProof.VerifyAbsence(key)
-		if err != nil {
-			return  nil, errors.Wrap(err, "failed in absence verification")
-		}
-	}
 	// Validate the substore commit hash against trusted appHash
-	err =  store.VerifyProofForMultiStore(rangeProof.StoreName, rangeProof.RootHash, rangeProof.MultiStoreCommitInfo, commit.Header.AppHash)
+	substoreCommitHash, err :=  store.VerifyMultiStoreCommitInfo(rangeProof.StoreName, rangeProof.MultiStoreCommitInfo, commit.Header.AppHash)
 	if err != nil {
-		return  nil, errors.Wrap(err, "failed in verify substore root commit against appHash")
+		return  nil, errors.Wrap(err, "failed in verifying the proof against appHash")
+	}
+	err = store.VerifyRangeProof(resp.Key, resp.Value, substoreCommitHash, &rangeProof)
+	if err != nil {
+		return  nil, errors.Wrap(err, "failed in the range proof verification")
 	}
 
 	return resp.Value, nil

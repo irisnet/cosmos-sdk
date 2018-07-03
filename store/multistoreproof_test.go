@@ -2,64 +2,95 @@ package store
 
 import (
 	"testing"
-	"encoding/hex"
 	"github.com/tendermint/iavl"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVerifyProofForMultiStore(t *testing.T) {
-	appHash,_ := hex.DecodeString("77c14d4f0f4ddbd2bf03f51fc81aa385f51f0fd3")
+func TestVerifyMultiStoreCommitInfo(t *testing.T) {
+	appHash,_ := hex.DecodeString("ebf3c1fb724d3458023c8fefef7b33add2fc1e84")
 
-	storeName := "acc"
 	substoreRootHash,_ := hex.DecodeString("ea5d468431015c2cd6295e9a0bb1fc0e49033828")
+	storeName := "acc"
 
 	var multiStoreCommitInfo []iavl.SubstoreCommitID
 
-	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
-		Name:"ibc",
-		Version:963,
-		CommitHash:nil,
-	})
-
-	stakeRootHash,_ := hex.DecodeString("6f104e1d5884a9afd49ae102b54175264c351571")
-	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
-		Name:"stake",
-		Version:963,
-		CommitHash:stakeRootHash,
-	})
-
-	slashingRootHash,_ := hex.DecodeString("7400e19b1eb05e19e108dec7eb6692b0a2e6dd43")
-	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
-		Name:"slashing",
-		Version:963,
-		CommitHash:slashingRootHash,
-	})
-
-	govRootHash,_ := hex.DecodeString("62c171bb022e47d1f745608ff749e676dbd25f78")
+	gocRootHash,_ := hex.DecodeString("62c171bb022e47d1f745608ff749e676dbd25f78")
 	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
 		Name:"gov",
-		Version:963,
-		CommitHash:govRootHash,
+		Version:689,
+		CommitHash:gocRootHash,
 	})
 
 	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
 		Name:"main",
-		Version:963,
+		Version:689,
 		CommitHash:nil,
 	})
 
 	accRootHash,_ := hex.DecodeString("ea5d468431015c2cd6295e9a0bb1fc0e49033828")
 	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
 		Name:"acc",
-		Version:963,
+		Version:689,
 		CommitHash:accRootHash,
 	})
 
-	err :=  VerifyProofForMultiStore(storeName, substoreRootHash, multiStoreCommitInfo, appHash)
+	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
+		Name:"ibc",
+		Version:689,
+		CommitHash:nil,
+	})
+
+	stakeRootHash,_ := hex.DecodeString("987d1d27b8771d93aa3691262f661d2c85af7ca4")
+	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
+		Name:"stake",
+		Version:689,
+		CommitHash:stakeRootHash,
+	})
+
+	slashingRootHash,_ := hex.DecodeString("388ee6e5b11f367069beb1eefd553491afe9d73e")
+	multiStoreCommitInfo=append(multiStoreCommitInfo,iavl.SubstoreCommitID{
+		Name:"slashing",
+		Version:689,
+		CommitHash:slashingRootHash,
+	})
+
+	commitHash, err :=  VerifyMultiStoreCommitInfo(storeName, multiStoreCommitInfo, appHash)
+	assert.Nil(t, err)
+	assert.Equal(t, commitHash, substoreRootHash)
+
+	appHash,_ = hex.DecodeString("29de216bf5e2531c688de36caaf024cd3bb09ee3")
+
+	_,err =  VerifyMultiStoreCommitInfo(storeName, multiStoreCommitInfo, appHash)
+	assert.Error(t,err,"appHash doesn't match to the merkle root of multiStoreCommitInfo")
+}
+
+func TestVerifyRangeProof(t *testing.T) {
+	tree := iavl.NewTree(nil, 0)
+
+	rand := cmn.NewRand()
+	rand.Seed(0) // for determinism
+	for _, ikey := range []byte{0x11, 0x32, 0x50, 0x72, 0x99} {
+		key := []byte{ikey}
+		tree.Set(key, []byte(rand.Str(8)))
+	}
+
+	root := tree.Hash()
+
+	key := []byte{0x32}
+	val, proof, err := tree.GetWithProof(key)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, val)
+	assert.NotEmpty(t, proof)
+	err = VerifyRangeProof(key, val, root, proof)
 	assert.Nil(t, err)
 
-	appHash,_ = hex.DecodeString("88c14d4f0f4ddbd2bf03f51fc81aa385f51f0fd3")
-
-	err =  VerifyProofForMultiStore(storeName, substoreRootHash, multiStoreCommitInfo, appHash)
-	assert.Error(t,err,"appHash doesn't match to the merkle root of multiStoreCommitInfo")
+	key = []byte{0x40}
+	val, proof, err = tree.GetWithProof(key)
+	assert.Nil(t, err)
+	assert.Empty(t, val)
+	assert.NotEmpty(t, proof)
+	err = VerifyRangeProof(key, val, root, proof)
+	assert.Nil(t, err)
 }

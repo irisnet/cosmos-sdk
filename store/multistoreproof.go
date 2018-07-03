@@ -4,22 +4,21 @@ import (
 	"github.com/tendermint/tmlibs/merkle"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/iavl"
-	"github.com/tendermint/tmlibs/merkle/tmhash"
-	"encoding/binary"
-	"io"
 	"bytes"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/pkg/errors"
 )
 
-func VerifyProofForMultiStore(storeName string, substoreRootHash []byte, multiStoreCommitInfo []iavl.SubstoreCommitID, appHash []byte) (error){
-	found :=  false
+func VerifyMultiStoreCommitInfo(storeName string, multiStoreCommitInfo []iavl.SubstoreCommitID, appHash []byte) ([]byte, error) {
+	var substoreCommitHash []byte
 	var kvPairs cmn.KVPairs
 	for _,multiStoreCommitID := range multiStoreCommitInfo {
-		if multiStoreCommitID.Name == storeName && bytes.Equal(substoreRootHash,multiStoreCommitID.CommitHash){
-			found = true;
-		}
-		kHash := merkle.SimpleHashFromBytes([]byte(multiStoreCommitID.Name))
 
+		if multiStoreCommitID.Name == storeName {
+			substoreCommitHash = multiStoreCommitID.CommitHash;
+		}
+
+		kHash := []byte(multiStoreCommitID.Name)
 		storeInfo := storeInfo{
 			Core:storeCore{
 				CommitID:sdk.CommitID{
@@ -34,25 +33,48 @@ func VerifyProofForMultiStore(storeName string, substoreRootHash []byte, multiSt
 			Value: storeInfo.Hash(),
 		})
 	}
-	if !found {
-		return cmn.NewError("failed to get substore root commit by store name")
+	if len(substoreCommitHash) == 0 {
+		return nil, cmn.NewError("failed to get substore root commit hash by store name")
 	}
 	if kvPairs == nil {
-		return cmn.NewError("failed extract information from multiStoreCommitInfo")
+		return nil, cmn.NewError("failed to extract information from multiStoreCommitInfo")
 	}
 	//sort the kvPair list
 	kvPairs.Sort()
 
-
 	//Rebuild simple merkle hash tree
 	var hashList [][]byte
 	for _, kvPair := range kvPairs {
-		hashResult := kvPairHash(kvPair.Key,kvPair.Value)
+		hashResult := merkle.SimpleHashFromTwoHashes(kvPair.Key,kvPair.Value)
 		hashList=append(hashList,hashResult)
 	}
 
 	if !bytes.Equal(appHash,simpleHashFromHashes(hashList)){
-		return cmn.NewError("appHash doesn't match to the merkle root of multiStoreCommitInfo")
+		return nil, cmn.NewError("The merkle root of multiStoreCommitInfo doesn't equal to appHash")
+	}
+	return substoreCommitHash, nil
+}
+
+func VerifyRangeProof(key, value []byte, substoreCommitHash []byte, rangeProof *iavl.RangeProof) (error){
+
+	// Validate the proof to ensure data integrity.
+	err := rangeProof.Verify(substoreCommitHash)
+	if err != nil {
+		return  errors.Wrap(err, "proof root hash doesn't equal to substore commit root hash")
+	}
+
+	if len(value) != 0 {
+		// Validate existence proof
+		err = rangeProof.VerifyItem(key, value)
+		if err != nil {
+			return  errors.Wrap(err, "failed in existence verification")
+		}
+	} else {
+		// Validate absence proof
+		err = rangeProof.VerifyAbsence(key)
+		if err != nil {
+			return  errors.Wrap(err, "failed in absence verification")
+		}
 	}
 
 	return nil
@@ -68,36 +90,6 @@ func simpleHashFromHashes(hashes [][]byte) []byte {
 	default:
 		left := simpleHashFromHashes(hashes[:(len(hashes)+1)/2])
 		right := simpleHashFromHashes(hashes[(len(hashes)+1)/2:])
-		return kvPairHash(left,right)
+		return merkle.SimpleHashFromTwoHashes(left,right)
 	}
-}
-
-func kvPairHash(part1, part2 []byte) []byte {
-	hasher := tmhash.New()
-
-	err := encodeByteSlice(hasher, part1)
-	if err != nil {
-		panic(err)
-	}
-	err = encodeByteSlice(hasher, part2)
-	if err != nil {
-		panic(err)
-	}
-	return hasher.Sum(nil)
-}
-
-func encodeByteSlice(w io.Writer, bz []byte) (err error) {
-	err = encodeUvarint(w, uint64(len(bz)))
-	if err != nil {
-		return
-	}
-	_, err = w.Write(bz)
-	return
-}
-
-func encodeUvarint(w io.Writer, i uint64) (err error) {
-	var buf [10]byte
-	n := binary.PutUvarint(buf[:], i)
-	_, err = w.Write(buf[0:n])
-	return
 }
