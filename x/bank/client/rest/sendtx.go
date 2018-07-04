@@ -34,17 +34,18 @@ type sendBody struct {
 	Gas              int64     `json:"gas"`
 }
 
-type transferParameters struct {
+type transferBody struct {
 	FromAddress		string	`json:"from_address"`
 	ToAddress		string	`json:"to_address"`
 	Amount			int64 	`json:"amount"`
 	Denomination 	string 	`json:"denomination"`
-	Accnum			int64	`json:"accnum"`
+	AccountNumber	int64	`json:"account_number"`
 	Sequence		int64	`json:"sequence"`
+	EnsureAccAndSeq bool 	`json:"ensure_account_sequence"`
 	Gas				int64	`json:"gas"`
 }
 
-type signedTransactionData struct {
+type signedBody struct {
 	TransactionData	[]byte		`json:"transaction_data"`
 	Signatures		[][]byte	`json:"signature_list"`
 	PublicKeys		[][]byte	`json:"public_key_list"`
@@ -143,32 +144,32 @@ func SendRequestHandlerFn(cdc *wire.Codec, kb keys.Keybase, ctx context.CoreCont
 func CreateTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var transferParam transferParameters
+		var transferBody transferBody
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		err = msgCdc.UnmarshalJSON(body, &transferParam)
+		err = msgCdc.UnmarshalJSON(body, &transferBody)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
 			return
 		}
 
-		amount := sdk.NewCoin(transferParam.Denomination,transferParam.Amount)
+		amount := sdk.NewCoin(transferBody.Denomination,transferBody.Amount)
 
 		var amounts sdk.Coins
 		amounts = append(amounts,amount)
 
-		fromAddress,err := sdk.GetAccAddressBech32(transferParam.FromAddress)
+		fromAddress,err := sdk.GetAccAddressBech32(transferBody.FromAddress)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		toAddress,err := sdk.GetAccAddressBech32(transferParam.ToAddress)
+		toAddress,err := sdk.GetAccAddressBech32(transferBody.ToAddress)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
@@ -182,10 +183,26 @@ func CreateTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.Ha
 			return
 		}
 
-		//TODO if users don't provide Accnum or Sequence, we plan to access /balance/{account} to get them
-		//TODO if users don't provide Gas, default value will be used.
+		accountNumber := transferBody.AccountNumber
+		sequence := transferBody.Sequence
+		gas := transferBody.Gas
 
-		txByteForSign, err := ctx.BuildTransaction(transferParam.Accnum, transferParam.Sequence, transferParam.Gas, msg, cdc)
+		if transferBody.EnsureAccAndSeq {
+			accountNumber,err = ctx.GetAccountNumber(fromAddress)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+				return
+			}
+			sequence,err = ctx.NextSequence(fromAddress)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+				return
+			}
+		}
+
+		txByteForSign, err := ctx.BuildTransaction(accountNumber, sequence, gas, msg, cdc)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
@@ -199,7 +216,7 @@ func CreateTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.Ha
 func BroadcastSignedTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var signedTransaction signedTransactionData
+		var signedTransaction signedBody
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
