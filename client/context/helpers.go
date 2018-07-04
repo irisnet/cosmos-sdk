@@ -406,6 +406,9 @@ func (ctx CoreContext) GetPassphraseFromStdin(name string) (pass string, err err
 
 // GetNode prepares a simple rpc.Client
 func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
+	if ctx.ClientMgr != nil {
+		return ctx.ClientMgr.getClient(), nil
+	}
 	if ctx.Client == nil {
 		return nil, errors.New("must define node URI")
 	}

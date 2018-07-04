@@ -25,6 +25,8 @@ import (
 //	slashing "github.com/cosmos/cosmos-sdk/x/slashing/client/rest"
 	stake "github.com/cosmos/cosmos-sdk/x/stake/client/rest"
 	tendermintLiteProxy "github.com/tendermint/tendermint/lite/proxy"
+	"strings"
+	"github.com/pkg/errors"
 )
 
 // ServeCommand will generate a long-running rest server
@@ -61,7 +63,7 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().StringP(flagListenAddr, "a", "tcp://localhost:1317", "Address for server to listen on")
 	cmd.Flags().String(flagCORS, "", "Set to domains that can make CORS requests (* for all)")
 	cmd.Flags().StringP(client.FlagChainID, "c", "", "ID of chain we connect to")
-	cmd.Flags().StringP(client.FlagNode, "n", "tcp://localhost:26657", "Node to connect to")
+	cmd.Flags().StringP(client.FlagNodeList, "n", "tcp://localhost:26657", "Node list to connect to, example: \"tcp://10.10.10.10:26657,tcp://20.20.20.20:26657\"")
 	cmd.Flags().IntP(flagMaxOpenConnections, "m", 1000, "Maximum open connections")
 	cmd.Flags().StringP(client.FlagTrustStore, "t", "$HOME/.cosmos_lcd", "Directory for trust store")
 	return cmd
@@ -76,14 +78,22 @@ func createHandler(cdc *wire.Codec) http.Handler {
 	}
 
 	rootDir := viper.GetString(client.FlagTrustStore)
-	nodeAddr := viper.GetString(client.FlagNode)
+	nodeAddrs := viper.GetString(client.FlagNodeList)
 	chainID := viper.GetString(client.FlagChainID)
 
-	cert,err := tendermintLiteProxy.GetCertifier(chainID, rootDir, nodeAddr)
+	nodeAddrArray := strings.Split(nodeAddrs,",")
+	if len(nodeAddrArray) < 1 {
+		panic(errors.New("missing node uri"))
+	}
+	cert,err := tendermintLiteProxy.GetCertifier(chainID, rootDir, nodeAddrArray[0])
 	if err != nil {
 		panic(err)
 	}
-	ctx := context.NewCoreContextFromViper().WithCert(cert)
+	clientMgr,err := context.NewClientManager(nodeAddrs)
+	if err != nil {
+		panic(err)
+	}
+	ctx := context.NewCoreContextFromViper().WithCert(cert).WithClientMgr(clientMgr)
 
 	// TODO make more functional? aka r = keys.RegisterRoutes(r)
 	r.HandleFunc("/version", CLIVersionRequestHandler).Methods("GET")

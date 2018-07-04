@@ -23,6 +23,7 @@ type CoreContext struct {
 	AccountStore    string
 	UseLedger       bool
 	Cert 			tendermintLite.Certifier
+	ClientMgr		*ClientManager
 }
 
 // WithChainID - return a copy of the context with an updated chainID
@@ -107,5 +108,11 @@ func (c CoreContext) WithUseLedger(useLedger bool) CoreContext {
 // WithCert - return a copy of the context with an updated Cert
 func (c CoreContext) WithCert(cert tendermintLite.Certifier) CoreContext {
 	c.Cert = cert
+	return c
+}
+
+// WithCert - return a copy of the context with an updated Cert
+func (c CoreContext) WithClientMgr(clientMgr *ClientManager) CoreContext {
+	c.ClientMgr = clientMgr
 	return c
 }
