@@ -4,6 +4,7 @@ import (
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	tendermintLite"github.com/tendermint/tendermint/lite"
 )
 
 // typical context created in sdk modules for transactions/queries
@@ -21,6 +22,8 @@ type CoreContext struct {
 	Decoder         auth.AccountDecoder
 	AccountStore    string
 	UseLedger       bool
+	Cert 			tendermintLite.Certifier
+	ClientMgr		*ClientManager
 }
 
 // WithChainID - return a copy of the context with an updated chainID
@@ -99,5 +102,17 @@ func (c CoreContext) WithAccountStore(accountStore string) CoreContext {
 // WithUseLedger - return a copy of the context with an updated UseLedger
 func (c CoreContext) WithUseLedger(useLedger bool) CoreContext {
 	c.UseLedger = useLedger
+	return c
+}
+
+// WithCert - return a copy of the context with an updated Cert
+func (c CoreContext) WithCert(cert tendermintLite.Certifier) CoreContext {
+	c.Cert = cert
+	return c
+}
+
+// WithCert - return a copy of the context with an updated Cert
+func (c CoreContext) WithClientMgr(clientMgr *ClientManager) CoreContext {
+	c.ClientMgr = clientMgr
 	return c
 }

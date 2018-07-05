@@ -12,11 +12,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/bank/client"
+	"encoding/json"
 )
 
 // RegisterRoutes - Central function to define routes that get registered by the main application
 func RegisterRoutes(ctx context.CoreContext, r *mux.Router, cdc *wire.Codec, kb keys.Keybase) {
-	r.HandleFunc("/accounts/{address}/send", SendRequestHandlerFn(cdc, kb, ctx)).Methods("POST")
+//	r.HandleFunc("/accounts/{address}/send", SendRequestHandlerFn(cdc, kb, ctx)).Methods("POST")
+	r.HandleFunc("/create_transfer", CreateTransferTransaction(cdc, ctx)).Methods("POST")
+	r.HandleFunc("/signed_transfer", BroadcastSignedTransferTransaction(cdc, ctx)).Methods("POST")
 }
 
 type sendBody struct {
@@ -29,6 +32,23 @@ type sendBody struct {
 	AccountNumber    int64     `json:"account_number"`
 	Sequence         int64     `json:"sequence"`
 	Gas              int64     `json:"gas"`
+}
+
+type transferBody struct {
+	FromAddress		string	`json:"from_address"`
+	ToAddress		string	`json:"to_address"`
+	Amount			int64 	`json:"amount"`
+	Denomination 	string 	`json:"denomination"`
+	AccountNumber	int64	`json:"account_number"`
+	Sequence		int64	`json:"sequence"`
+	EnsureAccAndSeq bool 	`json:"ensure_account_sequence"`
+	Gas				int64	`json:"gas"`
+}
+
+type signedBody struct {
+	TransactionData	[]byte		`json:"transaction_data"`
+	Signatures		[][]byte	`json:"signature_list"`
+	PublicKeys		[][]byte	`json:"public_key_list"`
 }
 
 var msgCdc = wire.NewCodec()
@@ -111,6 +131,116 @@ func SendRequestHandlerFn(cdc *wire.Codec, kb keys.Keybase, ctx context.CoreCont
 		}
 
 		output, err := wire.MarshalJSONIndent(cdc, res)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		w.Write(output)
+	}
+}
+
+func CreateTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		var transferBody transferBody
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		err = msgCdc.UnmarshalJSON(body, &transferBody)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		amount := sdk.NewCoin(transferBody.Denomination,transferBody.Amount)
+
+		var amounts sdk.Coins
+		amounts = append(amounts,amount)
+
+		fromAddress,err := sdk.GetAccAddressBech32(transferBody.FromAddress)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		toAddress,err := sdk.GetAccAddressBech32(transferBody.ToAddress)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		// build message
+		msg := client.BuildMsg(fromAddress, toAddress, amounts)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		accountNumber := transferBody.AccountNumber
+		sequence := transferBody.Sequence
+		gas := transferBody.Gas
+
+		if transferBody.EnsureAccAndSeq {
+			accountNumber,err = ctx.GetAccountNumber(fromAddress)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+				return
+			}
+			sequence,err = ctx.NextSequence(fromAddress)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+				return
+			}
+		}
+
+		txByteForSign, err := ctx.BuildTransaction(accountNumber, sequence, gas, msg, cdc)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		w.Write(txByteForSign)
+	}
+}
+
+func BroadcastSignedTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		var signedTransaction signedBody
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		err = msgCdc.UnmarshalJSON(body, &signedTransaction)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		txData := signedTransaction.TransactionData
+		signatures := signedTransaction.Signatures
+		publicKeys := signedTransaction.PublicKeys
+		res, err := ctx.BroadcastTransaction(txData,signatures,publicKeys,cdc)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		output, err := json.MarshalIndent(res, "", "  ")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))

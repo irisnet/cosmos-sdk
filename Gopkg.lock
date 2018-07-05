@@ -334,8 +334,8 @@
 [[projects]]
   name = "github.com/tendermint/iavl"
   packages = ["."]
-  revision = "9e5dc3e61f70b285bb25414452d47aca1ff34c1d"
-  version = "v0.8.2-rc0"
+  revision = "3e974a970743cb7d2fb9afc578749d78f14ff10a"
+  source = "github.com/HaoyangLiu/iavl"
 
 [[projects]]
   name = "github.com/tendermint/tendermint"
@@ -396,6 +396,17 @@
   ]
   revision = "5923b6288fe8ce9581936ee97c2bf9cf9c02c2f4"
   version = "v0.22.0-rc2"
+
+[[projects]]
+  name = "github.com/tendermint/tmlibs"
+  packages = [
+    "common",
+    "log",
+    "merkle",
+    "merkle/tmhash"
+  ]
+  revision = "49596e0a1f48866603813df843c9409fc19805c6"
+  version = "v0.9.0"
 
 [[projects]]
   name = "github.com/zondax/ledger-goclient"
@@ -506,6 +517,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "13ad2a57b6942729e2d08b5c37810d62108aa64a335a4822fcff1ad992c0662b"
+  inputs-digest = "7b27d6a89c20202f6bc93e367d25a1d8eb64cced0db951504df49f96d40850ee"
   solver-name = "gps-cdcl"
   solver-version = 1
