@@ -10,20 +10,21 @@ import (
 type ClientManager struct {
 	clients []rpcclient.Client
 	currentIndex int
-	mutex sync.Mutex
+	mutex sync.RWMutex
 }
 
 func NewClientManager(nodeURIs string) (*ClientManager,error) {
 	if nodeURIs != "" {
-		mgr := &ClientManager{
-			mutex: sync.Mutex{},
-		}
 		nodeUrlArray := strings.Split(nodeURIs, ",")
+		var clients []rpcclient.Client
 		for _, url := range nodeUrlArray {
 			client := rpcclient.NewHTTP(url, "/websocket")
-			mgr.clients = append(mgr.clients, client)
+			clients = append(clients, client)
 		}
-		mgr.currentIndex = 0
+		mgr := &ClientManager{
+			currentIndex: 0,
+			clients: clients,
+		}
 		return mgr, nil
 	} else {
 		return nil, errors.New("missing node URIs")

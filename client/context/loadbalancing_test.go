@@ -10,7 +10,7 @@ func TestLoadBalancing(t *testing.T) {
 	clientMgr,err := NewClientManager(nodeURIs)
 	assert.Empty(t,err)
 	endpoint := clientMgr.getClient()
-	clientMgr.getClient()
+	assert.NotEqual(t,endpoint,clientMgr.getClient())
 	clientMgr.getClient()
 	assert.Equal(t,endpoint,clientMgr.getClient())
 }
