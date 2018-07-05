@@ -77,6 +77,10 @@
   name = "github.com/zondax/ledger-goclient"
   revision = "065cbf938a16f20335c40cfe180f9cd4955c6a5a"
 
+[[constraint]]
+  name = "github.com/MrXJC/GoLoadBalance"
+  version = "=0.2.0"
+
 # this got updated and broke, so locked to an old working commit ...
 [[override]]
   name = "google.golang.org/genproto"
