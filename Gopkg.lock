@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/MrXJC/GoLoadBalance"
+  packages = ["."]
+  revision = "3e2986ff47b2a39ec80024c5a65903ff34573500"
+  version = "v0.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/bartekn/go-bip39"
   packages = ["."]
@@ -517,6 +523,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7b27d6a89c20202f6bc93e367d25a1d8eb64cced0db951504df49f96d40850ee"
+  inputs-digest = "7f8a39f5cb3f7a6d26c6e974ad69d6b15f7b6c657fd1c9c7effdd481bd93e439"
   solver-name = "gps-cdcl"
   solver-version = 1

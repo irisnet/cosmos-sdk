@@ -49,7 +49,6 @@ func (mgr *ClientManager) getClient() rpcclient.Client {
 type ClientManagerLB struct {
 	clients map[string]rpcclient.Client
 	mgr *balance.BalanceMgr
-	current string
 	mutex sync.Mutex
 }
 
@@ -86,7 +85,6 @@ func NewClientManagerLB(nodeURIs string) (*ClientManagerLB,error) {
 		clientMgr.mgr.RegisterBalancer("roundrobin",&balance.RoundRobinBalance{})
 		clientMgr.mgr.RegisterBalancer("roundrobinweight",&balance.RoundRobinWeightBalance{})
 
-		clientMgr.current,_,_ = clientMgr.mgr.GetAddrString("roundrobin")
 		return clientMgr, nil
 
 	} else {
@@ -133,7 +131,6 @@ func NewClientManagerLBwithWeight(nodeURIs string) (*ClientManagerLB,error) {
 		clientMgr.mgr.RegisterBalancer("roundrobin",&balance.RoundRobinBalance{})
 		clientMgr.mgr.RegisterBalancer("roundrobinweight",&balance.RoundRobinWeightBalance{})
 
-		clientMgr.current,_,_ = clientMgr.mgr.GetAddrString("roundrobin")
 		return clientMgr, nil
 
 	} else {
@@ -145,8 +142,8 @@ func (clientMgr *ClientManagerLB) getClient() rpcclient.Client {
 	clientMgr.mutex.Lock()
 	defer clientMgr.mutex.Unlock()
 
-	clientMgr.current,_,_ = clientMgr.mgr.GetAddrString("roundrobin")
-	client := clientMgr.clients[clientMgr.current]
+	current,_,_ := clientMgr.mgr.GetAddrString("roundrobin")
+	client := clientMgr.clients[current]
 
 	return client
 }
@@ -155,8 +152,8 @@ func (clientMgr *ClientManagerLB) getClientByName(name string) rpcclient.Client 
 	clientMgr.mutex.Lock()
 	defer clientMgr.mutex.Unlock()
 
-	clientMgr.current,_,_ = clientMgr.mgr.GetAddrString(name)
-	client := clientMgr.clients[clientMgr.current]
+	current,_,_ := clientMgr.mgr.GetAddrString(name)
+	client := clientMgr.clients[current]
 
 	return client
 }
@@ -165,8 +162,8 @@ func (clientMgr *ClientManagerLB) getClientByNameDebug(name string) (rpcclient.C
 	clientMgr.mutex.Lock()
 	defer clientMgr.mutex.Unlock()
 
-	clientMgr.current,_,_ = clientMgr.mgr.GetAddrString(name)
-	client := clientMgr.clients[clientMgr.current]
+	current,_,_ := clientMgr.mgr.GetAddrString(name)
+	client := clientMgr.clients[current]
 
-	return client,clientMgr.current
+	return client,current
 }
