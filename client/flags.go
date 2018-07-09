@@ -16,6 +16,8 @@ const (
 	FlagSequence      = "sequence"
 	FlagMemo          = "memo"
 	FlagFee           = "fee"
+	FlagTrustStore    = "trust-store"
+	FlagNodeList      = "node-list"
 	FlagAsync         = "async"
 	FlagJson          = "json"
 	FlagPrintResponse = "print-response"

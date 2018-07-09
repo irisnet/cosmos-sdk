@@ -16,6 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 
 	"github.com/tendermint/tendermint/libs/cli"
+	"github.com/gin-gonic/gin"
+	"github.com/cosmos/cosmos-sdk/client/httputil"
 )
 
 const (
@@ -229,6 +231,72 @@ func AddNewKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(output)
 }
 
+// @Summary Create a account
+// @Description Create a new key and persistent it to the key store
+// @Tags key
+// @Accept  json
+// @Produce  json
+// @Param  nameAndPwd body keys.NewKeyBody true "name and password for a new key"
+// @Success 200 {object} keys.KeyOutput
+// @Failure 400 {object} httputil.HTTPError
+// @Failure 404 {object} httputil.HTTPError
+// @Failure 500 {object} httputil.HTTPError
+// @Router /keys [post]
+func AddNewKeyRequest(gtx *gin.Context)  {
+	var kb keys.Keybase
+	var m NewKeyBody
+
+	kb, err := GetKeyBase()
+	if err != nil {
+		httputil.NewError(gtx, http.StatusInternalServerError, err)
+		return
+	}
+
+	if err := gtx.BindJSON(&m); err != nil {
+		httputil.NewError(gtx, http.StatusBadRequest, err)
+		return
+	}
+	if err != nil {
+		httputil.NewError(gtx, http.StatusBadRequest, err)
+		return
+	}
+	if m.Name == "" {
+		httputil.NewError(gtx, http.StatusBadRequest, err)
+		return
+	}
+	if m.Password == "" {
+		httputil.NewError(gtx, http.StatusBadRequest, err)
+		return
+	}
+
+	// check if already exists
+	infos, err := kb.List()
+	for _, i := range infos {
+		if i.GetName() == m.Name {
+			httputil.NewError(gtx, http.StatusConflict, err)
+			gtx.Writer.Write([]byte(fmt.Sprintf("Account with name %s already exists.", m.Name)))
+			return
+		}
+	}
+
+	// create account
+	info, mnemonic, err := kb.CreateMnemonic(m.Name, keys.English, m.Password, keys.Secp256k1)
+	if err != nil {
+		httputil.NewError(gtx, http.StatusInternalServerError, err)
+		return
+	}
+
+	keyOutput, err := Bech32KeyOutput(info)
+	if err != nil {
+		httputil.NewError(gtx, http.StatusInternalServerError, err)
+		return
+	}
+
+	keyOutput.Seed = mnemonic
+
+	gtx.JSON(http.StatusOK, keyOutput)
+}
+
 // function to just a new seed to display in the UI before actually persisting it in the keybase
 func getSeed(algo keys.SigningAlgo) string {
 	kb := client.MockKeyBase()
@@ -250,4 +318,23 @@ func SeedRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	seed := getSeed(algo)
 	w.Write([]byte(seed))
+}
+
+// @Summary Get a seed
+// @Description Get a seed for creating key
+// @Tags key
+// @Accept  json
+// @Produce  json
+// @Success 200 {string} string
+// @Failure 400 {object} httputil.HTTPError
+// @Failure 404 {object} httputil.HTTPError
+// @Failure 500 {object} httputil.HTTPError
+// @Router /keys/seed [get]
+func SeedRequest(gtx *gin.Context) {
+
+	algo := keys.SigningAlgo("secp256k1")
+
+	seed := getSeed(algo)
+
+	gtx.Writer.Write([]byte(seed))
 }

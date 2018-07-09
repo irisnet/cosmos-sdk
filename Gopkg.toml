@@ -58,7 +58,8 @@
 
 [[constraint]]
   name = "github.com/tendermint/iavl"
-  version = "=v0.8.2-rc0"
+  source = "github.com/HaoyangLiu/iavl"
+  revision = "3e974a970743cb7d2fb9afc578749d78f14ff10a"
 
 [[constraint]]
   name = "github.com/tendermint/tendermint"
@@ -71,6 +72,10 @@
 [[constraint]]
   name = "github.com/zondax/ledger-goclient"
   revision = "065cbf938a16f20335c40cfe180f9cd4955c6a5a"
+
+[[constraint]]
+  name = "github.com/swaggo/gin-swagger"
+  revision = "1510a6d46f01820f88b3a62d13353ccc8c6faa8e"
 
 # this got updated and broke, so locked to an old working commit ...
 [[override]]
