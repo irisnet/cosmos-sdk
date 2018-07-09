@@ -131,38 +131,41 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 			nodeAddrs := viper.GetString(client.FlagNodeList)
 			chainID := viper.GetString(client.FlagChainID)
 			listenAddr := viper.GetString(flagListenAddr)
-
+			//Get key store
 			kb, err := keys.GetKeyBase()
 			if err != nil {
 				panic(err)
 			}
-
+			//Split the node list string into multi full node URIs
 			nodeAddrArray := strings.Split(nodeAddrs,",")
 			if len(nodeAddrArray) < 1 {
 				panic(errors.New("missing node URIs"))
 			}
+			//Tendermint certifier can only connect to one full node. Here we assign the first full node to it
 			cert,err := tendermintLiteProxy.GetCertifier(chainID, rootDir, nodeAddrArray[0])
 			if err != nil {
 				panic(err)
 			}
+			//Create load balancing engine
 			clientMgr,err := context.NewClientManager(nodeAddrs)
 			if err != nil {
 				panic(err)
 			}
-
+			//Assign tendermint certifier and load balancing engine to ctx
 			ctx := context.NewCoreContextFromViper().WithCert(cert).WithClientMgr(clientMgr)
 
 			cdc := app.MakeCodec()
 
+			//Create rest server
 			server := gin.New()
 			createSwaggerHandler(server, ctx, cdc, kb)
-			server.Run(listenAddr)
+			go server.Run(listenAddr)
 
 			logger.Info("REST server started")
 
 			// Wait forever and cleanup
 			cmn.TrapSignal(func() {
-				logger.Error("error closing listener", "err", err)
+				logger.Info("Closing rest server...")
 			})
 
 			return nil
