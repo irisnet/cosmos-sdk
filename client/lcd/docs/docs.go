@@ -276,7 +276,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/keys.KeyOutput"
+                            "$ref": "#/definitions/keys.KeyOutputs"
                         }
                     },
                     "400": {
@@ -331,7 +331,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/keys.NewKeyResponse"
+                            "$ref": "#/definitions/keys.KeyOutput"
                         }
                     },
                     "400": {
@@ -939,6 +939,13 @@ var doc = `{
                 }
             }
         },
+        "keys.KeyOutputs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "$ref": "#/definitions/keys.KeyOutput"
+            }
+        },
         "keys.NewKeyBody": {
             "type": "object",
             "properties": {
@@ -946,17 +953,6 @@ var doc = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "keys.NewKeyResponse": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "mnemonic": {
                     "type": "string"
                 }
             }

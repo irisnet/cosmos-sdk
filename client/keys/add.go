@@ -237,7 +237,7 @@ func AddNewKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
 // @Accept  json
 // @Produce  json
 // @Param  nameAndPwd body keys.NewKeyBody true "name and password for a new key"
-// @Success 200 {object} keys.NewKeyResponse
+// @Success 200 {object} keys.KeyOutput
 // @Failure 400 {object} httputil.HTTPError
 // @Failure 404 {object} httputil.HTTPError
 // @Failure 500 {object} httputil.HTTPError
@@ -252,7 +252,7 @@ func AddNewKeyRequest(gtx *gin.Context)  {
 		return
 	}
 
-	if err := gtx.ShouldBindJSON(&m); err != nil {
+	if err := gtx.BindJSON(&m); err != nil {
 		httputil.NewError(gtx, http.StatusBadRequest, err)
 		return
 	}
@@ -285,12 +285,16 @@ func AddNewKeyRequest(gtx *gin.Context)  {
 		httputil.NewError(gtx, http.StatusInternalServerError, err)
 		return
 	}
-	bz := NewKeyResponse{
-		Address:  info.GetPubKey().Address().String(),
-		Mnemonic: mnemonic,
+
+	keyOutput, err := Bech32KeyOutput(info)
+	if err != nil {
+		httputil.NewError(gtx, http.StatusInternalServerError, err)
+		return
 	}
 
-	gtx.JSON(http.StatusOK, bz)
+	keyOutput.Seed = mnemonic
+
+	gtx.JSON(http.StatusOK, keyOutput)
 }
 
 // function to just a new seed to display in the UI before actually persisting it in the keybase

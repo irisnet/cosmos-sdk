@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	"strings"
 	"github.com/tendermint/tendermint/crypto"
+	"encoding/json"
 )
 
 // Broadcast the transaction bytes to Tendermint
@@ -168,7 +169,7 @@ func (ctx CoreContext) GetFromAddress() (from sdk.Address, err error) {
 }
 
 // build the transaction from the msg
-func (ctx CoreContext) BuildTransaction(accnum, sequence, gas int64, msg sdk.Msg, cdc *wire.Codec) ([]byte, error) {
+func (ctx CoreContext) BuildTransaction(accnum, sequence, gas int64, msg sdk.Msg) ([]byte, error) {
 	chainID := ctx.ChainID
 	if chainID == "" {
 		return nil, errors.Errorf("chain ID required but not specified")
@@ -188,22 +189,23 @@ func (ctx CoreContext) BuildTransaction(accnum, sequence, gas int64, msg sdk.Msg
 }
 
 // build the transaction from the msg
-func (ctx CoreContext) BroadcastTransaction(txData []byte, signatures [][]byte, publicKeys [][]byte, cdc *wire.Codec) (*ctypes.ResultBroadcastTxCommit, error) {
+func (ctx CoreContext) BroadcastTransaction(txData []byte, signatures [][]byte, publicKeys [][]byte) (*ctypes.ResultBroadcastTxCommit, error) {
 	var stdSignDoc auth.StdSignDoc//, transactionSigs []auth.StdSignature
-	err := cdc.UnmarshalBinary(txData,&stdSignDoc)
-	if err != nil {
+	if err := json.Unmarshal(txData,&stdSignDoc); err != nil {
 		return nil, err
 	}
 
 	var msgs []sdk.Msg
-	err = cdc.UnmarshalBinary(stdSignDoc.MsgsBytes,&msgs)
-	if err != nil {
-		return nil, err
+	for _, msgByte := range stdSignDoc.Msgs {
+		var stdMsg sdk.Msg
+		if err := json.Unmarshal(msgByte,stdMsg); err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, stdMsg)
 	}
 
 	var fee auth.StdFee
-	err = cdc.UnmarshalBinary(stdSignDoc.FeeBytes,&fee)
-	if err != nil {
+	if err := json.Unmarshal(stdSignDoc.Fee,&fee); err != nil {
 		return nil, err
 	}
 
@@ -234,7 +236,7 @@ func (ctx CoreContext) BroadcastTransaction(txData []byte, signatures [][]byte, 
 	// marshal bytes
 	tx := auth.NewStdTx(msgs, fee, stdSignatures, stdSignDoc.Memo)
 
-	txBytes,err := cdc.MarshalBinary(tx)
+	txBytes,err := json.Marshal(tx)
 	if err != nil {
 		return nil, err
 	}

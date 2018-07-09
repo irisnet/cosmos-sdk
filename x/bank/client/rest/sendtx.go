@@ -209,7 +209,7 @@ func CreateTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.Ha
 			}
 		}
 
-		txByteForSign, err := ctx.BuildTransaction(accountNumber, sequence, gas, msg, cdc)
+		txByteForSign, err := ctx.BuildTransaction(accountNumber, sequence, gas, msg)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
@@ -268,7 +268,7 @@ func BroadcastSignedTransferTransaction(cdc *wire.Codec, ctx context.CoreContext
 			publicKeys = append(publicKeys, base64DecodedData)
 		}
 
-		res, err := ctx.BroadcastTransaction(txData,signatures,publicKeys,cdc)
+		res, err := ctx.BroadcastTransaction(txData,signatures,publicKeys)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
@@ -306,7 +306,7 @@ func RegisterLCDRoutes(routerGroup *gin.RouterGroup, ctx context.CoreContext, cd
 func CreateTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 		var transferBody transferBody
-		if err := gtx.ShouldBindJSON(&transferBody); err != nil {
+		if err := gtx.BindJSON(&transferBody); err != nil {
 			httputil.NewError(gtx, http.StatusBadRequest, err)
 			return
 		}
@@ -353,7 +353,7 @@ func CreateTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.H
 			}
 		}
 
-		txByteForSign, err := ctx.BuildTransaction(accountNumber, sequence, gas, msg, cdc)
+		txByteForSign, err := ctx.BuildTransaction(accountNumber, sequence, gas, msg)
 		if err != nil {
 			httputil.NewError(gtx, http.StatusInternalServerError, err)
 			return
@@ -381,7 +381,7 @@ func CreateTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.H
 func BroadcastSignedTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 		var signedTransaction signedBody
-		if err := gtx.ShouldBindJSON(&signedTransaction); err != nil {
+		if err := gtx.BindJSON(&signedTransaction); err != nil {
 			httputil.NewError(gtx, http.StatusBadRequest, err)
 			return
 		}
@@ -412,7 +412,7 @@ func BroadcastSignedTransferTransactionFn(cdc *wire.Codec, ctx context.CoreConte
 			publicKeys = append(publicKeys, base64DecodedData)
 		}
 
-		res, err := ctx.BroadcastTransaction(txData, signatures, publicKeys, cdc)
+		res, err := ctx.BroadcastTransaction(txData, signatures, publicKeys)
 		if err != nil {
 			httputil.NewError(gtx, http.StatusInternalServerError, err)
 			return
@@ -445,7 +445,7 @@ func SendAssetWithKeystoreHandlerFn(cdc *wire.Codec, ctx context.CoreContext, kb
 		}
 
 		var m sendBody
-		if err := gtx.ShouldBindJSON(&m); err != nil {
+		if err := gtx.BindJSON(&m); err != nil {
 			httputil.NewError(gtx, http.StatusBadRequest, err)
 			return
 		}

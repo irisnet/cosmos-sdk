@@ -110,7 +110,7 @@ func DeleteKeyRequest(gtx *gin.Context) {
 	var kb keys.Keybase
 	var m DeleteKeyBody
 
-	if err := gtx.ShouldBindJSON(&m); err != nil {
+	if err := gtx.BindJSON(&m); err != nil {
 		httputil.NewError(gtx, http.StatusBadRequest, err)
 		return
 	}
