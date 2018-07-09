@@ -15,14 +15,14 @@ import (
 	client "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	keys "github.com/cosmos/cosmos-sdk/client/keys"
-//	rpc "github.com/cosmos/cosmos-sdk/client/rpc"
-//	tx "github.com/cosmos/cosmos-sdk/client/tx"
+	rpc "github.com/cosmos/cosmos-sdk/client/rpc"
+	tx "github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/wire"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
-//	gov "github.com/cosmos/cosmos-sdk/x/gov/client/rest"
-//	ibc "github.com/cosmos/cosmos-sdk/x/ibc/client/rest"
-//	slashing "github.com/cosmos/cosmos-sdk/x/slashing/client/rest"
+	gov "github.com/cosmos/cosmos-sdk/x/gov/client/rest"
+	ibc "github.com/cosmos/cosmos-sdk/x/ibc/client/rest"
+	slashing "github.com/cosmos/cosmos-sdk/x/slashing/client/rest"
 	stake "github.com/cosmos/cosmos-sdk/x/stake/client/rest"
 	tendermintLiteProxy "github.com/tendermint/tendermint/lite/proxy"
 	"strings"
@@ -99,13 +99,13 @@ func createHandler(cdc *wire.Codec) http.Handler {
 	r.HandleFunc("/version", CLIVersionRequestHandler).Methods("GET")
 	r.HandleFunc("/node_version", NodeVersionRequestHandler(ctx)).Methods("GET")
 	keys.RegisterRoutes(r)
-//	rpc.RegisterRoutes(ctx, r)
-//	tx.RegisterRoutes(ctx, r, cdc)
+	rpc.RegisterRoutes(ctx, r)
+	tx.RegisterRoutes(ctx, r, cdc)
 	auth.RegisterRoutes(ctx, r, cdc, "acc")
 	bank.RegisterRoutes(ctx, r, cdc, kb)
-//	ibc.RegisterRoutes(ctx, r, cdc, kb)
+	ibc.RegisterRoutes(ctx, r, cdc, kb)
 	stake.RegisterRoutes(ctx, r, cdc, kb)
-//	slashing.RegisterRoutes(ctx, r, cdc, kb)
-//	gov.RegisterRoutes(ctx, r, cdc)
+	slashing.RegisterRoutes(ctx, r, cdc, kb)
+	gov.RegisterRoutes(ctx, r, cdc)
 	return r
 }

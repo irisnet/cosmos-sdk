@@ -6,6 +6,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/version"
+	"github.com/gin-gonic/gin"
+	"github.com/cosmos/cosmos-sdk/client/httputil"
 )
 
 // cli version REST handler endpoint
@@ -24,5 +26,44 @@ func NodeVersionRequestHandler(ctx context.CoreContext) http.HandlerFunc {
 			return
 		}
 		w.Write(version)
+	}
+}
+
+// @Summary Get Cosmos-LCD version REST handler endpoint
+// @Description Get Cosmos-LCD version REST handler endpoint
+// @Tags version
+// @Accept  json
+// @Produce  json
+// @Success 200 {string} string
+// @Failure 400 {object} httputil.HTTPError
+// @Failure 404 {object} httputil.HTTPError
+// @Failure 500 {object} httputil.HTTPError
+// @Router /version [get]
+func CLIVersionRequest(gtx *gin.Context) {
+	v := version.GetVersion()
+	gtx.Status(http.StatusOK)
+	gtx.Writer.Write([]byte(v))
+}
+
+// @Summary Get connected node version REST handler endpoint
+// @Description Get connected node version REST handler endpoint
+// @Tags version
+// @Accept  json
+// @Produce  json
+// @Success 200 {string} string
+// @Failure 400 {object} httputil.HTTPError
+// @Failure 404 {object} httputil.HTTPError
+// @Failure 500 {object} httputil.HTTPError
+// @Router /node_version [get]
+func NodeVersionRequest(ctx context.CoreContext) gin.HandlerFunc {
+	return func(gtx *gin.Context) {
+		appVersion, err := ctx.Query("/app/version")
+		if err != nil {
+			httputil.NewError(gtx, http.StatusInternalServerError, err)
+			gtx.Writer.Write([]byte(fmt.Sprintf("Could't query version. Error: %s", err.Error())))
+			return
+		}
+		gtx.Status(http.StatusOK)
+		gtx.Writer.Write(appVersion)
 	}
 }

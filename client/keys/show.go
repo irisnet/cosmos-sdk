@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/spf13/cobra"
+	"github.com/gin-gonic/gin"
+	"github.com/cosmos/cosmos-sdk/client/httputil"
 )
 
 var showKeysCmd = &cobra.Command{
@@ -64,4 +66,33 @@ func GetKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(output)
+}
+
+// @Summary Get key information
+// @Description Get detailed information for specific key name
+// @Tags key
+// @Accept  json
+// @Produce  json
+// @Param name path string false "key name"
+// @Success 200 {object} keys.KeyOutput
+// @Failure 400 {object} httputil.HTTPError
+// @Failure 404 {object} httputil.HTTPError
+// @Failure 500 {object} httputil.HTTPError
+// @Router /keys/get/{name} [get]
+func GetKeyRequest(gtx *gin.Context) {
+	name := gtx.Param("name")
+
+	info, err := getKey(name)
+	// TODO check for the error if key actually does not exist, instead of assuming this as the reason
+	if err != nil {
+		httputil.NewError(gtx, http.StatusNotFound, err)
+		return
+	}
+
+	keyOutput, err := Bech32KeyOutput(info)
+	if err != nil {
+		httputil.NewError(gtx, http.StatusInternalServerError, err)
+		return
+	}
+	gtx.JSON(http.StatusOK, keyOutput)
 }
