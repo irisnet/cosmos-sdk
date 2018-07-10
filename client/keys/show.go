@@ -94,5 +94,5 @@ func GetKeyRequest(gtx *gin.Context) {
 		httputil.NewError(gtx, http.StatusInternalServerError, err)
 		return
 	}
-	gtx.JSON(http.StatusOK, keyOutput)
+	httputil.Response(gtx,keyOutput)
 }

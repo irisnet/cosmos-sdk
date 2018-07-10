@@ -54,7 +54,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/auth.BaseAccount"
+                            "$ref": "#/definitions/httputil.HTTPResponse.acoount_query"
                         }
                     },
                     "400": {
@@ -110,7 +110,8 @@ var doc = `{
                     "200": {
                         "description": "OK. The returned string is the base64 encoding",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.string"
                         }
                     },
                     "400": {
@@ -167,7 +168,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/bank.ResultBroadcastTxCommit"
+                            "$ref": "#/definitions/httputil.HTTPResponse.tx_commit"
                         }
                     },
                     "400": {
@@ -230,7 +231,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/bank.ResultBroadcastTxCommit"
+                            "$ref": "#/definitions/httputil.HTTPResponse.tx_commit"
                         }
                     },
                     "400": {
@@ -276,7 +277,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/keys.KeyOutputs"
+                            "$ref": "#/definitions/httputil.HTTPResponse.keys.list"
                         }
                     },
                     "400": {
@@ -331,7 +332,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/keys.KeyOutput"
+                            "$ref": "#/definitions/httputil.HTTPResponse.keys.add"
                         }
                     },
                     "400": {
@@ -384,7 +385,7 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/keys.KeyOutput"
+                            "$ref": "#/definitions/httputil.HTTPResponse.keys.get"
                         }
                     },
                     "400": {
@@ -428,7 +429,8 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.string"
                         }
                     },
                     "400": {
@@ -489,7 +491,8 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.string"
                         }
                     },
                     "400": {
@@ -548,7 +551,8 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.string"
                         }
                     },
                     "400": {
@@ -592,7 +596,8 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.string"
                         }
                     },
                     "400": {
@@ -636,7 +641,8 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.string"
                         }
                     },
                     "400": {
@@ -898,19 +904,6 @@ var doc = `{
                 }
             }
         },
-        "httputil.HTTPError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 400
-                },
-                "message": {
-                    "type": "string",
-                    "example": "status bad request"
-                }
-            }
-        },
         "keys.DeleteKeyBody": {
             "type": "object",
             "properties": {
@@ -929,9 +922,6 @@ var doc = `{
                     "type": "string"
                 },
                 "pub_key": {
-                    "type": "string"
-                },
-                "seed": {
                     "type": "string"
                 },
                 "type": {
@@ -954,6 +944,12 @@ var doc = `{
                 },
                 "password": {
                     "type": "string"
+                },
+                "pub_key": {
+                    "type": "string"
+                },
+                "seed": {
+                    "type": "string"
                 }
             }
         },
@@ -965,6 +961,123 @@ var doc = `{
                 },
                 "old_password": {
                     "type": "string"
+                }
+            }
+        },
+        "httputil.HTTPError": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 500
+                },
+                "error message": {
+                    "type": "string"
+                }
+            }
+        },
+        "httputil.HTTPResponse.keys.list": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/keys.KeyOutputs"
+                }
+            }
+        },
+        "httputil.HTTPResponse.keys.add": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/keys.NewKeyBody"
+                }
+            }
+        },
+        "httputil.HTTPResponse.keys.get": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/keys.KeyOutput"
+                }
+            }
+        },
+        "httputil.HTTPResponse.string": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "string"
+                }
+            }
+        },
+        "httputil.HTTPResponse.acoount_query": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/auth.BaseAccount"
+                }
+            }
+        },
+        "httputil.HTTPResponse.tx_commit": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/bank.ResultBroadcastTxCommit"
                 }
             }
         }

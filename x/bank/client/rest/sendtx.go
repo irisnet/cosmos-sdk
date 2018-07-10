@@ -417,7 +417,7 @@ func BroadcastSignedTransferTransactionFn(cdc *wire.Codec, ctx context.CoreConte
 			httputil.NewError(gtx, http.StatusInternalServerError, err)
 			return
 		}
-		gtx.JSON(http.StatusOK, res)
+		httputil.Response(gtx,res)
 	}
 }
 
@@ -490,6 +490,6 @@ func SendAssetWithKeystoreHandlerFn(cdc *wire.Codec, ctx context.CoreContext, kb
 			return
 		}
 
-		gtx.JSON(http.StatusOK, res)
+		httputil.Response(gtx,res)
 	}
 }

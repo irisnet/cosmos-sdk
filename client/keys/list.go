@@ -94,7 +94,7 @@ func QueryKeysRequest(gtx *gin.Context) {
 	}
 	// an empty list will be JSONized as null, but we want to keep the empty list
 	if len(infos) == 0 {
-		gtx.JSON(http.StatusOK, nil)
+		httputil.Response(gtx,nil)
 		return
 	}
 	keysOutput, err := Bech32KeysOutput(infos)
@@ -102,5 +102,5 @@ func QueryKeysRequest(gtx *gin.Context) {
 		httputil.NewError(gtx, http.StatusInternalServerError, err)
 		return
 	}
-	gtx.JSON(http.StatusOK, keysOutput)
+	httputil.Response(gtx,keysOutput)
 }

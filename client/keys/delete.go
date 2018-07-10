@@ -128,5 +128,5 @@ func DeleteKeyRequest(gtx *gin.Context) {
 		return
 	}
 
-	gtx.Status(http.StatusOK)
+	httputil.Response(gtx,"success")
 }

@@ -261,11 +261,15 @@ func AddNewKeyRequest(gtx *gin.Context)  {
 		return
 	}
 	if m.Name == "" {
-		httputil.NewError(gtx, http.StatusBadRequest, err)
+		httputil.NewError(gtx, http.StatusBadRequest, errors.New("Missing account name"))
 		return
 	}
 	if m.Password == "" {
-		httputil.NewError(gtx, http.StatusBadRequest, err)
+		httputil.NewError(gtx, http.StatusBadRequest, errors.New("Missing account password"))
+		return
+	}
+	if len(m.Password) < 8 {
+		httputil.NewError(gtx, http.StatusBadRequest, errors.New("Account password is too short, the length should be no less than 8"))
 		return
 	}
 
@@ -273,8 +277,7 @@ func AddNewKeyRequest(gtx *gin.Context)  {
 	infos, err := kb.List()
 	for _, i := range infos {
 		if i.GetName() == m.Name {
-			httputil.NewError(gtx, http.StatusConflict, err)
-			gtx.Writer.Write([]byte(fmt.Sprintf("Account with name %s already exists.", m.Name)))
+			httputil.NewError(gtx, http.StatusConflict, errors.New(fmt.Sprintf("Account with name %s already exists.",m.Name)))
 			return
 		}
 	}
@@ -294,7 +297,7 @@ func AddNewKeyRequest(gtx *gin.Context)  {
 
 	keyOutput.Seed = mnemonic
 
-	gtx.JSON(http.StatusOK, keyOutput)
+	httputil.Response(gtx,keyOutput)
 }
 
 // function to just a new seed to display in the UI before actually persisting it in the keybase
@@ -336,5 +339,5 @@ func SeedRequest(gtx *gin.Context) {
 
 	seed := getSeed(algo)
 
-	gtx.Writer.Write([]byte(seed))
+	httputil.Response(gtx,seed)
 }
