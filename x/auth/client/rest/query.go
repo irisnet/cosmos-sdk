@@ -117,6 +117,6 @@ func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.A
 			return
 		}
 
-		gtx.JSON(http.StatusOK,account)
+		httputil.Response(gtx,account)
 	}
 }

@@ -936,7 +936,7 @@ var doc = `{
                 "$ref": "#/definitions/keys.KeyOutput"
             }
         },
-        "keys.NewKeyBody": {
+        "keys.NewKeyResponse": {
             "type": "object",
             "properties": {
                 "name": {
@@ -949,6 +949,20 @@ var doc = `{
                     "type": "string"
                 },
                 "seed": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "keys.NewKeyBody": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "password": {
                     "type": "string"
                 }
             }
@@ -1010,7 +1024,7 @@ var doc = `{
                 },
                 "result": {
                     "type": "object",
-                    "$ref": "#/definitions/keys.NewKeyBody"
+                    "$ref": "#/definitions/keys.NewKeyResponse"
                 }
             }
         },

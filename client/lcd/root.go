@@ -172,9 +172,10 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagListenAddr, "localhost:1317", "Address for server to listen on")
-	cmd.Flags().String(client.FlagNodeList, "tcp://localhost:26657", "Node list to connect to, example: \"tcp://10.10.10.10:26657,tcp://20.20.20.20:26657\"")
-	cmd.Flags().String(client.FlagChainID, "", "ID of chain we connect to")
+	cmd.Flags().String(flagListenAddr, "localhost:1317", "Address for server to listen on.")
+	cmd.Flags().String(client.FlagNodeList, "tcp://localhost:26657", "Node list to connect to, example: \"tcp://10.10.10.10:26657,tcp://20.20.20.20:26657\".")
+	cmd.Flags().String(client.FlagChainID, "", "ID of chain we connect to, must be specified.")
+	cmd.Flags().Bool(client.FlagTrustNode, false, "Trust full nodes or not.")
 
 	return cmd
 }

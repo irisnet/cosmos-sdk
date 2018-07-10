@@ -362,8 +362,7 @@ func CreateTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.H
 		base64TxData := make([]byte, base64.StdEncoding.EncodedLen(len(txByteForSign)))
 		base64.StdEncoding.Encode(base64TxData,txByteForSign)
 
-		gtx.Status(http.StatusOK)
-		gtx.Writer.Write(base64TxData)
+		httputil.Response(gtx,string(base64TxData))
 	}
 }
 
