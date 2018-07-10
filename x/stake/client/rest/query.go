@@ -12,6 +12,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/cosmos/cosmos-sdk/x/stake/types"
+	"github.com/gin-gonic/gin"
+	"github.com/cosmos/cosmos-sdk/client/httputil"
+	"errors"
 )
 
 const storeName = "stake"
@@ -312,5 +315,186 @@ func validatorsHandlerFn(ctx context.CoreContext, cdc *wire.Codec) http.HandlerF
 		}
 
 		w.Write(output)
+	}
+}
+
+func RegisterQueryLCDRoutes(routerGroup *gin.RouterGroup, ctx context.CoreContext, cdc *wire.Codec) {
+	routerGroup.GET("/stake/:delegator/delegation/:validator", delegationHandlerFun(cdc, ctx))
+	routerGroup.GET("/stake/:delegator/ubd/:validator", ubdHandlerFun(cdc, ctx))
+	routerGroup.GET("/stake/:delegator/red/:validator_src/:validator_dst", redHandlerFun(cdc, ctx))
+	routerGroup.GET("/stake_validators", validatorsHandlerFun(cdc, ctx))
+}
+
+func delegationHandlerFun(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
+		return func(gtx *gin.Context) {
+
+		// read parameters
+		bech32delegator := gtx.Param("delegator")
+		bech32validator := gtx.Param("validator")
+
+		delegatorAddr, err := sdk.AccAddressFromBech32(bech32delegator)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		validatorAddr, err := sdk.AccAddressFromBech32(bech32validator)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		key := stake.GetDelegationKey(delegatorAddr, validatorAddr)
+
+		res, err := ctx.QueryStore(key, storeName)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, errors.New(fmt.Sprintf("couldn't query delegation. Error: %s", err.Error())))
+			return
+		}
+
+		// the query will return empty if there is no data for this record
+		if len(res) == 0 {
+			httputil.Response(gtx,nil)
+			return
+		}
+
+		delegation, err := types.UnmarshalDelegation(cdc, key, res)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		httputil.Response(gtx,delegation)
+	}
+}
+
+// http request handler to query an unbonding-delegation
+func ubdHandlerFun(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
+	return func(gtx *gin.Context) {
+
+		// read parameters
+		bech32delegator := gtx.Param("delegator")
+		bech32validator := gtx.Param("validator")
+
+		delegatorAddr, err := sdk.AccAddressFromBech32(bech32delegator)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		validatorAddr, err := sdk.AccAddressFromBech32(bech32validator)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		key := stake.GetUBDKey(delegatorAddr, validatorAddr)
+
+		res, err := ctx.QueryStore(key, storeName)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't query unbonding-delegation. Error: %s", err.Error())))
+			return
+		}
+
+		// the query will return empty if there is no data for this record
+		if len(res) == 0 {
+			httputil.Response(gtx,nil)
+			return
+		}
+
+		ubd, err := types.UnmarshalUBD(cdc, key, res)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't query unbonding-delegation. Error: %s", err.Error())))
+			return
+		}
+
+		httputil.Response(gtx,ubd)
+	}
+}
+
+// http request handler to query an redelegation
+func redHandlerFun(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
+	return func(gtx *gin.Context) {
+		// read parameters
+		bech32delegator := gtx.Param("delegator")
+		bech32validatorSrc := gtx.Param("validator_src")
+		bech32validatorDst := gtx.Param("validator_dst")
+
+		delegatorAddr, err := sdk.AccAddressFromBech32(bech32delegator)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		validatorSrcAddr, err := sdk.AccAddressFromBech32(bech32validatorSrc)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		validatorDstAddr, err := sdk.AccAddressFromBech32(bech32validatorDst)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusBadRequest, err)
+			return
+		}
+
+		key := stake.GetREDKey(delegatorAddr, validatorSrcAddr, validatorDstAddr)
+
+		res, err := ctx.QueryStore(key, storeName)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't query redelegation. Error: %s", err.Error())))
+			return
+		}
+
+		// the query will return empty if there is no data for this record
+		if len(res) == 0 {
+			httputil.Response(gtx,nil)
+			return
+		}
+
+		red, err := types.UnmarshalRED(cdc, key, res)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't query unbonding-delegation. Error: %s", err.Error())))
+			return
+		}
+
+		httputil.Response(gtx,red)
+	}
+}
+
+func validatorsHandlerFun(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
+	return func(gtx *gin.Context) {
+		kvs, err := ctx.QuerySubspace(cdc, stake.ValidatorsKey, storeName)
+		if err != nil {
+			httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't query validators. Error: %s", err.Error())))
+			return
+		}
+
+		// the query will return empty if there are no validators
+		if len(kvs) == 0 {
+			httputil.Response(gtx,nil)
+			return
+		}
+
+		// parse out the validators
+		validators := make([]StakeValidatorOutput, len(kvs))
+		for i, kv := range kvs {
+
+			addr := kv.Key[1:]
+			validator, err := types.UnmarshalValidator(cdc, addr, kv.Value)
+			if err != nil {
+				httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't query unbonding-delegation. Error: %s", err.Error())))
+				return
+			}
+
+			bech32Validator, err := bech32StakeValidatorOutput(validator)
+			if err != nil {
+				httputil.NewError(gtx, http.StatusBadRequest, err)
+				return
+			}
+			validators[i] = bech32Validator
+		}
+
+		httputil.Response(gtx,validators)
 	}
 }

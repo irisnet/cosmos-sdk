@@ -6,6 +6,8 @@ package docs
 
 import (
 	"github.com/swaggo/swag"
+	"github.com/spf13/viper"
+	"encoding/json"
 )
 
 var doc = `{
@@ -28,6 +30,234 @@ var doc = `{
     "host": "localhost:1317",
     "basePath": "/",
     "paths": {
+        "/ICS21/stake/{delegator}/delegation/{validator}": {
+            "get": {
+                "description": "Get the delegation information between specific delegator and validator",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ICS21"
+                ],
+                "summary": "Query delegation information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "delegator address, example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "name": "delegator",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "validator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "name": "validator",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.stake_delegation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ICS21/stake/{delegator}/ubd/{validator}": {
+            "get": {
+                "description": "Get the unbound information between specific delegator and validator",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ICS21"
+                ],
+                "summary": "Query unbound information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "delegator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "name": "delegator",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "validator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "name": "validator",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.stake_ubd"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ICS21/stake/{delegator}/red/{validator_src}/{validator_dst}": {
+            "get": {
+                "description": "Get the re-delegation information between specific delegator and validator",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ICS21"
+                ],
+                "summary": "Query re-delegation information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "delegator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "name": "delegator",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "validator source address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "name": "validator_src",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "validator destination address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "name": "validator_dst",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.stake_red"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ICS21/stake_validators": {
+            "get": {
+                "description": "Query all validators' information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ICS21"
+                ],
+                "summary": "Query all validators' information",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPResponse.stake_validators"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/httputil.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/ICS20/accounts/{address}": {
             "get": {
                 "description": "Get the detailed information for specific address",
@@ -1094,6 +1324,222 @@ var doc = `{
                     "$ref": "#/definitions/bank.ResultBroadcastTxCommit"
                 }
             }
+        },
+        "stake.Delegation":{
+            "type": "object",
+            "properties": {
+                "delegator_addr": {
+                    "type": "string"
+                },
+                "validator_addr": {
+                    "type": "string"
+                },
+                "shares": {
+                    "type": "string"
+                },
+                "height": {
+                    "type": "integer"
+                }
+            }
+        },
+        "stake.UnbondingDelegation":{
+            "type": "object",
+            "properties": {
+                "delegator_addr": {
+                    "type": "string"
+                },
+                "validator_addr": {
+                    "type": "string"
+                },
+                "initial_balance": {
+                    "type": "object",
+                    "$ref": "#/definitions/sdk.Coin"
+                },
+                "balance": {
+                    "type": "object",
+                    "$ref": "#/definitions/sdk.Coin"
+                },
+                "creation_height": {
+                    "type": "integer"
+                },
+                "min_time": {
+                    "type": "integer"
+                }
+            }
+        },
+        "stake.Redelegation":{
+            "type": "object",
+            "properties": {
+                "delegator_addr": {
+                    "type": "string"
+                },
+                "validator_src_addr": {
+                    "type": "string"
+                },
+                "validator_dst_addr": {
+                    "type": "string"
+                },
+                "creation_height": {
+                    "type": "integer"
+                },
+                "min_time": {
+                    "type": "integer"
+                },
+                "initial_balance": {
+                    "type": "object",
+                    "$ref": "#/definitions/sdk.Coin"
+                },
+                "balance": {
+                    "type": "object",
+                    "$ref": "#/definitions/sdk.Coin"
+                },
+                "shares_src": {
+                    "type": "string"
+                },
+                "shares_dst": {
+                    "type": "string"
+                }
+            }
+        },
+        "stake.PoolShares": {
+            "status": {
+                "type": "string"
+            },
+            "amount": {
+                "type": "string"
+            }
+        },
+        "stake.Description": {
+            "moniker": {
+                "type": "string"
+            },
+            "identity": {
+                "type": "string"
+            },
+            "website": {
+                "type": "string"
+            },
+            "details": {
+                "type": "string"
+            }
+        },
+        "stake.StakeValidatorOutput":{
+            "type": "object",
+            "properties": {
+                "owner": {
+                    "type": "string"
+                },
+                "pub_key": {
+                    "type": "string"
+                },
+                "revoked": {
+                    "type": "boolean"
+                },
+                "pool_shares": {
+                    "type": "object",
+                    "$ref": "#/definitions/stake.PoolShares"
+                },
+                "delegator_shares": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "object",
+                    "$ref": "#/definitions/stake.Description"
+                },
+                "bond_height": {
+                    "type": "integer"
+                },
+                "bond_intra_tx_counter": {
+                    "type": "integer"
+                },
+                "proposer_reward_pool": {
+                    "type": "object",
+                    "$ref": "#/definitions/sdk.Coins"
+                },
+                "commission": {
+                    "type": "string"
+                },
+                "commission_max": {
+                    "type": "string"
+                },
+                "commission_change_rate": {
+                    "type": "string"
+                },
+                "commission_change_today": {
+                    "type": "string"
+                }
+            }
+        },
+        "httputil.HTTPResponse.stake_delegation": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/stake.Delegation"
+                }
+            }
+        },
+        "httputil.HTTPResponse.stake_ubd": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/stake.UnbondingDelegation"
+                }
+            }
+        },
+        "httputil.HTTPResponse.stake_red": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "object",
+                    "$ref": "#/definitions/stake.Redelegation"
+                }
+            }
+        },
+        "httputil.HTTPResponse.stake_validators": {
+            "type": "object",
+            "properties": {
+                "rest api": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "code": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "result": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "$ref": "#/definitions/stake.StakeValidatorOutput"
+                    }
+                }
+            }
         }
     }
 }`
@@ -1101,7 +1547,22 @@ var doc = `{
 type s struct{}
 
 func (s *s) ReadDoc() string {
-	return doc
+	flagListenAddr := "laddr"
+	listenAddr := viper.GetString(flagListenAddr)
+
+	var docs map[string]interface{}
+	if err := json.Unmarshal([]byte(doc), &docs); err != nil {
+		panic(err)
+	}
+
+	docs["host"] = listenAddr
+
+	docString,err := json.Marshal(docs)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(docString)
 }
 func init() {
 	swag.Register(swag.Name, &s{})

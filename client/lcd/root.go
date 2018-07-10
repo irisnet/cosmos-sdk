@@ -195,4 +195,5 @@ func createSwaggerHandler(server *gin.Engine, ctx context.CoreContext, cdc *wire
 	keys.RegisterAll(server.Group("/ICS19"))
 	auth.RegisterLCDRoutes(server.Group("/ICS20"),ctx,cdc,"acc")
 	bank.RegisterLCDRoutes(server.Group("/ICS20"),ctx,cdc,kb)
+	stake.RegisterQueryLCDRoutes(server.Group("/ICS21"),ctx,cdc)
 }
