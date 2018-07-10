@@ -13,6 +13,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/gin-gonic/gin"
 	"github.com/cosmos/cosmos-sdk/client/httputil"
+	"errors"
 )
 
 // register REST routes
@@ -98,8 +99,7 @@ func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.A
 
 		res, err := ctx.QueryStore(auth.AddressStoreKey(addr), storeName)
 		if err != nil {
-			httputil.NewError(gtx, http.StatusInternalServerError, err)
-			gtx.Writer.Write([]byte(fmt.Sprintf("couldn't query account. Error: %s", err.Error())))
+			httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't query account. Error: %s", err.Error())))
 			return
 		}
 
@@ -112,8 +112,7 @@ func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.A
 		// decode the value
 		account, err := decoder(res)
 		if err != nil {
-			httputil.NewError(gtx, http.StatusInternalServerError, err)
-			gtx.Writer.Write([]byte(fmt.Sprintf("couldn't parse query result. Result: %s. Error: %s", res, err.Error())))
+			httputil.NewError(gtx, http.StatusInternalServerError, errors.New(fmt.Sprintf("couldn't parse query result. Result: %s. Error: %s", res, err.Error())))
 			return
 		}
 
