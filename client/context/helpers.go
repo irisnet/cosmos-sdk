@@ -148,7 +148,7 @@ func (ctx CoreContext) queryStore(key cmn.HexBytes, storeName, endPath string) (
 }
 
 // Get the from address from the name flag
-func (ctx CoreContext) GetFromAddress() (from sdk.Address, err error) {
+func (ctx CoreContext) GetFromAddress() (from sdk.AccAddress, err error) {
 
 	keybase, err := keys.GetKeyBase()
 	if err != nil {
@@ -165,7 +165,7 @@ func (ctx CoreContext) GetFromAddress() (from sdk.Address, err error) {
 		return nil, errors.Errorf("no key for: %s", name)
 	}
 
-	return info.GetPubKey().Address(), nil
+	return sdk.AccAddress(info.GetPubKey().Address()), nil
 }
 
 // build the transaction from the msg
