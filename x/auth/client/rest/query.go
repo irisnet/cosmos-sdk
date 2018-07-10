@@ -91,7 +91,7 @@ func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.A
 
 		bech32addr := gtx.Param("address")
 
-		addr, err := sdk.GetAccAddressBech32(bech32addr)
+		addr, err := sdk.AccAddressFromBech32(bech32addr)
 		if err != nil {
 			httputil.NewError(gtx, http.StatusConflict, err)
 			return

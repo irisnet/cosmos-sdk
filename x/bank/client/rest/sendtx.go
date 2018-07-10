@@ -160,13 +160,13 @@ func CreateTransferTransaction(cdc *wire.Codec, ctx context.CoreContext) http.Ha
 		var amounts sdk.Coins
 		amounts = append(amounts,amount)
 
-		fromAddress,err := sdk.GetAccAddressBech32(transferBody.FromAddress)
+		fromAddress,err := sdk.AccAddressFromBech32(transferBody.FromAddress)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		toAddress,err := sdk.GetAccAddressBech32(transferBody.ToAddress)
+		toAddress,err := sdk.AccAddressFromBech32(transferBody.ToAddress)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
@@ -309,12 +309,12 @@ func CreateTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.H
 		var amounts sdk.Coins
 		amounts = append(amounts,amount)
 
-		fromAddress,err := sdk.GetAccAddressBech32(transferBody.FromAddress)
+		fromAddress,err := sdk.AccAddressFromBech32(transferBody.FromAddress)
 		if err != nil {
 			httputil.NewError(gtx, http.StatusBadRequest, err)
 			return
 		}
-		toAddress,err := sdk.GetAccAddressBech32(transferBody.ToAddress)
+		toAddress,err := sdk.AccAddressFromBech32(transferBody.ToAddress)
 		if err != nil {
 			httputil.NewError(gtx, http.StatusBadRequest, err)
 			return
@@ -430,7 +430,7 @@ func SendAssetWithKeystoreHandlerFn(cdc *wire.Codec, ctx context.CoreContext, kb
 
 		bech32addr := gtx.Param("address")
 
-		address, err := sdk.GetAccAddressBech32(bech32addr)
+		address, err := sdk.AccAddressFromBech32(bech32addr)
 		if err != nil {
 			httputil.NewError(gtx, http.StatusBadRequest, err)
 			return
@@ -448,14 +448,16 @@ func SendAssetWithKeystoreHandlerFn(cdc *wire.Codec, ctx context.CoreContext, kb
 			return
 		}
 
-		to, err := sdk.GetAccAddressHex(address.String())
+		from := sdk.AccAddress(info.GetPubKey().Address())
+
+		to, err := sdk.AccAddressFromBech32(address.String())
 		if err != nil {
 			httputil.NewError(gtx, http.StatusBadRequest, err)
 			return
 		}
 
 		// build message
-		msg := client.BuildMsg(info.GetPubKey().Address(), to, m.Amount)
+		msg := client.BuildMsg(from, to, m.Amount)
 		if err != nil { // XXX rechecking same error ?
 			httputil.NewError(gtx, http.StatusInternalServerError, err)
 			return
