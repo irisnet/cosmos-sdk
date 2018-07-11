@@ -105,7 +105,7 @@ func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.A
 
 		// the query will return empty if there is no data for this account
 		if len(res) == 0 {
-			httputil.NewError(gtx, http.StatusNoContent, err)
+			httputil.Response(gtx,nil)
 			return
 		}
 

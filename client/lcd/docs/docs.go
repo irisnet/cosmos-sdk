@@ -8,12 +8,16 @@ import (
 	"github.com/swaggo/swag"
 	"github.com/spf13/viper"
 	"encoding/json"
+	"strings"
+	"errors"
+	"github.com/cosmos/cosmos-sdk/client"
+	"bytes"
 )
 
 var doc = `{
     "swagger": "2.0",
     "info": {
-        "description": "All cosmos-lcd supported APIs will be shown by this swagger-ui page",
+        "description": "All cosmos-lcd supported APIs will be shown by this swagger-ui page. You can access these APIs through this page.",
         "title": "Swagger Cosmos-LCD API",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
@@ -338,7 +342,7 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK. The returned string is the base64 encoding",
+                        "description": "OK. The returned string is base64 encoding",
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/httputil.HTTPResponse.string"
@@ -383,7 +387,7 @@ var doc = `{
                 "summary": "Broadcast signed transaction",
                 "parameters": [
                     {
-                        "description": "Signed transaction. Transaction data, signatures and public keys should be base64 encoding string",
+                        "description": "Signed transaction. Transaction data, signatures and public keys should be base64 encoding",
                         "name": "signedTransaction",
                         "in": "body",
                         "required": true,
@@ -1547,15 +1551,61 @@ var doc = `{
 type s struct{}
 
 func (s *s) ReadDoc() string {
-	flagListenAddr := "laddr"
-	listenAddr := viper.GetString(flagListenAddr)
+	listenAddr := viper.GetString(client.FlagListenAddr)
+	swaggerHost := viper.GetString(client.FlagSwaggerHostIP)
+	nodeList := viper.GetString(client.FlagNodeList)
+	chainID := viper.GetString(client.FlagChainID)
+	trustNode := viper.GetString(client.FlagTrustNode)
 
 	var docs map[string]interface{}
 	if err := json.Unmarshal([]byte(doc), &docs); err != nil {
 		panic(err)
 	}
 
-	docs["host"] = listenAddr
+	addrInfo := strings.Split(listenAddr,":")
+	if len(addrInfo) != 2{
+		panic(errors.New("invalid listen address"))
+	}
+	listenPort := addrInfo[1]
+	docs["host"] = swaggerHost + ":" + listenPort
+
+	infos := docs["info"].(map[string]interface{})
+	description := infos["description"].(string)
+
+	var buffer bytes.Buffer
+	buffer.WriteString(description)
+	buffer.WriteString("\n")
+
+	buffer.WriteString("Cosmos-LCD start options:")
+	buffer.WriteString("\n")
+
+	buffer.WriteString(client.FlagListenAddr)
+	buffer.WriteString(": ")
+	buffer.WriteString(listenAddr)
+	buffer.WriteString("\n")
+
+	buffer.WriteString(client.FlagSwaggerHostIP)
+	buffer.WriteString(": ")
+	buffer.WriteString(swaggerHost)
+	buffer.WriteString("\n")
+
+	buffer.WriteString(client.FlagNodeList)
+	buffer.WriteString(": ")
+	buffer.WriteString(nodeList)
+	buffer.WriteString("\n")
+
+	buffer.WriteString(client.FlagChainID)
+	buffer.WriteString(": ")
+	buffer.WriteString(chainID)
+	buffer.WriteString("\n")
+
+	buffer.WriteString(client.FlagTrustNode)
+	buffer.WriteString(": ")
+	buffer.WriteString(trustNode)
+	buffer.WriteString("\n")
+
+	infos["description"] = buffer.String()
+	docs["info"] = infos
 
 	docString,err := json.Marshal(docs)
 	if err != nil {

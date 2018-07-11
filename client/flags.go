@@ -21,6 +21,8 @@ const (
 	FlagAsync         = "async"
 	FlagJson          = "json"
 	FlagPrintResponse = "print-response"
+	FlagListenAddr    = "laddr"
+	FlagSwaggerHostIP = "swagger-host-ip"
 )
 
 // LineBreak can be included in a command list to provide a blank line

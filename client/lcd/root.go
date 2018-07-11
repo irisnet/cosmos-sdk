@@ -38,7 +38,6 @@ import (
 // (aka Light Client Daemon) that exposes functionality similar
 // to the cli, but over rest
 func ServeCommand(cdc *wire.Codec) *cobra.Command {
-	flagListenAddr := "laddr"
 	flagCORS := "cors"
 	flagMaxOpenConnections := "max-open"
 
@@ -46,7 +45,7 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 		Use:   "rest-server",
 		Short: "Start LCD (light-client daemon), a local REST server",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			listenAddr := viper.GetString(flagListenAddr)
+			listenAddr := viper.GetString(client.FlagListenAddr)
 			handler := createHandler(cdc)
 			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout)).With("module", "rest-server")
 			maxOpen := viper.GetInt(flagMaxOpenConnections)
@@ -71,7 +70,7 @@ func ServeCommand(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP(flagListenAddr, "a", "tcp://localhost:1317", "Address for server to listen on")
+	cmd.Flags().StringP(client.FlagListenAddr, "a", "tcp://localhost:1317", "Address for server to listen on")
 	cmd.Flags().String(flagCORS, "", "Set to domains that can make CORS requests (* for all)")
 	cmd.Flags().StringP(client.FlagChainID, "c", "", "ID of chain we connect to")
 	cmd.Flags().StringP(client.FlagNodeList, "n", "tcp://localhost:26657", "Node list to connect to, example: \"tcp://10.10.10.10:26657,tcp://20.20.20.20:26657\"")
@@ -125,8 +124,6 @@ func createHandler(cdc *wire.Codec) http.Handler {
 }
 
 func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
-	flagListenAddr := "laddr"
-
 	cmd := &cobra.Command{
 		Use:   "rest-server-swagger",
 		Short: "Start LCD (light-client daemon), a local REST server with swagger-ui, default uri: http://localhost:1317/swagger/index.html",
@@ -137,7 +134,7 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 			rootDir := viper.GetString(cli.HomeFlag)
 			nodeAddrs := viper.GetString(client.FlagNodeList)
 			chainID := viper.GetString(client.FlagChainID)
-			listenAddr := viper.GetString(flagListenAddr)
+			listenAddr := viper.GetString(client.FlagListenAddr)
 			//Get key store
 			kb, err := keys.GetKeyBase()
 			if err != nil {
@@ -179,9 +176,10 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagListenAddr, "localhost:1317", "Address for server to listen on.")
+	cmd.Flags().String(client.FlagListenAddr, "localhost:1317", "Address for server to listen on.")
 	cmd.Flags().String(client.FlagNodeList, "tcp://localhost:26657", "Node list to connect to, example: \"tcp://10.10.10.10:26657,tcp://20.20.20.20:26657\".")
 	cmd.Flags().String(client.FlagChainID, "", "ID of chain we connect to, must be specified.")
+	cmd.Flags().String(client.FlagSwaggerHostIP, "localhost", "The host IP of the lcd server, swagger will send request to this host")
 	cmd.Flags().Bool(client.FlagTrustNode, false, "Trust full nodes or not.")
 
 	return cmd
