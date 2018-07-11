@@ -12,6 +12,7 @@ import (
 	"errors"
 	"github.com/cosmos/cosmos-sdk/client"
 	"bytes"
+	"fmt"
 )
 
 var doc = `{
@@ -44,7 +45,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS21"
+                    "Stake Operation"
                 ],
                 "summary": "Query delegation information",
                 "parameters": [
@@ -103,7 +104,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS21"
+                    "Stake Operation"
                 ],
                 "summary": "Query unbound information",
                 "parameters": [
@@ -162,7 +163,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS21"
+                    "Stake Operation"
                 ],
                 "summary": "Query re-delegation information",
                 "parameters": [
@@ -227,7 +228,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS21"
+                    "Stake Operation"
                 ],
                 "summary": "Query all validators' information",
                 "responses": {
@@ -272,7 +273,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS20"
+                    "Token Operation"
                 ],
                 "summary": "Query account information",
                 "parameters": [
@@ -325,7 +326,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS20"
+                    "Token Operation"
                 ],
                 "summary": "Build transaction",
                 "parameters": [
@@ -382,7 +383,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS20"
+                    "Token Operation"
                 ],
                 "summary": "Broadcast signed transaction",
                 "parameters": [
@@ -439,7 +440,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS20"
+                    "Token Operation"
                 ],
                 "summary": "Send coins to a address",
                 "parameters": [
@@ -502,7 +503,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS19"
+                    "Key Management"
                 ],
                 "summary": "list all keys",
                 "operationId": "queryKeysRequest",
@@ -546,7 +547,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS19"
+                    "Key Management"
                 ],
                 "summary": "Create a account",
                 "parameters": [
@@ -603,7 +604,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS19"
+                    "Key Management"
                 ],
                 "summary": "Get key information",
                 "parameters": [
@@ -656,7 +657,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS19"
+                    "Key Management"
                 ],
                 "summary": "Get a seed",
                 "responses": {
@@ -701,7 +702,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS19"
+                    "Key Management"
                 ],
                 "summary": "Change key password",
                 "parameters": [
@@ -761,7 +762,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ICS19"
+                    "Key Management"
                 ],
                 "summary": "Delete key",
                 "parameters": [
@@ -823,7 +824,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "version"
+                    "General"
                 ],
                 "summary": "Get connected node version REST handler endpoint",
                 "responses": {
@@ -868,7 +869,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "version"
+                    "General"
                 ],
                 "summary": "Get Cosmos-LCD version REST handler endpoint",
                 "responses": {
@@ -1548,35 +1549,30 @@ var doc = `{
     }
 }`
 
+var TagToModuleDesc = `
+{
+  "General":"general",
+  "Key Management":"key",
+  "Token Operation":"token",
+  "Stake Operation":"stake"
+}
+`
+
 type s struct{}
 
-func (s *s) ReadDoc() string {
+func addOptionsToDesc (desc string) string {
 	listenAddr := viper.GetString(client.FlagListenAddr)
 	swaggerHost := viper.GetString(client.FlagSwaggerHostIP)
 	nodeList := viper.GetString(client.FlagNodeList)
 	chainID := viper.GetString(client.FlagChainID)
 	trustNode := viper.GetString(client.FlagTrustNode)
-
-	var docs map[string]interface{}
-	if err := json.Unmarshal([]byte(doc), &docs); err != nil {
-		panic(err)
-	}
-
-	addrInfo := strings.Split(listenAddr,":")
-	if len(addrInfo) != 2{
-		panic(errors.New("invalid listen address"))
-	}
-	listenPort := addrInfo[1]
-	docs["host"] = swaggerHost + ":" + listenPort
-
-	infos := docs["info"].(map[string]interface{})
-	description := infos["description"].(string)
+	modules := viper.GetString(client.FlagModules)
 
 	var buffer bytes.Buffer
-	buffer.WriteString(description)
+	buffer.WriteString(desc)
 	buffer.WriteString("\n")
 
-	buffer.WriteString("Cosmos-LCD start options:")
+	buffer.WriteString("Cosmos-LCD starting options:")
 	buffer.WriteString("\n")
 
 	buffer.WriteString(client.FlagListenAddr)
@@ -1604,8 +1600,85 @@ func (s *s) ReadDoc() string {
 	buffer.WriteString(trustNode)
 	buffer.WriteString("\n")
 
-	infos["description"] = buffer.String()
+	buffer.WriteString(client.FlagModules)
+	buffer.WriteString(": ")
+	buffer.WriteString(modules)
+	buffer.WriteString("\n")
+	
+	return buffer.String()
+}
+
+func moduleEnabled(modules []string, name string) bool {
+	for _, moduleName := range modules {
+		if moduleName == name {
+			return true
+		}
+	}
+	return false
+}
+
+func modularizeAPIs(modules string, paths map[string]interface{}) map[string]interface{} {
+	filteredAPIs := make(map[string]interface{})
+
+	var moduleToTag map[string]string
+	if err := json.Unmarshal([]byte(TagToModuleDesc), &moduleToTag); err != nil {
+		panic(err)
+	}
+	moduleArray := strings.Split(modules,",")
+
+	for path,operations := range paths {
+		operationAPIs := operations.(map[string]interface{})
+		for operation,API := range operationAPIs {
+			APIInfo := API.(map[string]interface{})
+			tags := APIInfo["tags"].([]interface{})
+			if len(tags) != 1 {
+				panic(errors.New(fmt.Sprintf("only support one tag, got %d tags",len(tags))))
+			}
+
+			moduleName := moduleToTag[tags[0].(string)]
+			enable := moduleEnabled(moduleArray,moduleName)
+
+			if enable {
+				if filteredAPIs[path] != nil {
+					originalOperations := filteredAPIs[path].(map[string]interface{})
+					originalOperations[operation]=API
+					filteredAPIs[path] = originalOperations
+				} else {
+					originalOperations := make(map[string]interface{})
+					originalOperations[operation]=API
+					filteredAPIs[path] = originalOperations
+				}
+			}
+		}
+	}
+	return filteredAPIs
+}
+
+func (s *s) ReadDoc() string {
+	listenAddr := viper.GetString(client.FlagListenAddr)
+	swaggerHost := viper.GetString(client.FlagSwaggerHostIP)
+	modules := viper.GetString(client.FlagModules)
+
+	var docs map[string]interface{}
+	if err := json.Unmarshal([]byte(doc), &docs); err != nil {
+		panic(err)
+	}
+
+	addrInfo := strings.Split(listenAddr,":")
+	if len(addrInfo) != 2{
+		panic(errors.New("invalid listen address"))
+	}
+	listenPort := addrInfo[1]
+	docs["host"] = swaggerHost + ":" + listenPort
+
+	infos := docs["info"].(map[string]interface{})
+	description := infos["description"].(string)
+	
+	infos["description"] = addOptionsToDesc(description)
 	docs["info"] = infos
+	
+	paths := docs["paths"].(map[string]interface{})
+	docs["paths"] = modularizeAPIs(modules,paths)
 
 	docString,err := json.Marshal(docs)
 	if err != nil {

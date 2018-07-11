@@ -23,6 +23,7 @@ const (
 	FlagPrintResponse = "print-response"
 	FlagListenAddr    = "laddr"
 	FlagSwaggerHostIP = "swagger-host-ip"
+	FlagModules       = "modules"
 )
 
 // LineBreak can be included in a command list to provide a blank line

@@ -179,7 +179,8 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 	cmd.Flags().String(client.FlagListenAddr, "localhost:1317", "Address for server to listen on.")
 	cmd.Flags().String(client.FlagNodeList, "tcp://localhost:26657", "Node list to connect to, example: \"tcp://10.10.10.10:26657,tcp://20.20.20.20:26657\".")
 	cmd.Flags().String(client.FlagChainID, "", "ID of chain we connect to, must be specified.")
-	cmd.Flags().String(client.FlagSwaggerHostIP, "localhost", "The host IP of the lcd server, swagger will send request to this host")
+	cmd.Flags().String(client.FlagSwaggerHostIP, "localhost", "The host IP of the Cosmos-LCD server, swagger will send request to this host.")
+	cmd.Flags().String(client.FlagModules, "general,key,token", "Enabled modules.")
 	cmd.Flags().Bool(client.FlagTrustNode, false, "Trust full nodes or not.")
 
 	return cmd
@@ -188,10 +189,33 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 func createSwaggerHandler(server *gin.Engine, ctx context.CoreContext, cdc *wire.Codec, kb keyTypes.Keybase)  {
 	server.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	server.GET("/version", CLIVersionRequest)
-	server.GET("/node_version", NodeVersionRequest(ctx))
-	keys.RegisterAll(server.Group("/ICS19"))
-	auth.RegisterLCDRoutes(server.Group("/ICS20"),ctx,cdc,"acc")
-	bank.RegisterLCDRoutes(server.Group("/ICS20"),ctx,cdc,kb)
-	stake.RegisterQueryLCDRoutes(server.Group("/ICS21"),ctx,cdc)
+	modules := viper.GetString(client.FlagModules)
+	moduleArray := strings.Split(modules,",")
+
+	if moduleEnabled(moduleArray,"general") {
+		server.GET("/version", CLIVersionRequest)
+		server.GET("/node_version", NodeVersionRequest(ctx))
+	}
+
+	if moduleEnabled(moduleArray,"key") {
+		keys.RegisterAll(server.Group("/ICS19"))
+	}
+
+	if moduleEnabled(moduleArray,"token") {
+		auth.RegisterLCDRoutes(server.Group("/ICS20"), ctx, cdc, "acc")
+		bank.RegisterLCDRoutes(server.Group("/ICS20"), ctx, cdc, kb)
+	}
+
+	if moduleEnabled(moduleArray,"stake") {
+		stake.RegisterQueryLCDRoutes(server.Group("/ICS21"), ctx, cdc)
+	}
+}
+
+func moduleEnabled(modules []string, name string) bool {
+	for _, moduleName := range modules {
+		if moduleName == name {
+			return true
+		}
+	}
+	return false
 }
