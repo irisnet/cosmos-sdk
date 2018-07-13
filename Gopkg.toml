@@ -59,7 +59,7 @@
 [[override]]
   name = "github.com/tendermint/iavl"
   source = "github.com/HaoyangLiu/iavl"
-  revision = "35f66e53d9b01e83b30de68b931f54b2477a94c9"
+  revision = "85d9db088c3f3cef110163a7a7b5513ca47d1d14"
 
 [[override]]
   name = "github.com/tendermint/tendermint"
