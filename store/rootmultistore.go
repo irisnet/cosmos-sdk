@@ -298,28 +298,35 @@ func (rs *rootMultiStore) Query(req abci.RequestQuery) abci.ResponseQuery {
 	//Load commit info from db
 	commitInfo, errMsg := getCommitInfo(rs.db,res.Height)
 	if errMsg != nil {
-		return sdk.ErrUnknownRequest(errMsg.Error()).QueryResult()
+		return sdk.ErrInternal(errMsg.Error()).QueryResult()
 	}
 
-	var multiStoreCommitInfo []iavl.SubstoreCommitID
+	var multiStoreCommitInfo MultiStoreCommitInfo
 	for _,storeInfo := range commitInfo.StoreInfos {
-		commitId := iavl.SubstoreCommitID{
+		commitId := SubstoreCommitID{
 			Name: storeInfo.Name,
 			Version:storeInfo.Core.CommitID.Version,
 			CommitHash:storeInfo.Core.CommitID.Hash,
 		}
-		multiStoreCommitInfo = append(multiStoreCommitInfo,commitId)
+		multiStoreCommitInfo.CommitIDList = append(multiStoreCommitInfo.CommitIDList,commitId)
+	}
+	multiStoreCommitInfo.StoreName = storeName
+
+	multiStoreCommitByteArray,errMsg := cdc.MarshalBinary(multiStoreCommitInfo)
+	if errMsg != nil {
+		return sdk.ErrInternal(errMsg.Error()).QueryResult()
 	}
 
 	var rangeProof iavl.RangeProof
+	errMsg = cdc.UnmarshalBinary(res.Proof,&rangeProof)
+	if errMsg != nil {
+		return sdk.ErrInternal(errMsg.Error()).QueryResult()
+	}
 
-	cdc.UnmarshalBinary(res.Proof,&rangeProof)
-	rangeProof.MultiStoreCommitInfo=multiStoreCommitInfo
-	rangeProof.StoreName=storeName
-
+	rangeProof.Appendix = multiStoreCommitByteArray
 	proof, errMsg := cdc.MarshalBinary(rangeProof)
 	if err != nil {
-		return sdk.ErrUnknownRequest(errMsg.Error()).QueryResult()
+		return sdk.ErrInternal(errMsg.Error()).QueryResult()
 	}
 	res.Proof = proof
 

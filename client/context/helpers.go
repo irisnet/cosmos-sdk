@@ -128,8 +128,13 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 		return res, errors.Wrap(err, "failed to unmarshalBinary rangeProof")
 	}
 
+	var multiStoreCommitInfo store.MultiStoreCommitInfo
+	err = cdc.UnmarshalBinary(rangeProof.Appendix, &multiStoreCommitInfo)
+	if err != nil {
+		return res, errors.Wrap(err, "failed to unmarshalBinary Appendix in rangeProof")
+	}
 	// Validate the substore commit hash against trusted appHash
-	substoreCommitHash, err :=  store.VerifyMultiStoreCommitInfo(rangeProof.StoreName, rangeProof.MultiStoreCommitInfo, commit.Header.AppHash)
+	substoreCommitHash, err :=  store.VerifyMultiStoreCommitInfo(multiStoreCommitInfo.StoreName, multiStoreCommitInfo.CommitIDList, commit.Header.AppHash)
 	if err != nil {
 		return  nil, errors.Wrap(err, "failed in verifying the proof against appHash")
 	}

@@ -9,7 +9,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func VerifyMultiStoreCommitInfo(storeName string, multiStoreCommitInfo []iavl.SubstoreCommitID, appHash []byte) ([]byte, error) {
+type SubstoreCommitID struct {
+	Name string `json:"name"`
+	Version int64 `json:"version"`
+	CommitHash    cmn.HexBytes `json:"commit_hash"`
+}
+
+type MultiStoreCommitInfo struct {
+	CommitIDList []SubstoreCommitID `json:"commit_id_list"`
+	StoreName string `json:"store_name"`
+}
+
+func VerifyMultiStoreCommitInfo(storeName string, multiStoreCommitInfo []SubstoreCommitID, appHash []byte) ([]byte, error) {
 	var substoreCommitHash []byte
 	var kvPairs cmn.KVPairs
 	for _,multiStoreCommitID := range multiStoreCommitInfo {

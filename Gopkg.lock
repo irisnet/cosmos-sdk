@@ -438,7 +438,7 @@
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "UT"
-  revision = "35f66e53d9b01e83b30de68b931f54b2477a94c9"
+  revision = "a208cfc0efac8544298922fa8c0c676fa2651be5"
   source = "github.com/HaoyangLiu/iavl"
 
 [[projects]]
