@@ -301,34 +301,10 @@ func (rs *rootMultiStore) Query(req abci.RequestQuery) abci.ResponseQuery {
 		return sdk.ErrInternal(errMsg.Error()).QueryResult()
 	}
 
-	var multiStoreCommitInfo MultiStoreCommitInfo
-	for _,storeInfo := range commitInfo.StoreInfos {
-		commitId := SubstoreCommitID{
-			Name: storeInfo.Name,
-			Version:storeInfo.Core.CommitID.Version,
-			CommitHash:storeInfo.Core.CommitID.Hash,
-		}
-		multiStoreCommitInfo.CommitIDList = append(multiStoreCommitInfo.CommitIDList,commitId)
-	}
-	multiStoreCommitInfo.StoreName = storeName
-
-	multiStoreCommitByteArray,errMsg := cdc.MarshalBinary(multiStoreCommitInfo)
+	res.Proof, errMsg = AppendMultiStoreCommitInfo(res.Proof, storeName, commitInfo.StoreInfos)
 	if errMsg != nil {
 		return sdk.ErrInternal(errMsg.Error()).QueryResult()
 	}
-
-	var rangeProof iavl.RangeProof
-	errMsg = cdc.UnmarshalBinary(res.Proof,&rangeProof)
-	if errMsg != nil {
-		return sdk.ErrInternal(errMsg.Error()).QueryResult()
-	}
-
-	rangeProof.Appendix = multiStoreCommitByteArray
-	proof, errMsg := cdc.MarshalBinary(rangeProof)
-	if err != nil {
-		return sdk.ErrInternal(errMsg.Error()).QueryResult()
-	}
-	res.Proof = proof
 
 	return res
 }

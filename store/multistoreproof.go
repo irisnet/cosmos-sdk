@@ -20,6 +20,39 @@ type MultiStoreCommitInfo struct {
 	StoreName string `json:"store_name"`
 }
 
+func AppendMultiStoreCommitInfo(iavlProof []byte, storeName string, storeInfos []storeInfo) ([]byte, error) {
+
+	var multiStoreCommitInfo MultiStoreCommitInfo
+	for _,storeInfo := range storeInfos {
+		commitId := SubstoreCommitID{
+			Name: storeInfo.Name,
+			Version:storeInfo.Core.CommitID.Version,
+			CommitHash:storeInfo.Core.CommitID.Hash,
+		}
+		multiStoreCommitInfo.CommitIDList = append(multiStoreCommitInfo.CommitIDList,commitId)
+	}
+	multiStoreCommitInfo.StoreName = storeName
+
+	multiStoreCommitByteArray,err := cdc.MarshalBinary(multiStoreCommitInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	var rangeProof iavl.RangeProof
+	err = cdc.UnmarshalBinary(iavlProof,&rangeProof)
+	if err != nil {
+		return nil, err
+	}
+
+	rangeProof.Appendix = multiStoreCommitByteArray
+
+	proof, err := cdc.MarshalBinary(rangeProof)
+	if err != nil {
+		return nil, err
+	}
+	return proof, nil
+}
+
 func VerifyMultiStoreCommitInfo(storeName string, multiStoreCommitInfo []SubstoreCommitID, appHash []byte) ([]byte, error) {
 	var substoreCommitHash []byte
 	var kvPairs cmn.KVPairs
