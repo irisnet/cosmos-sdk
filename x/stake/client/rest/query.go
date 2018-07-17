@@ -426,7 +426,7 @@ func validatorsHandlerFun(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerF
 		}
 
 		// parse out the validators
-		validators := make([]StakeValidatorOutput, len(kvs))
+		validators := make([]types.BechValidator, len(kvs))
 		for i, kv := range kvs {
 
 			addr := kv.Key[1:]
@@ -436,7 +436,7 @@ func validatorsHandlerFun(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerF
 				return
 			}
 
-			bech32Validator, err := bech32StakeValidatorOutput(validator)
+			bech32Validator, err := validator.Bech32Validator()
 			if err != nil {
 				httputil.NewError(gtx, http.StatusBadRequest, err)
 				return

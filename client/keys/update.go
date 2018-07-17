@@ -124,8 +124,10 @@ func UpdateKeyRequest(gtx *gin.Context) {
 		return
 	}
 
+	getNewpass := func() (string, error) { return m.NewPassword, nil }
+
 	// TODO check if account exists and if password is correct
-	err = kb.Update(name, m.OldPassword, m.NewPassword)
+	err = kb.Update(name, m.OldPassword, getNewpass)
 	if err != nil {
 		httputil.NewError(gtx, http.StatusUnauthorized, err)
 		return

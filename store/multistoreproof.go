@@ -1,8 +1,8 @@
 package store
 
 import (
-	"github.com/tendermint/tmlibs/merkle"
-	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tendermint/crypto/merkle"
+	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/iavl"
 	"bytes"
 	sdk "github.com/cosmos/cosmos-sdk/types"
