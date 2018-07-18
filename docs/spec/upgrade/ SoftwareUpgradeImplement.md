@@ -5,16 +5,16 @@
 2. Change an old module 
 
 ## Main Idea
-One module only corresponds to a KVstore according to the `KVstoreKey`. There are two important designs.
+One module should only corresponds to a KVStore according to the `KVStoreKey`. There are two important design.
  
-* If a KVstore can be read, it mean that it can participate in `CommitID` computing（completely changed）and its module can handle the `QueryMsgs` 
-* If a KVstore can be written, it mean that its module can handle the `msgs`. 
+* If a KVStore can be read, it means that it can participate in apphash computing（completely different from the apphash computing）and its module can handle the `QueryMsgs` 
+* If a KVStore can be written, it means that its module can handle the `msgs`. 
 
-So we  add a lifetime part to the  `KVstorekey`  to control wether the module can be read and written. Lifetime part is only changed by the governance and it means that entire software upgrade is controlled by the blockchain except for downloading the new code and restarting it.
+So we add a lifetime parameter to the  `KVStoreKey`  to control when the KVStore can be read or written. Lifetime parameter is only modified by the governance and it means that after the community agrees to pass a software-upgrade proposal, if the majority completes the upgrading process, the proposal could modify the lifetime to start the new version.
 
 See below for details.
  
-## KVstoreKey
+## KVStoreKey
 Currently, the `KVStoreKey` in CosmosSDK v0.21.0 is
 
 ```go
@@ -32,10 +32,9 @@ type KVStoreKey struct {
     end   int64
 }
 ```
-When `start<= lastheight`,this `KVstore` not only can be read and written. When `lastheight>=end`, this `KVstore` can't be written. `start` is always no more than `end`. 
+When `start<= lastheight`,  `KVStore` can be read and written. When `lastheight>=end`, `KVStore` can't be written. `start` is always no more than `end`. 
 
-For genesis version, the `start` of all `KVstoreKey`  initialize to 0. For later versions, if we add new module, the `start` of it initialize to $ 2^{64}$. `end` always initialize to $ 2^{64}$.
-
+All the `KVStoreKey` are stored in `Global Paramstore`.
 `start` and `end` can only be changed by the governance.
 
 ## Design
@@ -43,17 +42,19 @@ For genesis version, the `start` of all `KVstoreKey`  initialize to 0. For later
 ```go
 	var app = &GaiaApp{
 ...
-		keyMain:          sdk.NewKVStoreKey("main",0),
-		keyAccount:       sdk.NewKVStoreKey("acc",0),
-		keyStake:         sdk.NewKVStoreKey("stake",0),
-		keyGov:           sdk.NewKVStoreKey("gov",0),
-		keyParams:        sdk.NewKVStoreKey("params",0),
-		keyNew: sdk.NewKVStoreKey("New",math.MaxInt64),//later verison
+		keyMain:          sdk.NewKVStoreKey("main",0,math.MaxInt64),
+		keyAccount:       sdk.NewKVStoreKey("acc",0,math.MaxInt64),
+		keyStake:         sdk.NewKVStoreKey("stake",0,math.MaxInt64),
+		keyGov:           sdk.NewKVStoreKey("gov",0,math.MaxInt64),
+		keyParams:        sdk.NewKVStoreKey("params",0,math.MaxInt64),
+		keyNew:           sdk.NewKVStoreKey("New",math.MaxInt64),//later verison
 	}
 	app.loadGlobalKey()// update the keys information
 ```
 
-Then the `keys` in `Global Paramstore` will be assgined to all above keys according to the same `name`. If `key` doesn't exist in `Global Paramstore`，`Global Paramstore` will add this `key`.
+For genesis version, the `start` of all `KVStoreKey`  initialize to 0 like `main`,`acc` ... For later versions, if we add new module, the `start` initialize to $ 2^{64}$ like `keyNew`. `end` always initialize to $ 2^{64}$.
+
+When application is initialized, the `KVStoreKey` in `Global Paramstore` will be assgined to all above keys according to the same `name`. If `key` doesn't exist in `Global Paramstore`，`Global Paramstore` will add this `KVStoreKey`.
 
 ### Gov
 
@@ -89,16 +90,16 @@ type MsgSwitch struct {
 ```
 This message is used to signal that my local software has been updated and ready to switch to the new version software.
 
-## Update Workflow
+## Upgrade Workflow
 
-### Add New Modules
+### Add a New Module
 For example，we want to add a new module `ABC` and start to be used at  `height_ABC`.
 
 1. (gov) Submit the `AddModuleProposal` to add `ABC`. Proposal contains the name `ABC` and `height_ABC`.
 2. After the proposal is accepted, every validator start to download the new version, then run it and send the `MsgSwitch` message. Now the `start` in the KVStoreKey of the `ABC` module is the inital value($2^{64}$).So the `start` of `ABC` module is bigger than `lastheight`, it can't be read and written. 
 3. When `lastheight` reach to the `height_ABC`, govenance will count if more than two-thirds of validators have updated the software according to the `MsgSwitch` messages. If `true`, the govenance will set the `start` in the KVStoreKey of the `ABC` module to the `height_ABC`  and the app switch to the new version of the software. But the validator who doesn't update to the version will report an error，because the old version don't have the `ABC` module. They will be slashed, as they are out of the consensus. They should download the new version to continue.
 
-### Change the Module
+### Change an Old Module
 
  For example, we change the module `ABC` to `ABC*` at `height_ABC*`. `ABC*` is similiar with `ABC`, but `ABC*` is more complete. Our approach is to keep the old module handling the`msgs` before the `height_ABC*` and add the new module handling the `msgs` after the `hegiht_ABC`.
 
