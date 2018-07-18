@@ -1,9 +1,19 @@
 # Software Upgrade Implement
 
 ## Two types of upgrade
-1. Add the new module
-2. Change the old module 
+1. Add a new module
+2. Change an old module 
 
+## Main Idea
+One module only corresponds to a KVstore according to the `KVstoreKey`. There are two important designs.
+ 
+* If a KVstore can be read, it mean that it can participate in `CommitID` computing（completely changed）and its module can handle the `QueryMsgs` 
+* If a KVstore can be written, it mean that its module can handle the `msgs`. 
+
+So we  add a lifetime part to the  `KVstorekey`  to control wether the module can be read and written. Lifetime part is only changed by the governance and it means that entire software upgrade is controlled by the blockchain except for downloading the new code and restarting it.
+
+See below for details.
+ 
 ## KVstoreKey
 Currently, the `KVStoreKey` in CosmosSDK v0.21.0 is
 
@@ -22,7 +32,7 @@ type KVStoreKey struct {
     end   int64
 }
 ```
-When `start<= lastheight`,this `KVstore` not only can be read and written (the module can handle the `msgs`), but also participate in `CommitID` computing. When `lastheight>=end`, this `KVstore` can't be written and its module doesn't handle the `msg`. `start` is always no more than `end`. 
+When `start<= lastheight`,this `KVstore` not only can be read and written. When `lastheight>=end`, this `KVstore` can't be written. `start` is always no more than `end`. 
 
 For genesis version, the `start` of all `KVstoreKey`  initialize to 0. For later versions, if we add new module, the `start` of it initialize to $ 2^{64}$. `end` always initialize to $ 2^{64}$.
 
@@ -90,20 +100,21 @@ For example，we want to add a new module `ABC` and start to be used at  `height
 
 ### Change the Module
 
-In fact, our method is  to keep the old module but replace the old module with the new module. So previous `msgs`  are handled by the former and subsequent `msgs` are handled by the latter. For example, we change the module `ABC` to `ABC*` at `height_ABC*`
+ For example, we change the module `ABC` to `ABC*` at `height_ABC*`. `ABC*` is similiar with `ABC`, but `ABC*` is more complete. Our approach is to keep the old module handling the`msgs` before the `height_ABC*` and add the new module handling the `msgs` after the `hegiht_ABC`.
 
-1. (gov) Submit the `ChangeModuleProposal` to change the module `ABC`. Proposal contains the old name `ABC`, the new name `ABC*` and the `height` that we can start to change the old module to the new module. 
+1. (gov) Submit the `ChangeModuleProposal` to change the module `ABC`. Proposal contains the old name `ABC`, the new name `ABC*` and the `height_ABC*` that we start to change the old module to the new module. 
 
 
-2. After the proposal is accepted, every validator start to download new version, run it and send the `MsgSwitch`. But the `start` of `ABC` module is bigger than `lastheight`,so it can't be read and written.
+2. After the proposal is accepted, every validator start to download new version, run it and send the `MsgSwitch`. 
+
  
 3. When `lastheight` reach to the `height_ABC*`, govenance will count if more than two-thirds of validators have updated the software. If `true`, the govenance will do three things.   
-   1. Delete the old module `ABC` by setting the `end` of `ABC` to `height_ABC*`. (In fact, we can alse query the storage in old module `ABC`,but the module will not handle the message to change th ABCI status after the `height_ABC*`) 
-   2. Start the new module `ABC*` by setting the `start` of `ABC*` to the `height_ABC*`. The module `ABC*` will handle the message to change th ABCI status after the `height_ABC*`
+   1. Set the `end` in the KVStoreKey of the `ABC` module to `height_ABC*`. (In fact, we can alse query the storage in old module `ABC`,but the module will not handle the message to change th ABCI status after the `height_ABC*`) 
+   2. Start the new module `ABC*` by setting the `start` in the KVStoreKey of the `ABC*` module to the `height_ABC*`. The module `ABC*` will handle the message to change th ABCI status after the `height_ABC*`
    3. Transfer the useful storage from the old  to the new module.
 
-4. Finally, the app switch to the new version of the software. But the validator which don't update the version will report an error，because the old version don't have the `ABC*`. They will be slashed, because they are out of the consensus.
-
+4. Finally, the app switch to the new version of the software. 
+Other thing is same as above.
 
 
 
