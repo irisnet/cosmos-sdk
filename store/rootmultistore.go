@@ -12,7 +12,6 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/iavl"
 )
 
 const (
@@ -301,7 +300,7 @@ func (rs *rootMultiStore) Query(req abci.RequestQuery) abci.ResponseQuery {
 		return sdk.ErrInternal(errMsg.Error()).QueryResult()
 	}
 
-	res.Proof, errMsg = AppendMultiStoreCommitInfo(res.Proof, storeName, commitInfo.StoreInfos)
+	res.Proof, errMsg = BuildMultiStoreProof(res.Proof, storeName, commitInfo.StoreInfos)
 	if errMsg != nil {
 		return sdk.ErrInternal(errMsg.Error()).QueryResult()
 	}

@@ -17,7 +17,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tendermintLiteProxy "github.com/tendermint/tendermint/lite/proxy"
-	"github.com/tendermint/iavl"
 	"github.com/cosmos/cosmos-sdk/store"
 	"strings"
 	"github.com/tendermint/tendermint/crypto"
@@ -121,24 +120,19 @@ func (ctx CoreContext) query(path string, key common.HexBytes) (res []byte, err 
 		return nil, err
 	}
 
-	var rangeProof iavl.RangeProof
+	var multiStoreProof store.MultiStoreProof
 	cdc := wire.NewCodec()
-	err = cdc.UnmarshalBinary(resp.Proof, &rangeProof)
+	err = cdc.UnmarshalBinary(resp.Proof, &multiStoreProof)
 	if err != nil {
 		return res, errors.Wrap(err, "failed to unmarshalBinary rangeProof")
 	}
 
-	var multiStoreCommitInfo store.MultiStoreCommitInfo
-	err = cdc.UnmarshalBinary(rangeProof.Appendix, &multiStoreCommitInfo)
-	if err != nil {
-		return res, errors.Wrap(err, "failed to unmarshalBinary Appendix in rangeProof")
-	}
 	// Validate the substore commit hash against trusted appHash
-	substoreCommitHash, err :=  store.VerifyMultiStoreCommitInfo(multiStoreCommitInfo.StoreName, multiStoreCommitInfo.CommitIDList, commit.Header.AppHash)
+	substoreCommitHash, err :=  store.VerifyMultiStoreCommitInfo(multiStoreProof.StoreName, multiStoreProof.CommitIDList, commit.Header.AppHash)
 	if err != nil {
 		return  nil, errors.Wrap(err, "failed in verifying the proof against appHash")
 	}
-	err = store.VerifyRangeProof(resp.Key, resp.Value, substoreCommitHash, &rangeProof)
+	err = store.VerifyRangeProof(resp.Key, resp.Value, substoreCommitHash, &multiStoreProof.RangeProof)
 	if err != nil {
 		return  nil, errors.Wrap(err, "failed in the range proof verification")
 	}

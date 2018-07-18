@@ -15,41 +15,36 @@ type SubstoreCommitID struct {
 	CommitHash    cmn.HexBytes `json:"commit_hash"`
 }
 
-type MultiStoreCommitInfo struct {
+type MultiStoreProof struct {
 	CommitIDList []SubstoreCommitID `json:"commit_id_list"`
 	StoreName string `json:"store_name"`
+	RangeProof iavl.RangeProof `json:"range_proof"`
 }
 
-func AppendMultiStoreCommitInfo(iavlProof []byte, storeName string, storeInfos []storeInfo) ([]byte, error) {
+func BuildMultiStoreProof(iavlProof []byte, storeName string, storeInfos []storeInfo) ([]byte, error) {
+	var rangeProof iavl.RangeProof
+	err := cdc.UnmarshalBinary(iavlProof,&rangeProof)
+	if err != nil {
+		return nil, err
+	}
 
-	var multiStoreCommitInfo MultiStoreCommitInfo
+	var multiStoreProof MultiStoreProof
 	for _,storeInfo := range storeInfos {
 		commitId := SubstoreCommitID{
 			Name: storeInfo.Name,
 			Version:storeInfo.Core.CommitID.Version,
 			CommitHash:storeInfo.Core.CommitID.Hash,
 		}
-		multiStoreCommitInfo.CommitIDList = append(multiStoreCommitInfo.CommitIDList,commitId)
+		multiStoreProof.CommitIDList = append(multiStoreProof.CommitIDList,commitId)
 	}
-	multiStoreCommitInfo.StoreName = storeName
+	multiStoreProof.StoreName = storeName
+	multiStoreProof.RangeProof = rangeProof
 
-	multiStoreCommitByteArray,err := cdc.MarshalBinary(multiStoreCommitInfo)
+	proof,err := cdc.MarshalBinary(multiStoreProof)
 	if err != nil {
 		return nil, err
 	}
 
-	var rangeProof iavl.RangeProof
-	err = cdc.UnmarshalBinary(iavlProof,&rangeProof)
-	if err != nil {
-		return nil, err
-	}
-
-	rangeProof.Appendix = multiStoreCommitByteArray
-
-	proof, err := cdc.MarshalBinary(rangeProof)
-	if err != nil {
-		return nil, err
-	}
 	return proof, nil
 }
 
