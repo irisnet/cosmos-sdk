@@ -495,7 +495,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS19/keys": {
+        "/ICS1/keys": {
             "get": {
                 "description": "Get all keys in the key store",
                 "consumes": [
@@ -596,7 +596,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS19/keys/get/{name}": {
+        "/ICS1/keys/get/{name}": {
             "get": {
                 "description": "Get detailed information for specific key name",
                 "consumes": [
@@ -649,7 +649,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS19/keys/seed": {
+        "/ICS1/keys/seed": {
             "get": {
                 "description": "Get a seed for creating key",
                 "consumes": [
@@ -694,7 +694,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS19/keys/{name}": {
+        "/ICS1/keys/{name}": {
             "put": {
                 "description": "The keys are protected by the password, here this API provides a way to change the password",
                 "consumes": [

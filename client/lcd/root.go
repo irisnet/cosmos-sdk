@@ -198,7 +198,7 @@ func createSwaggerHandler(server *gin.Engine, ctx context.CoreContext, cdc *wire
 	}
 
 	if moduleEnabled(moduleArray,"key") {
-		keys.RegisterAll(server.Group("/ICS19"))
+		keys.RegisterAll(server.Group("/ICS1"))
 	}
 
 	if moduleEnabled(moduleArray,"token") {
