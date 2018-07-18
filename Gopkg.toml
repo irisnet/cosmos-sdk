@@ -72,10 +72,6 @@
   name = "github.com/zondax/ledger-goclient"
   revision = "39ba4728c137c75718a21f9b4b3280fa31b9139b"
 
-[[constraint]]
-  name = "github.com/swaggo/gin-swagger"
-  revision = "1510a6d46f01820f88b3a62d13353ccc8c6faa8e"
-
 [prune]
   go-tests = true
   unused-packages = true
