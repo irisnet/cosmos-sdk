@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"github.com/tendermint/tendermint/libs/cli"
 )
 
 var doc = `{
@@ -58,7 +59,7 @@ var doc = `{
                     },
                     {
                         "type": "string",
-                        "description": "validator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "description": "validator address, example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
                         "name": "validator",
                         "in": "path"
                     }
@@ -111,13 +112,13 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "delegator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "description": "delegator address, example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
                         "name": "delegator",
                         "in": "path"
                     },
                     {
                         "type": "string",
-                        "description": "validator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "description": "validator address, example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
                         "name": "validator",
                         "in": "path"
                     }
@@ -170,19 +171,19 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "delegator address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "description": "delegator address, example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
                         "name": "delegator",
                         "in": "path"
                     },
                     {
                         "type": "string",
-                        "description": "validator source address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "description": "validator source address, example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
                         "name": "validator_src",
                         "in": "path"
                     },
                     {
                         "type": "string",
-                        "description": "validator destination address example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
+                        "description": "validator destination address, example: cosmosaccaddr1t48m77vw08fqygkz96l3neqdzrnuvh6ansk7ks",
                         "name": "validator_dst",
                         "in": "path"
                     }
@@ -817,7 +818,7 @@ var doc = `{
         },
         "/node_version": {
             "get": {
-                "description": "Get connected node version REST handler endpoint",
+                "description": "Get connected full node version",
                 "consumes": [
                     "application/json"
                 ],
@@ -827,7 +828,7 @@ var doc = `{
                 "tags": [
                     "General"
                 ],
-                "summary": "Get connected node version REST handler endpoint",
+                "summary": "Get connected full node version",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -862,7 +863,7 @@ var doc = `{
         },
         "/version": {
             "get": {
-                "description": "Get Cosmos-LCD version REST handler endpoint",
+                "description": "Get Cosmos-LCD version",
                 "consumes": [
                     "application/json"
                 ],
@@ -872,7 +873,7 @@ var doc = `{
                 "tags": [
                     "General"
                 ],
-                "summary": "Get Cosmos-LCD version REST handler endpoint",
+                "summary": "Get Cosmos-LCD version",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1562,6 +1563,7 @@ var TagToModuleDesc = `
 type s struct{}
 
 func addOptionsToDesc (desc string) string {
+	home := viper.GetString(cli.HomeFlag)
 	listenAddr := viper.GetString(client.FlagListenAddr)
 	swaggerHost := viper.GetString(client.FlagSwaggerHostIP)
 	nodeList := viper.GetString(client.FlagNodeList)
@@ -1574,6 +1576,11 @@ func addOptionsToDesc (desc string) string {
 	buffer.WriteString("\n")
 
 	buffer.WriteString("Cosmos-LCD starting options:")
+	buffer.WriteString("\n")
+
+	buffer.WriteString(cli.HomeFlag)
+	buffer.WriteString(": ")
+	buffer.WriteString(home)
 	buffer.WriteString("\n")
 
 	buffer.WriteString(client.FlagListenAddr)

@@ -1,21 +1,33 @@
 # Cosmos-LCD(light-client daemon) REST-server with swagger-ui
 
 ## Getting Start
-* Execute the following command:
+* If you have gaiad running on your local machine, and its listened port is 26657, then you can start Cosmos-LCD just with the following command:
 ```
-export GIN_MODE=release && gaiacli advanced rest-server-swagger --chain-id test-chain-RtAS0K
+gaiacli advanced rest-server-swagger --chain-id {your chain id}
 ```
 * Open this uri with your explorer:
 ```
 http://localhost:1317/swagger/index.html
+
 ```
 ## More Options
 
-* You can specify more full node URIs and localhost listen address with this command:
+| Parameter       | Type      | Default                 | Required | Description                                          |
+| -----------     | --------- | ----------------------- | -------- | ---------------------------------------------------- |
+| home            | string    | "$HOME/.gaiacli"        | false    | directory for save checkpoints and validator sets    |
+| chain-id        | string    | null                    | true     | chain id of the full node to connect                 |
+| node-list       | URL       | "tcp://localhost:26657" | false    | addresses of the full node to connect                |
+| laddr           | URL       | "tcp://localhost:1317"  | false    | address to run the rest server on                    |
+| trust-node      | bool      | "false"                 | false    | Whether this LCD is connected to a trusted full node |
+| swagger-host-ip | string    | "localhost"             | false    | The IP of the server which Cosmos-LCD is running on  |
+| modules         | string    | "general,key,token"     | false    | enabled modules.                                     |
+
+* You can specify more full node URIs with this command:
 ```
-gaiacli advanced rest-server-swagger --chain-id test-chain-RtAS0K --laddr localhost:8080 --node-list tcp://10.10.10.10:46657,tcp://20.20.20.20:46657
+gaiacli advanced rest-server-swagger --chain-id {your chain id} --node-list tcp://10.10.10.10:26657,tcp://20.20.20.20:26657
 ```
-* Then the swagger-ui URI will be:
+
+* If you want to run Cosmos-LCD on remote server, you can start it like this:
 ```
-http://localhost:8080/swagger/index.html
+gaiacli advanced rest-server-swagger --chain-id {your chain id} --laddr 0.0.0.0:1317 --swagger-host-ip {your server ip}
 ```
