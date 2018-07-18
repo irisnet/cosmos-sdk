@@ -1,11 +1,11 @@
 # Software Upgrade Implement
 
-## Two basic upgrades
+## Two types of upgrade
 1. Add the new module
 2. Change the old module 
 
-## Design(KVstoreKey)
-Now, the `KVStoreKey` in CosmosSDK v0.21.0 is
+## KVstoreKey
+Currently, the `KVStoreKey` in CosmosSDK v0.21.0 is
 
 ```go
 type KVStoreKey struct {
@@ -13,7 +13,7 @@ type KVStoreKey struct {
 }
 ```
 
-But we add `start` and `height` to `KVStoreKey`
+Now we add `start` and `height` to `KVStoreKey`
 
 ```go
 type KVStoreKey struct {
@@ -77,18 +77,18 @@ type MsgSwitch struct {
 	validator  sdk.AccAddress `json:"depositer"`  // Address of the validator
 }
 ```
-This message is used to signal the `SoftwareUpgradeProposal` that my software has updated.
+This message is used to signal that my local software has been updated and ready to switch to the new version software.
 
 ## Update Workflow
 
-###Add New Modules
-For example，we want to add new module `ABC` and start to use at  `height_ABC`.
+### Add New Modules
+For example，we want to add a new module `ABC` and start to be used at  `height_ABC`.
 
 1. (gov) Submit the `AddModuleProposal` to add `ABC`. Proposal contains the name `ABC` and `height_ABC`.
-2. After the proposal is accepted, every validator start to download new version, then run it and send the `MsgSwitch` message. But the `start` of `ABC` module is bigger than `lastheight`, so it can't be read and written. 
-3. When `lastheight` reach to the `height_ABC`, govenance will count if more than two-thirds of validators have updated the software according to the `MsgSwitch` messages. If `true`, the govenance will set the `start` to `height_ABC`  and the app switch to the new version of the software. But the validator which don't update the version will report an error，because the old version don't have the `ABC`. They will be slashed, because they are out of the consensus. They should download the new version.
+2. After the proposal is accepted, every validator start to download the new version, then run it and send the `MsgSwitch` message. Now the `start` in the KVStoreKey of the `ABC` module is the inital value($2^{64}$).So the `start` of `ABC` module is bigger than `lastheight`, it can't be read and written. 
+3. When `lastheight` reach to the `height_ABC`, govenance will count if more than two-thirds of validators have updated the software according to the `MsgSwitch` messages. If `true`, the govenance will set the `start` in the KVStoreKey of the `ABC` module to the `height_ABC`  and the app switch to the new version of the software. But the validator who doesn't update to the version will report an error，because the old version don't have the `ABC` module. They will be slashed, as they are out of the consensus. They should download the new version to continue.
 
-###Change the Module
+### Change the Module
 
 In fact, our method is  to keep the old module but replace the old module with the new module. So previous `msgs`  are handled by the former and subsequent `msgs` are handled by the latter. For example, we change the module `ABC` to `ABC*` at `height_ABC*`
 
