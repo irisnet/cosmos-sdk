@@ -285,17 +285,6 @@ func RegisterLCDRoutes(routerGroup *gin.RouterGroup, ctx context.CoreContext, cd
 	routerGroup.POST("/signed_transfer", BroadcastSignedTransferTransactionFn(cdc, ctx))
 }
 
-// @Summary Build transaction
-// @Description Build transaction
-// @Tags ICS20
-// @Accept  json
-// @Produce  json
-// @Param transferBody body transferBody true "create transaction parameters"
-// @Success 200 {string} string
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /ICS20/create_transfer [post]
 func CreateTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 		var transferBody transferBody
@@ -359,17 +348,6 @@ func CreateTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.H
 	}
 }
 
-// @Summary Broadcast signed transaction
-// @Description Broadcast signed transaction
-// @Tags ICS20
-// @Accept  json
-// @Produce  json
-// @Param signedTransaction body signedBody true "signed transaction"
-// @Success 200 {object} ResultBroadcastTxCommit
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /ICS20/signed_transfer [post]
 func BroadcastSignedTransferTransactionFn(cdc *wire.Codec, ctx context.CoreContext) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 		var signedTransaction signedBody
@@ -413,18 +391,6 @@ func BroadcastSignedTransferTransactionFn(cdc *wire.Codec, ctx context.CoreConte
 	}
 }
 
-// SendRequestHandlerFn - http request handler to send coins to a address
-// @Summary Send coins to a address
-// @Description This API require the Cosmos-LCD have keystore module. It will ask keystore module for transaction signature
-// @Tags ICS20
-// @Accept  json
-// @Produce  json
-// @Param sendAsset body sendBody true "transfer asset"
-// @Success 200 {object} ResultBroadcastTxCommit
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /accounts/{address}/send [post]
 func SendAssetWithKeystoreHandlerFn(cdc *wire.Codec, ctx context.CoreContext, kb keys.Keybase) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 

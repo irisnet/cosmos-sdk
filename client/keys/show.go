@@ -68,17 +68,6 @@ func GetKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(output)
 }
 
-// @Summary Get key information
-// @Description Get detailed information for specific key name
-// @Tags key
-// @Accept  json
-// @Produce  json
-// @Param name path string false "key name"
-// @Success 200 {object} keys.KeyOutput
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /keys/get/{name} [get]
 func GetKeyRequest(gtx *gin.Context) {
 	name := gtx.Param("name")
 

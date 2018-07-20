@@ -93,18 +93,6 @@ func DeleteKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-// @Summary Delete key
-// @Description delete specific name
-// @Tags key
-// @Accept  json
-// @Produce  json
-// @Param name path string false "key name"
-// @Param pwd body keys.DeleteKeyBody false "password"
-// @Success 200 {string} string
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /keys/{name} [delete]
 func DeleteKeyRequest(gtx *gin.Context) {
 	name := gtx.Param("name")
 	var kb keys.Keybase

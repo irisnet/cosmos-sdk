@@ -30,31 +30,11 @@ func NodeVersionRequestHandler(ctx context.CoreContext) http.HandlerFunc {
 	}
 }
 
-// @Summary Get Cosmos-LCD version REST handler endpoint
-// @Description Get Cosmos-LCD version REST handler endpoint
-// @Tags version
-// @Accept  json
-// @Produce  json
-// @Success 200 {string} string
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /version [get]
 func CLIVersionRequest(gtx *gin.Context) {
 	v := version.GetVersion()
 	httputil.Response(gtx,v)
 }
 
-// @Summary Get connected node version REST handler endpoint
-// @Description Get connected node version REST handler endpoint
-// @Tags version
-// @Accept  json
-// @Produce  json
-// @Success 200 {string} string
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /node_version [get]
 func NodeVersionRequest(ctx context.CoreContext) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 		appVersion, err := ctx.Query("/app/version")

@@ -37,7 +37,7 @@ var doc = `{
     "host": "localhost:1317",
     "basePath": "/",
     "paths": {
-        "/ICS21/stake/{delegator}/delegation/{validator}": {
+        "/stake/{delegator}/delegation/{validator}": {
             "get": {
                 "description": "Get the delegation information between specific delegator and validator",
                 "consumes": [
@@ -96,7 +96,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS21/stake/{delegator}/ubd/{validator}": {
+        "/stake/{delegator}/ubd/{validator}": {
             "get": {
                 "description": "Get the unbound information between specific delegator and validator",
                 "consumes": [
@@ -155,7 +155,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS21/stake/{delegator}/red/{validator_src}/{validator_dst}": {
+        "/stake/{delegator}/red/{validator_src}/{validator_dst}": {
             "get": {
                 "description": "Get the re-delegation information between specific delegator and validator",
                 "consumes": [
@@ -220,7 +220,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS21/stake_validators": {
+        "/stake_validators": {
             "get": {
                 "description": "Query all validators' information",
                 "consumes": [
@@ -265,7 +265,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS20/accounts/{address}": {
+        "/accounts/{address}": {
             "get": {
                 "description": "Get the detailed information for specific address",
                 "consumes": [
@@ -318,7 +318,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS20/create_transfer": {
+        "/create_transfer": {
             "post": {
                 "description": "Build transaction",
                 "consumes": [
@@ -375,7 +375,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS20/signed_transfer": {
+        "/signed_transfer": {
             "post": {
                 "description": "Broadcast signed transaction.",
                 "consumes": [
@@ -432,7 +432,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS20/accounts/{address}/send": {
+        "/accounts/{address}/send": {
             "post": {
                 "description": "This API require the Cosmos-LCD have keystore module. It will ask keystore module for transaction signature",
                 "consumes": [
@@ -495,7 +495,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS1/keys": {
+        "/keys": {
             "get": {
                 "description": "Get all keys in the key store",
                 "consumes": [
@@ -596,7 +596,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS1/keys/get/{name}": {
+        "/keys/get/{name}": {
             "get": {
                 "description": "Get detailed information for specific key name",
                 "consumes": [
@@ -649,7 +649,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS1/keys/seed": {
+        "/keys/seed": {
             "get": {
                 "description": "Get a seed for creating key",
                 "consumes": [
@@ -694,7 +694,7 @@ var doc = `{
                 }
             }
         },
-        "/ICS1/keys/{name}": {
+        "/keys/{name}": {
             "put": {
                 "description": "The keys are protected by the password, here this API provides a way to change the password",
                 "consumes": [

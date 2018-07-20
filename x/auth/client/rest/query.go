@@ -75,17 +75,6 @@ func RegisterLCDRoutes(routerGroup *gin.RouterGroup, ctx context.CoreContext, cd
 	routerGroup.GET("accounts/:address",QueryKeysRequestHandlerFn(storeName,cdc,authcmd.GetAccountDecoder(cdc),ctx))
 }
 
-// @Summary Query account information
-// @Description Get the detailed information for specific address
-// @Tags ICS20
-// @Accept  json
-// @Produce  json
-// @Param address path string false "address"
-// @Success 200 {object} auth.BaseAccount
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /ICS20/accounts/{address} [get]
 func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.AccountDecoder, ctx context.CoreContext) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 

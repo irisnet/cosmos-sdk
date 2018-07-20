@@ -238,17 +238,6 @@ func AddNewKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(bz)
 }
 
-// @Summary Create a account
-// @Description Create a new key and persistent it to the key store
-// @Tags key
-// @Accept  json
-// @Produce  json
-// @Param  nameAndPwd body keys.NewKeyBody true "name and password for a new key"
-// @Success 200 {object} keys.KeyOutput
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /keys [post]
 func AddNewKeyRequest(gtx *gin.Context)  {
 	var kb keys.Keybase
 	var m NewKeyBody
@@ -330,16 +319,6 @@ func SeedRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(seed))
 }
 
-// @Summary Get a seed
-// @Description Get a seed for creating key
-// @Tags key
-// @Accept  json
-// @Produce  json
-// @Success 200 {string} string
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /keys/seed [get]
 func SeedRequest(gtx *gin.Context) {
 
 	algo := keys.SigningAlgo("secp256k1")

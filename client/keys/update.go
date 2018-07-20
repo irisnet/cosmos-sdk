@@ -96,18 +96,6 @@ func UpdateKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-// @Summary Change key password
-// @Description The keys are protected by the password, here this API provides a way to change the password
-// @Tags key
-// @Accept  json
-// @Produce  json
-// @Param name path string false "key name"
-// @Param pwd body keys.UpdateKeyBody false "key name"
-// @Success 200 {string} string
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /keys/{name} [put]
 func UpdateKeyRequest(gtx *gin.Context) {
 	name := gtx.Param("name")
 	var kb keys.Keybase

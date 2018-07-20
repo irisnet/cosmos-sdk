@@ -70,17 +70,6 @@ func QueryKeysRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(output)
 }
 
-// @Description Get all keys in the key store
-// @Summary list all keys
-// @ID queryKeysRequest
-// @Tags key
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} keys.KeyOutput
-// @Failure 400 {object} httputil.HTTPError
-// @Failure 404 {object} httputil.HTTPError
-// @Failure 500 {object} httputil.HTTPError
-// @Router /keys [get]
 func QueryKeysRequest(gtx *gin.Context) {
 	kb, err := GetKeyBase()
 	if err != nil {

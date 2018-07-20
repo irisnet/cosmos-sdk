@@ -198,16 +198,16 @@ func createSwaggerHandler(server *gin.Engine, ctx context.CoreContext, cdc *wire
 	}
 
 	if moduleEnabled(moduleArray,"key") {
-		keys.RegisterAll(server.Group("/ICS1"))
+		keys.RegisterAll(server.Group("/"))
 	}
 
 	if moduleEnabled(moduleArray,"token") {
-		auth.RegisterLCDRoutes(server.Group("/ICS20"), ctx, cdc, "acc")
-		bank.RegisterLCDRoutes(server.Group("/ICS20"), ctx, cdc, kb)
+		auth.RegisterLCDRoutes(server.Group("/"), ctx, cdc, "acc")
+		bank.RegisterLCDRoutes(server.Group("/"), ctx, cdc, kb)
 	}
 
 	if moduleEnabled(moduleArray,"stake") {
-		stake.RegisterQueryLCDRoutes(server.Group("/ICS21"), ctx, cdc)
+		stake.RegisterQueryLCDRoutes(server.Group("/"), ctx, cdc)
 	}
 }
 
