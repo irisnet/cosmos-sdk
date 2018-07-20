@@ -26,9 +26,9 @@ tsung version: 1.5.1
 
 Here we mainly care about the query APIs of Cosmos-LCD. Now Cosmos-LCD doesn't have full functionality. So we only test the token query API. All query APIs has similar process logic. From the perspective of gaia, the only difference is the store name and query key. So this API is very representative.
 
-* Functionality test: Manualy call token query API in swagger-ui.
-* Maximum TPS test: Use tsung to send requests at specific speed for 5 minutes, if no http error returns, then increate the speed, here we increate 20. Repeat this process until there is http error returned.
-* Stability test: Use tsung to send requests at 80 percent of maximum speed for a hour. If no http error retruns, then the stability is OK.
+* Functionality test: Manually call token query API in swagger-ui.
+* Maximum TPS test: Use tsung to send requests at specific speed for 5 minutes, if no http error returns, then increase the speed, here the increase step is 20. Repeat this process until there is http error returned.
+* Stability test: Use tsung to send requests at 80 percent of maximum speed for a hour. If no http error returns, then the stability is OK.
 
 
 ## Test Result
@@ -111,15 +111,15 @@ Mean TPS on different condition.
 
 |Mode         | one full node | two full node | three full node |
 |------------ |-------------- |-------------- |---------------- |
-|distrust mode| 36.4 sec      | 75.1 sec      | 111.9 / sec     |
-|trust mode   | 78 sec        | 204.5 sec     |  333.9 / sec     |
+|distrust mode| 36.4 / sec      | 75.1 / sec      | 111.9 / sec     |
+|trust mode   | 78 / sec        | 204.5 / sec     |  333.9 / sec     |
 
 Comparing with distrust mode, Cosmos-LCD has much better TPS in trust mode. The reason is very obvious. In trust mode, full nodes don't need to build proof and return proof which reduce request processing complexity and decrease network traffic. In addition, cosmos-LCD also doesn't need to verify proof. So the whole request processing is much more fast.
 
 According to the above table, trying to connect to more full nodes can help to improve Cosmos-LCD TPS significantly. So in productive environment, users should specify as many as possible full nodes for Cosmos-LCD.
 
-From the perspective of full node, processing query request is disk I/O intensive operation, especially for distrust mode, because full node need to access database twice, one for query data and IAVL proof, another for getting multistore commit information. So SSD may be very helpful for improving query effiency. 
+From the perspective of full node, processing query request is disk I/O intensive operation, especially for distrust mode, because full node need to access database twice, one for query data and IAVL proof, another for getting multistore commit information. So SSD may be very helpful for improving query efficiency.
 
-From the perspective of Cosmos-LCD, when in distrust mode, it requires much computing resource for signature verfication and hash calculation. So using better CPU and more memory may improve TPS too.
+From the perspective of Cosmos-LCD, when in distrust mode, it requires much computing resource for signature verification and hash calculation. So using better CPU and more memory may improve TPS too.
 
-Bandwitdh may also affect the TPS a lot, especially for distrust mode. Here the bandwidth is only 2Mb/s, which is very poor. But we didn't try to deploy Cosmos-LCD and full nodes in the same local network to acquire more bandwidth, because in real use cases, Cosmos-LCD has to connect to full nodes throught global network. In real use case, users should try to acquire more bandwidth and try to deploy Cosmos-LCD as closet as possible to full nodes.
+Bandwidth may also affect the TPS a lot, especially for distrust mode. Here the bandwidth is only 2Mb/s, which is very poor. But we didn't try to deploy Cosmos-LCD and full nodes in the same local network to acquire more bandwidth, because in real use cases, Cosmos-LCD has to connect to full nodes through global network. In real use case, users should try to acquire more bandwidth and try to deploy Cosmos-LCD as closet as possible to full nodes.
