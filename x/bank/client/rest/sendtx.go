@@ -261,7 +261,7 @@ func BroadcastSignedTransferTransaction(cdc *wire.Codec, ctx context.CoreContext
 			publicKeys = append(publicKeys, base64DecodedData)
 		}
 
-		res, err := ctx.BroadcastTransaction(txData,signatures,publicKeys)
+		res, err := ctx.BroadcastTransaction(cdc, txData,signatures,publicKeys)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
@@ -382,7 +382,7 @@ func BroadcastSignedTransferTransactionFn(cdc *wire.Codec, ctx context.CoreConte
 			publicKeys = append(publicKeys, base64DecodedData)
 		}
 
-		res, err := ctx.BroadcastTransaction(txData, signatures, publicKeys)
+		res, err := ctx.BroadcastTransaction(cdc, txData, signatures, publicKeys)
 		if err != nil {
 			httputil.NewError(gtx, http.StatusInternalServerError, err)
 			return

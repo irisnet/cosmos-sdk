@@ -6,6 +6,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/x/params"
+
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -24,15 +26,17 @@ func getMockApp(t *testing.T, numGenAccs int) (*mock.App, Keeper, stake.Keeper, 
 	stake.RegisterWire(mapp.Cdc)
 	RegisterWire(mapp.Cdc)
 
+	keyGlobalParams := sdk.NewKVStoreKey("params")
 	keyStake := sdk.NewKVStoreKey("stake")
 	keyGov := sdk.NewKVStoreKey("gov")
 
+	pk := params.NewKeeper(mapp.Cdc, keyGlobalParams)
 	ck := bank.NewKeeper(mapp.AccountMapper)
 	sk := stake.NewKeeper(mapp.Cdc, keyStake, ck, mapp.RegisterCodespace(stake.DefaultCodespace))
-	keeper := NewKeeper(mapp.Cdc, keyGov, ck, sk, DefaultCodespace)
+	keeper := NewKeeper(mapp.Cdc, keyGov, pk.Setter(), ck, sk, DefaultCodespace)
 	mapp.Router().AddRoute("gov", NewHandler(keeper))
 
-	require.NoError(t, mapp.CompleteSetup([]*sdk.KVStoreKey{keyStake, keyGov}))
+	require.NoError(t, mapp.CompleteSetup([]*sdk.KVStoreKey{keyStake, keyGov, keyGlobalParams}))
 
 	mapp.SetEndBlocker(getEndBlocker(keeper))
 	mapp.SetInitChainer(getInitChainer(mapp, keeper, sk))
@@ -61,12 +65,14 @@ func getInitChainer(mapp *mock.App, keeper Keeper, stakeKeeper stake.Keeper) sdk
 		stakeGenesis := stake.DefaultGenesisState()
 		stakeGenesis.Pool.LooseTokens = sdk.NewRat(100000)
 
-		err := stake.InitGenesis(ctx, stakeKeeper, stakeGenesis)
+		validators, err := stake.InitGenesis(ctx, stakeKeeper, stakeGenesis)
 		if err != nil {
 			panic(err)
 		}
 		InitGenesis(ctx, keeper, DefaultGenesisState())
-		return abci.ResponseInitChain{}
+		return abci.ResponseInitChain{
+			Validators: validators,
+		}
 	}
 }
 

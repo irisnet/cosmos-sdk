@@ -24,11 +24,15 @@ func GetCmdCreateValidator(cdc *wire.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
-			amount, err := sdk.ParseCoin(viper.GetString(FlagAmount))
+			amounstStr := viper.GetString(FlagAmount)
+			if amounstStr == "" {
+				return fmt.Errorf("Must specify amount to stake using --amount")
+			}
+			amount, err := sdk.ParseCoin(amounstStr)
 			if err != nil {
 				return err
 			}
-			validatorAddr, err := sdk.AccAddressFromBech32(viper.GetString(FlagAddressValidator))
+			validatorAddr, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -73,8 +77,7 @@ func GetCmdCreateValidator(cdc *wire.Codec) *cobra.Command {
 
 	cmd.Flags().AddFlagSet(fsPk)
 	cmd.Flags().AddFlagSet(fsAmount)
-	cmd.Flags().AddFlagSet(fsDescription)
-	cmd.Flags().AddFlagSet(fsValidator)
+	cmd.Flags().AddFlagSet(fsDescriptionCreate)
 	cmd.Flags().AddFlagSet(fsDelegator)
 	return cmd
 }
@@ -85,8 +88,9 @@ func GetCmdEditValidator(cdc *wire.Codec) *cobra.Command {
 		Use:   "edit-validator",
 		Short: "edit and existing validator account",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
-			validatorAddr, err := sdk.AccAddressFromBech32(viper.GetString(FlagAddressValidator))
+			validatorAddr, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -99,8 +103,6 @@ func GetCmdEditValidator(cdc *wire.Codec) *cobra.Command {
 			msg := stake.NewMsgEditValidator(validatorAddr, description)
 
 			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
-
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -110,8 +112,7 @@ func GetCmdEditValidator(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().AddFlagSet(fsDescription)
-	cmd.Flags().AddFlagSet(fsValidator)
+	cmd.Flags().AddFlagSet(fsDescriptionEdit)
 	return cmd
 }
 
@@ -121,12 +122,14 @@ func GetCmdDelegate(cdc *wire.Codec) *cobra.Command {
 		Use:   "delegate",
 		Short: "delegate liquid tokens to an validator",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
+
 			amount, err := sdk.ParseCoin(viper.GetString(FlagAmount))
 			if err != nil {
 				return err
 			}
 
-			delegatorAddr, err := sdk.AccAddressFromBech32(viper.GetString(FlagAddressDelegator))
+			delegatorAddr, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -138,8 +141,6 @@ func GetCmdDelegate(cdc *wire.Codec) *cobra.Command {
 			msg := stake.NewMsgDelegate(delegatorAddr, validatorAddr, amount)
 
 			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
-
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -150,7 +151,6 @@ func GetCmdDelegate(cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().AddFlagSet(fsAmount)
-	cmd.Flags().AddFlagSet(fsDelegator)
 	cmd.Flags().AddFlagSet(fsValidator)
 	return cmd
 }
@@ -175,9 +175,10 @@ func GetCmdBeginRedelegate(storeName string, cdc *wire.Codec) *cobra.Command {
 		Use:   "begin",
 		Short: "begin redelegation",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
 			var err error
-			delegatorAddr, err := sdk.AccAddressFromBech32(viper.GetString(FlagAddressDelegator))
+			delegatorAddr, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -202,8 +203,6 @@ func GetCmdBeginRedelegate(storeName string, cdc *wire.Codec) *cobra.Command {
 			msg := stake.NewMsgBeginRedelegate(delegatorAddr, validatorSrcAddr, validatorDstAddr, sharesAmount)
 
 			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
-
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -214,7 +213,6 @@ func GetCmdBeginRedelegate(storeName string, cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().AddFlagSet(fsShares)
-	cmd.Flags().AddFlagSet(fsDelegator)
 	cmd.Flags().AddFlagSet(fsRedelegation)
 	return cmd
 }
@@ -266,8 +264,9 @@ func GetCmdCompleteRedelegate(cdc *wire.Codec) *cobra.Command {
 		Use:   "complete",
 		Short: "complete redelegation",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
-			delegatorAddr, err := sdk.AccAddressFromBech32(viper.GetString(FlagAddressDelegator))
+			delegatorAddr, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -283,8 +282,6 @@ func GetCmdCompleteRedelegate(cdc *wire.Codec) *cobra.Command {
 			msg := stake.NewMsgCompleteRedelegate(delegatorAddr, validatorSrcAddr, validatorDstAddr)
 
 			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
-
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -293,7 +290,6 @@ func GetCmdCompleteRedelegate(cdc *wire.Codec) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().AddFlagSet(fsDelegator)
 	cmd.Flags().AddFlagSet(fsRedelegation)
 	return cmd
 }
@@ -318,8 +314,9 @@ func GetCmdBeginUnbonding(storeName string, cdc *wire.Codec) *cobra.Command {
 		Use:   "begin",
 		Short: "begin unbonding",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
-			delegatorAddr, err := sdk.AccAddressFromBech32(viper.GetString(FlagAddressDelegator))
+			delegatorAddr, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -340,8 +337,6 @@ func GetCmdBeginUnbonding(storeName string, cdc *wire.Codec) *cobra.Command {
 			msg := stake.NewMsgBeginUnbonding(delegatorAddr, validatorAddr, sharesAmount)
 
 			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
-
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -352,7 +347,6 @@ func GetCmdBeginUnbonding(storeName string, cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().AddFlagSet(fsShares)
-	cmd.Flags().AddFlagSet(fsDelegator)
 	cmd.Flags().AddFlagSet(fsValidator)
 	return cmd
 }
@@ -363,8 +357,9 @@ func GetCmdCompleteUnbonding(cdc *wire.Codec) *cobra.Command {
 		Use:   "complete",
 		Short: "complete unbonding",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
-			delegatorAddr, err := sdk.AccAddressFromBech32(viper.GetString(FlagAddressDelegator))
+			delegatorAddr, err := ctx.GetFromAddress()
 			if err != nil {
 				return err
 			}
@@ -376,8 +371,6 @@ func GetCmdCompleteUnbonding(cdc *wire.Codec) *cobra.Command {
 			msg := stake.NewMsgCompleteUnbonding(delegatorAddr, validatorAddr)
 
 			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
-
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
 				return err
@@ -386,7 +379,6 @@ func GetCmdCompleteUnbonding(cdc *wire.Codec) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().AddFlagSet(fsDelegator)
 	cmd.Flags().AddFlagSet(fsValidator)
 	return cmd
 }

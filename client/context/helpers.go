@@ -188,7 +188,7 @@ func (ctx CoreContext) BuildTransaction(accnum, sequence, gas int64, msg sdk.Msg
 }
 
 // build the transaction from the msg
-func (ctx CoreContext) BroadcastTransaction(txData []byte, signatures [][]byte, publicKeys [][]byte) (*ctypes.ResultBroadcastTxCommit, error) {
+func (ctx CoreContext) BroadcastTransaction(cdc *wire.Codec, txData []byte, signatures [][]byte, publicKeys [][]byte) (*ctypes.ResultBroadcastTxCommit, error) {
 	var stdSignDoc auth.StdSignDoc//, transactionSigs []auth.StdSignature
 	if err := json.Unmarshal(txData,&stdSignDoc); err != nil {
 		return nil, err
@@ -214,19 +214,19 @@ func (ctx CoreContext) BroadcastTransaction(txData []byte, signatures [][]byte, 
 
 	var stdSignatures []auth.StdSignature
 	for index,signature := range signatures {
-
-		public,err := crypto.PubKeyFromBytes(publicKeys[index])
+		var pubKey crypto.PubKey
+		err := cdc.UnmarshalBinaryBare(publicKeys[index], &pubKey)
 		if err != nil {
 			return nil, err
 		}
-
-		sig,err := crypto.SignatureFromBytes(signature)
+		var sig crypto.Signature
+		err = cdc.UnmarshalBinaryBare(signature, &sig)
 		if err != nil {
 			return nil, err
 		}
 
 		stdSignatures = append(stdSignatures,auth.StdSignature{
-			PubKey:        public,
+			PubKey:        pubKey,
 			Signature:     sig,
 			AccountNumber: stdSignDoc.AccountNumber,
 			Sequence:      stdSignDoc.Sequence,
@@ -300,6 +300,11 @@ func (ctx CoreContext) SignAndBuild(name, passphrase string, msgs []sdk.Msg, cdc
 
 // sign and build the transaction from the msg
 func (ctx CoreContext) ensureSignBuild(name string, msgs []sdk.Msg, cdc *wire.Codec) (tyBytes []byte, err error) {
+	err = EnsureAccountExists(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, err = EnsureAccountNumber(ctx)
 	if err != nil {
 		return nil, err

@@ -10,6 +10,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -23,8 +24,8 @@ import (
 
 // dummy addresses used for testing
 var (
-	Addrs       = createTestAddrs(100)
-	PKs         = createTestPubKeys(100)
+	Addrs       = createTestAddrs(500)
+	PKs         = createTestPubKeys(500)
 	emptyAddr   sdk.AccAddress
 	emptyPubkey crypto.PubKey
 
@@ -131,7 +132,7 @@ func NewPubKey(pk string) (res crypto.PubKey) {
 		panic(err)
 	}
 	//res, err = crypto.PubKeyFromBytes(pkBytes)
-	var pkEd crypto.PubKeyEd25519
+	var pkEd ed25519.PubKeyEd25519
 	copy(pkEd[:], pkBytes[:])
 	return pkEd
 }

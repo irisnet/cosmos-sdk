@@ -6,6 +6,7 @@ import (
 
 	secp256k1 "github.com/btcsuite/btcd/btcec"
 	tmcrypto "github.com/tendermint/tendermint/crypto"
+	tmsecp256k1 "github.com/tendermint/tendermint/crypto/secp256k1"
 )
 
 var (
@@ -140,7 +141,7 @@ func (pkl PrivKeyLedgerSecp256k1) signLedgerSecp256k1(msg []byte) (tmcrypto.Sign
 		return nil, err
 	}
 
-	return tmcrypto.SignatureSecp256k1FromBytes(sigBytes), nil
+	return tmsecp256k1.SignatureSecp256k1FromBytes(sigBytes), nil
 }
 
 func (pkl PrivKeyLedgerSecp256k1) pubkeyLedgerSecp256k1() (pub tmcrypto.PubKey, err error) {
@@ -149,10 +150,13 @@ func (pkl PrivKeyLedgerSecp256k1) pubkeyLedgerSecp256k1() (pub tmcrypto.PubKey, 
 		return nil, fmt.Errorf("error fetching public key: %v", err)
 	}
 
-	var pk tmcrypto.PubKeySecp256k1
+	var pk tmsecp256k1.PubKeySecp256k1
 
 	// re-serialize in the 33-byte compressed format
 	cmp, err := secp256k1.ParsePubKey(key[:], secp256k1.S256())
+	if err != nil {
+		return nil, fmt.Errorf("error parsing public key: %v", err)
+	}
 	copy(pk[:], cmp.SerializeCompressed())
 
 	return pk, nil
