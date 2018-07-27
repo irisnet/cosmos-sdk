@@ -432,17 +432,59 @@ func setLatestVersion(batch dbm.Batch, version int64) {
 	batch.Set([]byte(latestVersionKey), latestBytes)
 }
 
+//// Commits each store and returns a new commitInfo.
+//func commitStores(version int64, storeMap map[StoreKey]CommitStore) commitInfo {
+//	storeInfos := make([]storeInfo, 0, len(storeMap))
+//
+//	for key, store := range storeMap {
+//		// Commit
+//		commitID := store.Commit()
+//
+//		// Record CommitID
+//		si := storeInfo{}
+//		si.Name = key.Name()
+//		si.Core.CommitID = commitID
+//		// si.Core.StoreType = store.GetStoreType()
+//		storeInfos = append(storeInfos, si)
+//	}
+//
+//	ci := commitInfo{
+//		Version:    version,
+//		StoreInfos: storeInfos,
+//	}
+//	return ci
+//}
+
+////////////////////  iris/cosmos-sdk begin///////////////////////////
 // Commits each store and returns a new commitInfo.
 func commitStores(version int64, storeMap map[StoreKey]CommitStore) commitInfo {
-	storeInfos := make([]storeInfo, 0, len(storeMap))
 
-	for key, store := range storeMap {
+	storemap := make(map[string]CommitStore)
+
+	fmt.Println("CommitStores!!!!!!")
+	for key,store:= range storeMap{
+		fmt.Println(key)
+		storemap[key.Name()] = store
+	}
+
+	upgradeStore:=storemap["gov"].(KVStore)
+	bz:= upgradeStore.Get([]byte("k/"))//CurrentStoreKey
+	storekeys := string(bz) //splitby":"
+
+	storekeyslist := strings.Split(storekeys, ":")
+	fmt.Println(storekeyslist)
+
+	storeInfos := make([]storeInfo, 0, len(storekeyslist))
+
+	for _, key := range storekeyslist {
+
+		store := storemap[key]
 		// Commit
 		commitID := store.Commit()
 
 		// Record CommitID
 		si := storeInfo{}
-		si.Name = key.Name()
+		si.Name = key
 		si.Core.CommitID = commitID
 		// si.Core.StoreType = store.GetStoreType()
 		storeInfos = append(storeInfos, si)
@@ -454,6 +496,7 @@ func commitStores(version int64, storeMap map[StoreKey]CommitStore) commitInfo {
 	}
 	return ci
 }
+////////////////////  iris/cosmos-sdk end///////////////////////////
 
 // Gets commitInfo from disk.
 func getCommitInfo(db dbm.DB, ver int64) (commitInfo, error) {

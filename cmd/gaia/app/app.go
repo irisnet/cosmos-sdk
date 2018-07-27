@@ -175,7 +175,7 @@ func (app *GaiaApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci
 	}
 
 	gov.InitGenesis(ctx, app.govKeeper, gov.DefaultGenesisState())
-
+    gov.InitGenesis_commitID(ctx, app.govKeeper, "main:acc:ibc:stake:slashing:gov:fee")
 	return abci.ResponseInitChain{}
 }
 
