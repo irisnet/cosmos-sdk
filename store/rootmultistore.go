@@ -467,7 +467,7 @@ func commitStores(version int64, storeMap map[StoreKey]CommitStore) commitInfo {
 		storemap[key.Name()] = store
 	}
 
-	upgradeStore:=storemap["gov"].(KVStore)
+	upgradeStore:=storemap["upgrade"].(KVStore)
 	bz:= upgradeStore.Get([]byte("k/"))//CurrentStoreKey
 	storekeys := string(bz) //splitby":"
 
@@ -478,16 +478,17 @@ func commitStores(version int64, storeMap map[StoreKey]CommitStore) commitInfo {
 
 	for _, key := range storekeyslist {
 
-		store := storemap[key]
-		// Commit
-		commitID := store.Commit()
+		if store,ok:= storemap[key]; ok{
+			// Commit
+			commitID := store.Commit()
 
-		// Record CommitID
-		si := storeInfo{}
-		si.Name = key
-		si.Core.CommitID = commitID
-		// si.Core.StoreType = store.GetStoreType()
-		storeInfos = append(storeInfos, si)
+			// Record CommitID
+			si := storeInfo{}
+			si.Name = key
+			si.Core.CommitID = commitID
+			// si.Core.StoreType = store.GetStoreType()
+			storeInfos = append(storeInfos, si)
+		}
 	}
 
 	ci := commitInfo{
