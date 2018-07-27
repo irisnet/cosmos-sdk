@@ -25,6 +25,7 @@ BREAKING CHANGES
   * `gaiacli gov vote --voter`
 * [x/gov] Added tags sub-package, changed tags to use dash-case 
 * [x/gov] Governance parameters are now stored in globalparams store
+* [cli] #1551: Officially removed `--name` from CLI commands
 
 FEATURES
 * [lcd] Can now query governance proposals by ProposalStatus
@@ -50,10 +51,16 @@ IMPROVEMENTS
 * [tests] Fixes ansible scripts to work with AWS too
 * [tests] \#1806 CLI tests are now behind the build flag 'cli_test', so go test works on a new repo
 * [x/gov] Initial governance parameters can now be set in the genesis file
+* [client] \#1551: Refactored `CoreContext`
+  * Renamed `CoreContext` to `QueryContext`
+  * Removed all tx related fields and logic (building & signing) to separate
+  structure `TxContext` in `x/auth/client/context`
+  * Cleaned up documentation and API of what used to be `CoreContext`
+  * Implemented `KeyType` enum for key info
 
 BUG FIXES
 *  \#1666 Add intra-tx counter to the genesis validators
-*  \#1797 Fix off-by-one error in slashing for downtime
+* [tests] \#1551: Fixed invalid LCD test JSON payload in `doIBCTransfer`
 *  \#1787 Fixed bug where Tally fails due to revoked/unbonding validator
 *  \#1766 Fixes bad example for keybase identity
 *  \#1804 Fixes gen-tx genesis generation logic temporarily until upstream updates

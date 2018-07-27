@@ -1051,6 +1051,9 @@ var doc = `{
                 "ensure_account_sequence": {
                     "type": "boolean"
                 },
+				"chain_id": {
+                    "type": "string"
+                },
                 "from_address": {
                     "type": "string"
                 },

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
@@ -14,18 +12,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/cosmos/cosmos-sdk/client/httputil"
 	"errors"
+	"github.com/gorilla/mux"
 )
 
 // register REST routes
-func RegisterRoutes(ctx context.CoreContext, r *mux.Router, cdc *wire.Codec, storeName string) {
+func RegisterRoutes(queryCtx context.QueryContext, r *mux.Router, cdc *wire.Codec, storeName string) {
 	r.HandleFunc(
 		"/accounts/{address}",
-		QueryAccountRequestHandlerFn(storeName, cdc, authcmd.GetAccountDecoder(cdc), ctx),
+		QueryAccountRequestHandlerFn(storeName, cdc, authcmd.GetAccountDecoder(cdc), queryCtx),
 	).Methods("GET")
 }
 
 // query accountREST Handler
-func QueryAccountRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.AccountDecoder, ctx context.CoreContext) http.HandlerFunc {
+func QueryAccountRequestHandlerFn(
+	storeName string, cdc *wire.Codec,
+	decoder auth.AccountDecoder, queryCtx context.QueryContext,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		bech32addr := vars["address"]
@@ -37,7 +39,7 @@ func QueryAccountRequestHandlerFn(storeName string, cdc *wire.Codec, decoder aut
 			return
 		}
 
-		res, err := ctx.QueryStore(auth.AddressStoreKey(addr), storeName)
+		res, err := queryCtx.QueryStore(auth.AddressStoreKey(addr), storeName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(fmt.Sprintf("couldn't query account. Error: %s", err.Error())))
@@ -71,11 +73,11 @@ func QueryAccountRequestHandlerFn(storeName string, cdc *wire.Codec, decoder aut
 }
 
 // register to Cosmos-LCD swagger routes
-func RegisterLCDRoutes(routerGroup *gin.RouterGroup, ctx context.CoreContext, cdc *wire.Codec, storeName string) {
+func RegisterLCDRoutes(routerGroup *gin.RouterGroup, ctx context.QueryContext, cdc *wire.Codec, storeName string) {
 	routerGroup.GET("accounts/:address",QueryKeysRequestHandlerFn(storeName,cdc,authcmd.GetAccountDecoder(cdc),ctx))
 }
 
-func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.AccountDecoder, ctx context.CoreContext) gin.HandlerFunc {
+func QueryKeysRequestHandlerFn(storeName string, cdc *wire.Codec, decoder auth.AccountDecoder, ctx context.QueryContext) gin.HandlerFunc {
 	return func(gtx *gin.Context) {
 
 		bech32addr := gtx.Param("address")

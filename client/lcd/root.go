@@ -104,7 +104,7 @@ func createHandler(cdc *wire.Codec) http.Handler {
 	if err != nil {
 		panic(err)
 	}
-	ctx := context.NewCoreContextFromViper().WithCert(cert).WithClientMgr(clientMgr)
+	ctx := context.NewQueryContextFromCLI().WithCodec(cdc).WithLogger(os.Stdout).WithCert(cert).WithClientMgr(clientMgr)
 
 	// TODO: make more functional? aka r = keys.RegisterRoutes(r)
 	r.HandleFunc("/version", CLIVersionRequestHandler).Methods("GET")
@@ -156,7 +156,7 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 				panic(err)
 			}
 			//Assign tendermint certifier and load balancing engine to ctx
-			ctx := context.NewCoreContextFromViper().WithCert(cert).WithClientMgr(clientMgr)
+			ctx := context.NewQueryContextFromCLI().WithCodec(cdc).WithLogger(os.Stdout).WithCert(cert).WithClientMgr(clientMgr)
 
 			cdc := app.MakeCodec()
 
@@ -186,7 +186,7 @@ func ServeSwaggerCommand(cdc *wire.Codec) *cobra.Command {
 	return cmd
 }
 
-func createSwaggerHandler(server *gin.Engine, ctx context.CoreContext, cdc *wire.Codec, kb keyTypes.Keybase)  {
+func createSwaggerHandler(server *gin.Engine, ctx context.QueryContext, cdc *wire.Codec, kb keyTypes.Keybase)  {
 	server.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	modules := viper.GetString(client.FlagModules)
