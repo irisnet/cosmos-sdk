@@ -119,13 +119,16 @@ func NewAnteHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.AnteHandler {
 		newCtx = WithSigners(newCtx, signerAccs)
 
 		res.GasWanted = stdTx.Fee.Gas
+		//GetNativeFeeToken and FeePreprocess will ensure that there must be just one fee token
+		res.FeeAmount = fee.Amount[0].Amount.Int64()
+		res.FeeDenom = fee.Amount[0].Denom
 
 		return newCtx, res, false // continue...
 	}
 }
 
 func NewFeeRefundHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.FeeRefundHandler {
-	return func(ctx sdk.Context, tx sdk.Tx, txResult sdk.Result) (err error) {
+	return func(ctx sdk.Context, tx sdk.Tx, txResult sdk.Result) (result sdk.Result, err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = errors.New(fmt.Sprintf("encountered panic error during fee refund, recovered: %v\nstack:\n%v", r, string(debug.Stack())))
@@ -135,17 +138,19 @@ func NewFeeRefundHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.FeeRefun
 		txAccounts := GetSigners(ctx)
 		// If this tx failed in anteHandler, txAccount length will be less than 1
 		if len(txAccounts) < 1 {
-			return nil
+			result.FeeAmount = txResult.FeeAmount
+			return result, nil
 		}
 		firstAccount := txAccounts[0]
 		//If all gas has been consumed, then there is no necessary to run fee refund process
 		if txResult.GasWanted <= txResult.GasUsed {
-			return nil
+			result.FeeAmount = txResult.FeeAmount
+			return result, nil
 		}
 
 		stdTx, ok := tx.(StdTx)
 		if !ok {
-			return errors.New("transaction is not Stdtx")
+			return sdk.Result{}, errors.New("transaction is not Stdtx")
 		}
 		// Refund process will also cost gas, but this is compensation for previous fee deduction.
 		// It is not reasonable to consume users' gas. So the context gas is reset to transaction gas
@@ -168,11 +173,14 @@ func NewFeeRefundHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.FeeRefun
 		coins := am.GetAccount(ctx, firstAccount.GetAddress()).GetCoins()   // consume gas
 		err = firstAccount.SetCoins(coins.Plus(refundCoins))
 		if err != nil {
-			return err
+			return sdk.Result{}, err
 		}
 
 		am.SetAccount(ctx, firstAccount)                                    // consume gas
 		fck.refundCollectedFees(ctx, refundCoins)                           // consume gas
+		// There must be just one fee token
+		result.FeeAmount = fee.Amount[0].Amount.Mul(sdk.NewInt(txResult.GasUsed)).Div(sdk.NewInt(txResult.GasWanted)).Int64()
+
 		return
 	}
 }
