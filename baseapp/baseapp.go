@@ -533,6 +533,10 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 		Log:       result.Log,
 		GasWanted: result.GasWanted,
 		GasUsed:   result.GasUsed,
+		Fee: cmn.KI64Pair{
+			[]byte(result.FeeDenom),
+			result.FeeAmount,
+		},
 		Tags:      result.Tags,
 	}
 }
