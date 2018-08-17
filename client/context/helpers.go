@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"strings"
 )
 
 // Broadcast the transaction bytes to Tendermint
@@ -143,7 +144,7 @@ func (ctx CoreContext) SignAndBuild(name, passphrase string, msgs []sdk.Msg, cdc
 
 	fee := sdk.Coin{}
 	if ctx.Fee != "" {
-		parsedFee, err := sdk.ParseCoin(ctx.Fee)
+		parsedFee, err := ctx.ParseCoin(ctx.Fee,cdc)
 		if err != nil {
 			return nil, err
 		}
@@ -344,4 +345,54 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 		return nil, errors.New("must define node URI")
 	}
 	return ctx.Client, nil
+}
+
+func (ctx CoreContext) GetCoinType(name string, cdc *wire.Codec) (sdk.CoinType, error) {
+	var coinType sdk.CoinType
+	key := fmt.Sprintf("%s/%s","global",name)
+	//TODO params StoreName
+	bz,err := ctx.QueryStore([]byte(key),"params")
+	if err != nil {
+		return coinType,err
+	}
+
+	if err = cdc.UnmarshalBinary(bz,&coinType);err != nil {
+		return coinType,err
+	}
+	return coinType, nil
+}
+
+func (ctx CoreContext) ParseCoin(coinStr string, cdc *wire.Codec) (sdk.Coin, error) {
+	denom,_,err := sdk.GetCoin(coinStr)
+	if err != nil {
+		return sdk.Coin{},err
+	}
+	denom = strings.Split(denom,"_")[0]
+	coinType,err := ctx.GetCoinType(denom,cdc)
+	if err != nil {
+		return sdk.Coin{},err
+	}
+
+	coin,err:=coinType.ConvertToIota(coinStr)
+	if err != nil {
+		return sdk.Coin{},err
+	}
+	return coin,nil
+}
+
+func (ctx CoreContext) ParseCoins(coinsStr string, cdc *wire.Codec) (coins sdk.Coins, err error) {
+	coinsStr = strings.TrimSpace(coinsStr)
+	if len(coinsStr) == 0 {
+		return coins, nil
+	}
+
+	coinStrs := strings.Split(coinsStr, ",")
+	for _, coinStr := range coinStrs {
+		coin, err := ctx.ParseCoin(coinStr,cdc)
+		if err != nil {
+			return nil, err
+		}
+		coins = append(coins, coin)
+	}
+	return coins,nil
 }

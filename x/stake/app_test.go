@@ -106,8 +106,8 @@ func checkDelegation(
 func TestStakeMsgs(t *testing.T) {
 	mApp, keeper := getMockApp(t)
 
-	genCoin := sdk.NewCoin("steak", 42)
-	bondCoin := sdk.NewCoin("steak", 10)
+	genCoin := sdk.NewCoin("steak_iota", 42)
+	bondCoin := sdk.NewCoin("steak_iota", 10)
 
 	acc1 := &auth.BaseAccount{
 		Address: addr1,

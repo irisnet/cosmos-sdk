@@ -45,8 +45,10 @@ func GetCmdSubmitProposal(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// build and sign the transaction, then broadcast to Tendermint
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
-			amount, err := sdk.ParseCoins(initialDeposit)
+			amount, err := ctx.ParseCoins(initialDeposit,cdc)
 			if err != nil {
 				return err
 			}
@@ -71,8 +73,7 @@ func GetCmdSubmitProposal(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
+
 			// proposalID must be returned, and it is a part of response
 			ctx.PrintResponse = true
 
@@ -100,6 +101,9 @@ func GetCmdDeposit(cdc *wire.Codec) *cobra.Command {
 		Use:   "deposit",
 		Short: "deposit tokens for activing proposal",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// build and sign the transaction, then broadcast to Tendermint
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 			// get the from address from the name flag
 			depositer, err := sdk.AccAddressFromBech32(viper.GetString(flagDepositer))
 			if err != nil {
@@ -108,7 +112,7 @@ func GetCmdDeposit(cdc *wire.Codec) *cobra.Command {
 
 			proposalID := viper.GetInt64(flagProposalID)
 
-			amount, err := sdk.ParseCoins(viper.GetString(flagDeposit))
+			amount, err := ctx.ParseCoins(viper.GetString(flagDeposit),cdc)
 			if err != nil {
 				return err
 			}
@@ -121,8 +125,7 @@ func GetCmdDeposit(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
+
 
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {

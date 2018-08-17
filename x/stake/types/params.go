@@ -40,7 +40,7 @@ func DefaultParams() Params {
 		GoalBonded:          sdk.NewRat(67, 100),
 		UnbondingTime:       defaultUnbondingTime,
 		MaxValidators:       100,
-		BondDenom:           "steak",
+		BondDenom:           "steak_iota",
 		DenomPrecision:       18,
 	}
 }

@@ -22,11 +22,19 @@ func NewGenesisState(startingProposalID int64, dp DepositProcedure, vp VotingPro
 }
 
 // get raw genesis raw message for testing
-func DefaultGenesisState() GenesisState {
+func DefaultGenesisState(coinTypes []sdk.CoinType) GenesisState {
+	var steakCoinType sdk.CoinType
+	for _,typ := range coinTypes {
+		if typ.Name == "steak" {
+			steakCoinType = typ
+			break
+		}
+	}
+	minDeposit,_ := steakCoinType.ConvertToIota("10steak")
 	return GenesisState{
 		StartingProposalID: 1,
 		DepositProcedure: DepositProcedure{
-			MinDeposit:       sdk.Coins{sdk.Coin{Denom: "steak", Amount: sdk.NewInt(int64(10)).Mul(Pow10(18))}},
+			MinDeposit:      sdk.Coins{minDeposit} ,
 			MaxDepositPeriod: 10,
 		},
 		VotingProcedure: VotingProcedure{
