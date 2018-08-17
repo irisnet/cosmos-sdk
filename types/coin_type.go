@@ -133,6 +133,10 @@ func NewDefaultCoinType(name string) CoinType {
 	}
 }
 
+func CoinTypeKey(coinName string) string {
+	return fmt.Sprintf("%s/%s","coin_types",coinName)
+}
+
 func GetCoin(coinStr string) (denom, amount string, err error) {
 	var (
 		reDnm  = `[[:alpha:]][[:word:]]{2,15}`

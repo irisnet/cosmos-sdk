@@ -163,6 +163,6 @@ func InitGenesis(ctx sdk.Context, setter params.SetterProxy, data GenesisState) 
 	setter.GovSetter().SetString(ctx, NativeGasPriceThresholdKey, sdk.NewInt(data.GasPriceThreshold).String())
 
 	for _,typ := range data.CoinTypes {
-		setter.Set(ctx,typ.Name,typ)
+		setter.Set(ctx,sdk.CoinTypeKey(typ.Name),typ)
 	}
 }

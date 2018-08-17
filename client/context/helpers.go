@@ -347,9 +347,9 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 	return ctx.Client, nil
 }
 
-func (ctx CoreContext) GetCoinType(name string, cdc *wire.Codec) (sdk.CoinType, error) {
+func (ctx CoreContext) GetCoinType(coinName string, cdc *wire.Codec) (sdk.CoinType, error) {
 	var coinType sdk.CoinType
-	key := fmt.Sprintf("%s/%s","global",name)
+	key := fmt.Sprintf("%s/%s","global",sdk.CoinTypeKey(coinName))
 	//TODO params StoreName
 	bz,err := ctx.QueryStore([]byte(key),"params")
 	if err != nil {
