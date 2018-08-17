@@ -24,18 +24,18 @@ type CoinType struct {
 	Units Units  `json:"units"`
 }
 
-type CoinConfig struct {
+type CoinTypeSet struct {
 	CoinTypes []CoinType `json:"coin_type"`
 }
 
-func NewCoinConfig() CoinConfig {
+func NewCoinTypeSet() CoinTypeSet {
 	var typs []CoinType
-	return CoinConfig{
+	return CoinTypeSet{
 		typs,
 	}
 }
 
-func (cts *CoinConfig) Add(ct CoinType) {
+func (cts *CoinTypeSet) Add(ct CoinType) {
 	for _, typ := range cts.CoinTypes {
 		if typ.Name == ct.Name {
 			return

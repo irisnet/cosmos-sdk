@@ -146,7 +146,7 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 	// get genesis flag account information
 	genaccs := make([]GenesisAccount, len(appGenTxs))
 
-	coinConfig := sdk.NewCoinConfig()
+	coinTypeSet := sdk.NewCoinTypeSet()
 	for i, appGenTx := range appGenTxs {
 
 		var genTx GaiaGenTx
@@ -159,11 +159,11 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 		accAuth := auth.NewBaseAccountWithAddress(genTx.Address)
 
 		coinType := sdk.NewDefaultCoinType(genTx.Name)
-		coinConfig.Add(coinType)
+		coinTypeSet.Add(coinType)
 		genTxCoin,_:= coinType.ConvertToIota(fmt.Sprintf("%d%s",freeFermionVal,genTx.Name))
 
 		steakCoinType := sdk.NewDefaultCoinType("steak")
-		coinConfig.Add(steakCoinType)
+		coinTypeSet.Add(steakCoinType)
 		steakGenTxCoin,_:= steakCoinType.ConvertToIota(fmt.Sprintf("%d%s",freeFermionsAcc,"steak"))
 
 		accAuth.Coins = sdk.Coins{
@@ -204,7 +204,7 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 	genesisState = GenesisState{
 		Accounts:  genaccs,
 		StakeData: stakeData,
-		CoinTypes: coinConfig.CoinTypes,
+		CoinTypes: coinTypeSet.CoinTypes,
 	}
 	return
 }
