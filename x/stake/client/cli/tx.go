@@ -24,7 +24,7 @@ func GetCmdCreateValidator(cdc *wire.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
-			amount, err := sdk.ParseCoin(viper.GetString(FlagAmount))
+			amount, err := ctx.ParseCoin(viper.GetString(FlagAmount),cdc)
 			if err != nil {
 				return err
 			}
@@ -121,7 +121,10 @@ func GetCmdDelegate(cdc *wire.Codec) *cobra.Command {
 		Use:   "delegate",
 		Short: "delegate liquid tokens to an validator",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			amount, err := sdk.ParseCoin(viper.GetString(FlagAmount))
+			// build and sign the transaction, then broadcast to Tendermint
+			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
+
+			amount, err := ctx.ParseCoin(viper.GetString(FlagAmount),cdc)
 			if err != nil {
 				return err
 			}
@@ -136,9 +139,6 @@ func GetCmdDelegate(cdc *wire.Codec) *cobra.Command {
 			}
 
 			msg := stake.NewMsgDelegate(delegatorAddr, validatorAddr, amount)
-
-			// build and sign the transaction, then broadcast to Tendermint
-			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
 			err = ctx.EnsureSignBuildBroadcast(ctx.FromAddressName, []sdk.Msg{msg}, cdc)
 			if err != nil {
