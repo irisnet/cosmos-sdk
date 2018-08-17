@@ -533,6 +533,10 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 		Log:       result.Log,
 		GasWanted: result.GasWanted,
 		GasUsed:   result.GasUsed,
+		Fee: cmn.KI64Pair{
+			[]byte(result.FeeDenom),
+			result.FeeAmount,
+		},
 		Tags:      result.Tags,
 	}
 }
@@ -643,6 +647,8 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
 	var gasWanted int64
+	var feeAmount int64
+	var feeDenom string
 	ctx := app.getContextForAnte(mode, txBytes)
 	ctxWithNoCache := ctx
 	defer func() {
@@ -659,14 +665,20 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 		result.GasWanted = gasWanted
 		result.GasUsed = ctxWithNoCache.GasMeter().GasConsumed()
+		result.FeeAmount = feeAmount
+		result.FeeDenom = feeDenom
 
 		// Refund unspent fee
 		if app.feeRefundHandler != nil {
-			err := app.feeRefundHandler(ctxWithNoCache, tx, result)
+			resultRefund, err := app.feeRefundHandler(ctxWithNoCache, tx, result)
 			if err != nil {
 				result = sdk.ErrInternal(err.Error()).Result()
 				result.GasWanted = gasWanted
 				result.GasUsed = ctxWithNoCache.GasMeter().GasConsumed()
+				result.FeeAmount = feeAmount
+				result.FeeDenom = feeDenom
+			} else {
+				result.FeeAmount = resultRefund.FeeAmount
 			}
 		}
 	}()
@@ -690,6 +702,8 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		}
 
 		gasWanted = anteResult.GasWanted
+		feeDenom = anteResult.FeeDenom
+		feeAmount = anteResult.FeeAmount
 	}
 
 	// Keep the state in a transient CacheWrap in case processing the messages
