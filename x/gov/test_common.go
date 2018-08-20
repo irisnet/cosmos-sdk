@@ -24,7 +24,7 @@ func toBigInt(amount int) sdk.Int{
 }
 
 // initialize the mock application for this module
-func getMockApp(t *testing.T, numGenAccs int) (*mock.App, Keeper, stake.Keeper, []sdk.AccAddress, []crypto.PubKey, []crypto.PrivKey) {
+func getMockApp(t *testing.T, numGenAccs int) (*mock.App, Keeper,stake.Keeper, []sdk.AccAddress, []crypto.PubKey, []crypto.PrivKey) {
 	mapp := mock.NewApp()
 
 	stake.RegisterWire(mapp.Cdc)
@@ -52,6 +52,34 @@ func getMockApp(t *testing.T, numGenAccs int) (*mock.App, Keeper, stake.Keeper, 
 	return mapp, keeper, sk, addrs, pubKeys, privKeys
 }
 
+// initialize the mock application for this module
+func getMockAppPK(t *testing.T, numGenAccs int) (*mock.App, Keeper,params.Keeper,stake.Keeper, []sdk.AccAddress, []crypto.PubKey, []crypto.PrivKey) {
+	mapp := mock.NewApp()
+
+	stake.RegisterWire(mapp.Cdc)
+	RegisterWire(mapp.Cdc)
+
+	keyGlobalParams := sdk.NewKVStoreKey("params")
+	keyStake := sdk.NewKVStoreKey("stake")
+	keyGov := sdk.NewKVStoreKey("gov")
+
+	pk := params.NewKeeper(mapp.Cdc, keyGlobalParams)
+	ck := bank.NewKeeper(mapp.AccountMapper)
+	sk := stake.NewKeeper(mapp.Cdc, keyStake, ck, mapp.RegisterCodespace(stake.DefaultCodespace))
+
+	keeper := NewKeeper(mapp.Cdc, keyGov,pk.Setter(), ck, sk, DefaultCodespace)
+	mapp.Router().AddRoute("gov", []*sdk.KVStoreKey{keyGov, mapp.KeyAccount, keyStake}, NewHandler(keeper))
+
+	require.NoError(t, mapp.CompleteSetup([]*sdk.KVStoreKey{keyStake, keyGov, keyGlobalParams}))
+
+	mapp.SetEndBlocker(getEndBlocker(keeper))
+	mapp.SetInitChainer(getInitChainer(mapp, keeper, sk))
+
+	genAccs, addrs, pubKeys, privKeys := mock.CreateGenAccounts(numGenAccs, sdk.Coins{sdk.Coin{"steak", toBigInt(42)}})
+	mock.SetGenesis(mapp, genAccs)
+
+	return mapp, keeper,pk, sk, addrs, pubKeys, privKeys
+}
 // gov and stake endblocker
 func getEndBlocker(keeper Keeper) sdk.EndBlocker {
 	return func(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {

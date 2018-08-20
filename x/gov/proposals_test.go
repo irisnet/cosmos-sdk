@@ -44,3 +44,44 @@ func TestParameterProposal(t *testing.T) {
 			GovernancePenalty: sdk.NewRat(1, 50),
 		})
 }
+
+func TestSoftwareUpgradeProposal(t *testing.T) {
+	mapp, keeper,pk, _, _, _,_ := getMockAppPK(t, 0)
+
+	mapp.BeginBlock(abci.RequestBeginBlock{})
+	ctx := mapp.BaseApp.NewContext(false, abci.Header{Height:0})
+
+	var proposalID int64
+	var height int64
+	sp := SoftwareUpgradeProposal{TextProposal{ProposalID:28}}
+
+	pk.Setter().GovSetter().Set(ctx,"upgrade/proposalId",int64(-1))
+	sp.Execute(ctx, keeper)
+	pk.Getter().GovGetter().Get(ctx,"upgrade/proposalId",&proposalID)
+	assert.Equal(t,proposalID,int64(28))
+
+
+	pk.Getter().GovGetter().Get(ctx,"upgrade/proposalAcceptHeight",&height)
+	assert.Equal(t,height,int64(0))
+
+
+	pk.Setter().GovSetter().Set(ctx,"upgrade/proposalId",int64(5))
+	pk.Setter().GovSetter().Set(ctx,"upgrade/proposalAcceptHeight",int64(-1))
+
+	sp.Execute(ctx, keeper)
+	pk.Getter().GovGetter().Get(ctx,"upgrade/proposalId",&proposalID)
+	assert.Equal(t,proposalID,int64(5))
+	pk.Getter().GovGetter().Get(ctx,"upgrade/proposalAcceptHeight",&height)
+	assert.Equal(t,height,int64(-1))
+
+	ctx = mapp.BaseApp.NewContext(false, abci.Header{Height:64})
+	pk.Setter().GovSetter().Set(ctx,"upgrade/proposalId",int64(-1))
+	pk.Setter().GovSetter().Set(ctx,"upgrade/proposalAcceptHeight",int64(-1))
+
+	sp.Execute(ctx, keeper)
+	pk.Getter().GovGetter().Get(ctx,"upgrade/proposalId",&proposalID)
+	assert.Equal(t,proposalID,int64(28))
+	pk.Getter().GovGetter().Get(ctx,"upgrade/proposalAcceptHeight",&height)
+	assert.Equal(t,height,int64(64))
+
+	}
