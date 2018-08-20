@@ -370,7 +370,7 @@ func (ctx CoreContext) ParseCoin(coinStr string, cdc *wire.Codec) (sdk.Coin, err
 		return sdk.Coin{},err
 	}
 
-	coin,err:=coinType.ConvertToAtto(coinStr)
+	coin,err:=coinType.ConvertToMinCoin(coinStr)
 	if err != nil {
 		return sdk.Coin{},err
 	}

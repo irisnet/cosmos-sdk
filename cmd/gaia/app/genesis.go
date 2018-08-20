@@ -160,11 +160,11 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 
 		coinType := sdk.NewDefaultCoinType(genTx.Name)
 		coinTypeSet.Add(coinType)
-		genTxCoin,_:= coinType.ConvertToAtto(fmt.Sprintf("%d%s",freeFermionVal,genTx.Name))
+		genTxCoin,_:= coinType.ConvertToMinCoin(fmt.Sprintf("%d%s",freeFermionVal,genTx.Name))
 
 		steakCoinType := sdk.NewDefaultCoinType("steak")
 		coinTypeSet.Add(steakCoinType)
-		steakGenTxCoin,_:= steakCoinType.ConvertToAtto(fmt.Sprintf("%d%s",freeFermionsAcc,"steak"))
+		steakGenTxCoin,_:= steakCoinType.ConvertToMinCoin(fmt.Sprintf("%d%s",freeFermionsAcc,"steak"))
 
 		accAuth.Coins = sdk.Coins{
 			genTxCoin,

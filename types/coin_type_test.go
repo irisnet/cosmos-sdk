@@ -41,15 +41,16 @@ func TestCoinType_Convert(t *testing.T) {
 
 }
 
-func TestCoinType_ConvertToIota(t *testing.T) {
+func TestCoinType_ConvertToMinCoin(t *testing.T) {
 	coinType := makeCoinType()
-	coinIota,err := coinType.ConvertToAtto("1.1iris")
+	coinIota,err := coinType.ConvertToMinCoin("1.1iris")
 	assert.Nil(t,err)
 	assert.Equal(t,NewCoin("iris-atto",11 * pow10(17) ),coinIota)
 
 	coinAtto := "1 iris-atto"
 	coinfemto,_ := coinType.Convert(coinAtto,"iris-femto")
 	assert.Equal(t,"0.001iris-femto",coinfemto)
+
 
 	coinfemto,_ = coinType.Convert(coinAtto,"iris-pico")
 	assert.Equal(t,"0.000001iris-pico",coinfemto)
