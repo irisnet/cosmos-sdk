@@ -26,7 +26,14 @@ const (
 
 	//1 iris = 10^18 iris-atto
 	Atto = "atto"
+
+	Native     Origin = 0x01
+	External   Origin = 0x02
+	UserIssued Origin = 0x03
 )
+
+
+
 
 var (
 	MainUnit = func(coinName string) Unit {
@@ -64,6 +71,20 @@ var (
 	}
 )
 
+type Origin = byte
+
+func ToOrigin(origin string) (og Origin,err error) {
+	switch strings.ToLower(origin) {
+	case "native":
+		return Native,nil
+	case "external":
+		return External,nil
+	case "userissued":
+		return UserIssued,nil
+	}
+	return og,errors.New("not support type:"+origin)
+}
+
 type Unit struct {
 	Denom   string `json:"denom"`
 	Decimal int    `json:"decimal"`
@@ -83,8 +104,9 @@ type Units = []Unit
 
 type CoinType struct {
 	Name         string `json:"name"`
-	MinUnitDenom string `json:"minUnitDenom"`
+	MinUnitDenom string `json:"min_unit_denom"`
 	Units        Units  `json:"units"`
+	Origin       Origin `json:"origin"`
 }
 
 type CoinTypeSet struct {
@@ -100,7 +122,7 @@ func NewCoinTypeSet() CoinTypeSet {
 
 func (cts *CoinTypeSet) Add(ct CoinType) {
 	for _, typ := range cts.CoinTypes {
-		if typ.Name == ct.Name {
+		if strings.ToLower(typ.Name) == strings.ToLower(ct.Name) {
 			return
 		}
 	}
@@ -119,7 +141,7 @@ func (ct CoinType) Convert(orgCoinStr string, denom string) (destCoinStr string,
 	// 目标Coin = 原金额 * (10^目标精度 / 10^原精度)
 	if orgUnit, err := ct.GetUnit(orgDenom); err == nil {
 		rat := NewRatFromInt(destUint.GetPrecision(), orgUnit.GetPrecision())
-		amount, _ := NewRatFromDecimal(orgAmt, destUint.Decimal)//将原金额按照目标精度转化
+		amount, _ := NewRatFromDecimal(orgAmt, destUint.Decimal) //将原金额按照目标精度转化
 		amt := amount.Mul(rat).DecimalString(destUint.Decimal)
 		destCoinStr = fmt.Sprintf("%s%s", amt, destUint.Denom)
 		return destCoinStr, nil
@@ -140,7 +162,7 @@ func (ct CoinType) ConvertToMinCoin(coinStr string) (coin Coin, err error) {
 
 func (ct CoinType) GetUnit(denom string) (u Unit, err error) {
 	for _, unit := range ct.Units {
-		if denom == unit.Denom {
+		if strings.ToLower(denom) == strings.ToLower(unit.Denom) {
 			return unit, nil
 		}
 	}
@@ -149,14 +171,14 @@ func (ct CoinType) GetUnit(denom string) (u Unit, err error) {
 
 func (ct CoinType) GetMinUnit() (unit Unit) {
 	for _, unit := range ct.Units {
-		if unit.Denom == ct.MinUnitDenom {
+		if strings.ToLower(unit.Denom) == strings.ToLower(ct.MinUnitDenom) {
 			return unit
 		}
 	}
 	return unit
 }
 
-func (ct CoinType) GetMaxUnit() (unit Unit) {
+func (ct CoinType) GetMainUnit() (unit Unit) {
 	unit, _ = ct.GetUnit(ct.Name)
 	return unit
 }
@@ -172,6 +194,7 @@ func NewDefaultCoinType(name string) CoinType {
 		Name:         name,
 		Units:        units,
 		MinUnitDenom: units[6].Denom,
+		Origin:       Native,
 	}
 }
 

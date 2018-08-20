@@ -70,7 +70,7 @@ func getInitChainer(mapp *mock.App, keeper Keeper, stakeKeeper stake.Keeper) sdk
 
 		stakeGenesis := stake.DefaultGenesisState()
 		stakeGenesis.Pool.LooseTokens = sdk.NewRat(100000)
-		coinType := sdk.NewDefaultCoinType(strings.Split(stakeGenesis.Params.BondDenom,"_")[0])
+		coinType := sdk.NewDefaultCoinType(strings.Split(stakeGenesis.Params.BondDenom,"-")[0])
 
 		err := stake.InitGenesis(ctx, stakeKeeper, stakeGenesis)
 		if err != nil {
