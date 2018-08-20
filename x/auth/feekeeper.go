@@ -153,7 +153,7 @@ type GenesisState struct {
 
 func DefaultGenesisState() GenesisState {
 	return GenesisState{
-		FeeTokenNative: "steak_iota",
+		FeeTokenNative: "steak-atto",
 		GasPriceThreshold: 20000000000, //2*10^10
 	}
 }

@@ -30,7 +30,7 @@ func DefaultGenesisState(coinTypes []sdk.CoinType) GenesisState {
 			break
 		}
 	}
-	minDeposit,_ := steakCoinType.ConvertToIota("10steak")
+	minDeposit,_ := steakCoinType.ConvertToAtto("10steak")
 	return GenesisState{
 		StartingProposalID: 1,
 		DepositProcedure: DepositProcedure{

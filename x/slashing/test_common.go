@@ -57,7 +57,7 @@ func defaultParamsForTest() types.Params {
 		GoalBonded:          sdk.NewRat(67, 100),
 		UnbondingTime:       int64(60 * 60 * 24 * 3),
 		MaxValidators:       100,
-		BondDenom:           "steak_iota",
+		BondDenom:           "steak-atto",
 		DenomPrecision:       0,
 	}
 }
@@ -116,6 +116,6 @@ func newTestMsgCreateValidator(address sdk.AccAddress, pubKey crypto.PubKey, amt
 		DelegatorAddr: address,
 		ValidatorAddr: address,
 		PubKey:        pubKey,
-		Delegation:    sdk.Coin{"steak_iota", amt},
+		Delegation:    sdk.Coin{"steak-atto", amt},
 	}
 }

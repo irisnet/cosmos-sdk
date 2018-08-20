@@ -56,36 +56,36 @@ func TestGaiaCLISend(t *testing.T) {
 	barAddr, _ := executeGetAddrPK(t, fmt.Sprintf("gaiacli keys show bar --output=json --home=%s", gaiacliHome))
 
 	fooAcc := executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.Equal(t,toBigInt(50) , fooAcc.GetCoins().AmountOf("steak_iota"))
+	require.Equal(t,toBigInt(50) , fooAcc.GetCoins().AmountOf("steak-atto"))
 
-	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --gas 10000 --fee 200000000000000steak_iota", flags,10, barAddr), pass)
+	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --gas 10000 --fee 200000000000000steak-atto", flags,10, barAddr), pass)
 	tests.WaitForNextNBlocksTM(2, port)
 
 	barAcc := executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", barAddr, flags))
-	require.Equal(t, toBigInt(10), barAcc.GetCoins().AmountOf("steak_iota"))
+	require.Equal(t, toBigInt(10), barAcc.GetCoins().AmountOf("steak-atto"))
 	fooAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").LT(toBigInt(40)))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").GT(toBigInt(39)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").LT(toBigInt(40)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").GT(toBigInt(39)))
 
 	// test autosequencing
-	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --gas 10000 --fee 200000000000000steak_iota", flags,10, barAddr), pass)
+	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --gas 10000 --fee 200000000000000steak-atto", flags,10, barAddr), pass)
 	tests.WaitForNextNBlocksTM(2, port)
 
 	barAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", barAddr, flags))
-	require.Equal(t, toBigInt(20), barAcc.GetCoins().AmountOf("steak_iota"))
+	require.Equal(t, toBigInt(20), barAcc.GetCoins().AmountOf("steak-atto"))
 	fooAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").LT(toBigInt(30)))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").GT(toBigInt(29)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").LT(toBigInt(30)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").GT(toBigInt(29)))
 
 	// test memo
-	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --memo 'testmemo' --gas 10000 --fee 200000000000000steak_iota", flags,10, barAddr), pass)
+	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --memo 'testmemo' --gas 10000 --fee 200000000000000steak-atto", flags,10, barAddr), pass)
 	tests.WaitForNextNBlocksTM(2, port)
 
 	barAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", barAddr, flags))
-	require.Equal(t, toBigInt(30), barAcc.GetCoins().AmountOf("steak_iota"))
+	require.Equal(t, toBigInt(30), barAcc.GetCoins().AmountOf("steak-atto"))
 	fooAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").LT(toBigInt(20)))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").GT(toBigInt(19)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").LT(toBigInt(20)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").GT(toBigInt(19)))
 }
 
 func toBigInt(amount int) sdk.Int{
@@ -114,14 +114,14 @@ func TestGaiaCLICreateValidator(t *testing.T) {
 	barAddr, barPubKey := executeGetAddrPK(t, fmt.Sprintf("gaiacli keys show bar --output=json --home=%s", gaiacliHome))
 	barCeshPubKey := sdk.MustBech32ifyValPub(barPubKey)
 
-	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --gas 10000 --fee 200000000000000steak_iota", flags,10, barAddr), pass)
+	executeWrite(t, fmt.Sprintf("gaiacli send %v --amount=%vsteak --to=%s --from=foo --gas 10000 --fee 200000000000000steak-atto", flags,10, barAddr), pass)
 	tests.WaitForNextNBlocksTM(2, port)
 
 	barAcc := executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", barAddr, flags))
-	require.Equal(t, toBigInt(10), barAcc.GetCoins().AmountOf("steak_iota"))
+	require.Equal(t, toBigInt(10), barAcc.GetCoins().AmountOf("steak-atto"))
 	fooAcc := executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").LT(toBigInt(40)))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").GT(toBigInt(39)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").LT(toBigInt(40)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").GT(toBigInt(39)))
 
 	// create validator
 	cvStr := fmt.Sprintf("gaiacli stake create-validator %v", flags)
@@ -130,15 +130,15 @@ func TestGaiaCLICreateValidator(t *testing.T) {
 	cvStr += fmt.Sprintf(" --amount=%vsteak", 2)
 	cvStr += fmt.Sprintf(" --moniker=%v", "bar-vally")
 	cvStr += fmt.Sprintf(" --gas=%d", 100000)
-	cvStr += fmt.Sprintf(" --fee=%vsteak_iota", 2000000000000000)
+	cvStr += fmt.Sprintf(" --fee=%vsteak-atto", 2000000000000000)
 	cvStr += fmt.Sprintf(" --address-validator=%s", barAddr)
 
 	executeWrite(t, cvStr, pass)
 	tests.WaitForNextNBlocksTM(2, port)
 
 	barAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", barAddr, flags))
-	require.True(t, barAcc.GetCoins().AmountOf("steak_iota").LT(toBigInt(8)), "%v", barAcc)
-	require.True(t, barAcc.GetCoins().AmountOf("steak_iota").GT(toBigInt(7)), "%v", barAcc)
+	require.True(t, barAcc.GetCoins().AmountOf("steak-atto").LT(toBigInt(8)), "%v", barAcc)
+	require.True(t, barAcc.GetCoins().AmountOf("steak-atto").GT(toBigInt(7)), "%v", barAcc)
 
 	validator := executeGetValidator(t, fmt.Sprintf("gaiacli stake validator %s --output=json %v", barAddr, flags))
 	require.Equal(t, validator.Owner, barAddr)
@@ -151,7 +151,7 @@ func TestGaiaCLICreateValidator(t *testing.T) {
 	unbondStr += fmt.Sprintf(" --address-delegator=%s", barAddr)
 	unbondStr += fmt.Sprintf(" --shares-amount=%v", toBigInt(1))
 	unbondStr += fmt.Sprintf(" --gas=%d", 100000)
-	unbondStr += fmt.Sprintf(" --fee=%vsteak_iota", 2000000000000000)
+	unbondStr += fmt.Sprintf(" --fee=%vsteak-atto", 2000000000000000)
 
 	success := executeWrite(t, unbondStr, pass)
 	require.True(t, success)
@@ -187,7 +187,7 @@ func TestGaiaCLISubmitProposal(t *testing.T) {
 	fooAddr, _ := executeGetAddrPK(t, fmt.Sprintf("gaiacli keys show foo --output=json --home=%s", gaiacliHome))
 
 	fooAcc := executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.Equal(t, toBigInt(50), fooAcc.GetCoins().AmountOf("steak_iota"))
+	require.Equal(t, toBigInt(50), fooAcc.GetCoins().AmountOf("steak-atto"))
 
 	// unbond a single share
 	spStr := fmt.Sprintf("gaiacli gov submit-proposal %v", flags)
@@ -198,14 +198,14 @@ func TestGaiaCLISubmitProposal(t *testing.T) {
 	spStr += fmt.Sprintf(" --description=%s", "test")
 	spStr += fmt.Sprintf(" --proposer=%s", fooAddr)
   	spStr += fmt.Sprintf(" --gas=%d", 100000)
-  	spStr += fmt.Sprintf(" --fee=%s", "2000000000000000steak_iota")
+  	spStr += fmt.Sprintf(" --fee=%s", "2000000000000000steak-atto")
 
 	executeWrite(t, spStr, pass)
 	tests.WaitForNextNBlocksTM(2, port)
 
 	fooAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").LT(toBigInt(45)))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").GT(toBigInt(44)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").LT(toBigInt(45)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").GT(toBigInt(44)))
 
 
 	proposal1 := executeGetProposal(t, fmt.Sprintf("gaiacli gov query-proposal --proposalID=1 --output=json %v", flags))
@@ -218,14 +218,14 @@ func TestGaiaCLISubmitProposal(t *testing.T) {
 	depositStr += fmt.Sprintf(" --proposalID=%s", "1")
 	depositStr += fmt.Sprintf(" --depositer=%s", fooAddr)
   	depositStr += fmt.Sprintf(" --gas=%d", 100000)
-  	depositStr += fmt.Sprintf(" --fee=%s", "2000000000000000steak_iota")
+  	depositStr += fmt.Sprintf(" --fee=%s", "2000000000000000steak-atto")
 
 	executeWrite(t, depositStr, pass)
 	tests.WaitForNextNBlocksTM(2, port)
 
 	fooAcc = executeGetAccount(t, fmt.Sprintf("gaiacli account %s %v", fooAddr, flags))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").LT(toBigInt(35)))
-	require.True(t, fooAcc.GetCoins().AmountOf("steak_iota").GT(toBigInt(34)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").LT(toBigInt(35)))
+	require.True(t, fooAcc.GetCoins().AmountOf("steak-atto").GT(toBigInt(34)))
 	proposal1 = executeGetProposal(t, fmt.Sprintf("gaiacli gov query-proposal --proposalID=1 --output=json %v", flags))
 	require.Equal(t, int64(1), proposal1.GetProposalID())
 	require.Equal(t, gov.StatusVotingPeriod, proposal1.GetStatus())
@@ -236,7 +236,7 @@ func TestGaiaCLISubmitProposal(t *testing.T) {
 	voteStr += fmt.Sprintf(" --option=%s", "Yes")
 	voteStr += fmt.Sprintf(" --voter=%s", fooAddr)
   	voteStr += fmt.Sprintf(" --gas=%d", 100000)
-  	voteStr += fmt.Sprintf(" --fee=%s", "2000000000000000steak_iota")
+  	voteStr += fmt.Sprintf(" --fee=%s", "2000000000000000steak-atto")
 
 	executeWrite(t, voteStr, pass)
 	tests.WaitForNextNBlocksTM(2, port)

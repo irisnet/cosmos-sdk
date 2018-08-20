@@ -13,38 +13,50 @@ func makeCoinType() CoinType{
 
 func TestCoinType_Convert(t *testing.T) {
 	coinType := makeCoinType()
-
 	coin := NewCoin(name,1)
 
-	coinLua,err:=coinType.Convert(coin.String(),"iris_lua")
+	coinStr,err := coinType.Convert(coin.String(),"iris-milli")
 	assert.Nil(t,err)
-	assert.Equal(t,NewCoin("iris_lua",1000000000).String(),coinLua)
+	assert.Equal(t,NewCoin("iris-milli",pow10(3)).String(),coinStr)
 
-	coinIris,err:=coinType.Convert(coin.String(),"iris")
+	coinStr,err = coinType.Convert(coin.String(),"iris-micro")
 	assert.Nil(t,err)
-	assert.Equal(t,NewCoin("iris",1).String(),coinIris)
+	assert.Equal(t,NewCoin("iris-micro",pow10(6)).String(),coinStr)
 
-	coinIota,err:= coinType.Convert(coin.String(),"iris_iota")
+	coinStr,err = coinType.Convert(coin.String(),"iris-nano")
 	assert.Nil(t,err)
-	assert.Equal(t,NewCoin("iris_iota",1000000000000000000).String(),coinIota)
+	assert.Equal(t,NewCoin("iris-nano",pow10(9)).String(),coinStr)
 
-	coin = NewCoin("iris_lua",10000000)
-	coinIris2,err := coinType.Convert(coin.String(),"iris")
+	coinStr,err = coinType.Convert(coin.String(),"iris-pico")
 	assert.Nil(t,err)
-	assert.Equal(t,"0.01iris",coinIris2)
+	assert.Equal(t,NewCoin("iris-pico",pow10(12)).String(),coinStr)
+
+	coinStr,err = coinType.Convert(coin.String(),"iris-femto")
+	assert.Nil(t,err)
+	assert.Equal(t,NewCoin("iris-femto",pow10(15)).String(),coinStr)
+
+	coinStr,err = coinType.Convert(coin.String(),"iris-atto")
+	assert.Nil(t,err)
+	assert.Equal(t,NewCoin("iris-atto",pow10(18)).String(),coinStr)
+
 }
 
 func TestCoinType_ConvertToIota(t *testing.T) {
 	coinType := makeCoinType()
-	coinIota,err := coinType.ConvertToIota("1.1iris")
+	coinIota,err := coinType.ConvertToAtto("1.1iris")
 	assert.Nil(t,err)
-	assert.Equal(t,NewCoin("iris_iota",1100000000000000000),coinIota)
+	assert.Equal(t,NewCoin("iris-atto",11 * pow10(17) ),coinIota)
+
+	coinAtto := "1 iris-atto"
+	coinfemto,_ := coinType.Convert(coinAtto,"iris-femto")
+	assert.Equal(t,"0.001iris-femto",coinfemto)
+
+	coinfemto,_ = coinType.Convert(coinAtto,"iris-pico")
+	assert.Equal(t,"0.000001iris-pico",coinfemto)
+
 }
 
-func TestCoinType_ConvertFromCoinString(t *testing.T) {
-	coinType := makeCoinType()
-	coinStr := "1.2iris"
-	coin,err := coinType.ConvertToIota(coinStr)
-	assert.Nil(t,err)
-	assert.Equal(t,NewCoin("iris_iota",1200000000000000000),coin)
+
+func pow10(n int) int64 {
+	return NewIntWithDecimal(1, n).Int64()
 }

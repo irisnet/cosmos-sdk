@@ -349,7 +349,8 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 
 func (ctx CoreContext) GetCoinType(coinName string, cdc *wire.Codec) (sdk.CoinType, error) {
 	var coinType sdk.CoinType
-	key := fmt.Sprintf("%s/%s","global",sdk.CoinTypeKey(coinName))
+	//key := fmt.Sprintf("%s/%s","global",sdk.CoinTypeKey(coinName))
+	key := sdk.CoinTypeKey(coinName)
 	//TODO params StoreName
 	bz,err := ctx.QueryStore([]byte(key),"params")
 	if err != nil {
@@ -363,17 +364,13 @@ func (ctx CoreContext) GetCoinType(coinName string, cdc *wire.Codec) (sdk.CoinTy
 }
 
 func (ctx CoreContext) ParseCoin(coinStr string, cdc *wire.Codec) (sdk.Coin, error) {
-	denom,_,err := sdk.GetCoin(coinStr)
-	if err != nil {
-		return sdk.Coin{},err
-	}
-	denom = strings.Split(denom,"_")[0]
-	coinType,err := ctx.GetCoinType(denom,cdc)
+	mainUnit,err := sdk.GetMainCoinDenom(coinStr)
+	coinType,err := ctx.GetCoinType(mainUnit,cdc)
 	if err != nil {
 		return sdk.Coin{},err
 	}
 
-	coin,err:=coinType.ConvertToIota(coinStr)
+	coin,err:=coinType.ConvertToAtto(coinStr)
 	if err != nil {
 		return sdk.Coin{},err
 	}
