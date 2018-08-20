@@ -182,9 +182,11 @@ func (app *GaiaApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci
 		// return sdk.ErrGenesisParse("").TraceCause(err, "")
 	}
 
-	gov.InitGenesis(ctx, app.govKeeper, gov.DefaultGenesisState())
+	gov.InitGenesis(ctx, app.govKeeper, gov.DefaultGenesisState(genesisState.CoinTypes))
 
-	auth.InitGenesis(ctx,app.paramsKeeper.Setter(),auth.DefaultGenesisState())
+	authGenesis := auth.DefaultGenesisState()
+	authGenesis.CoinTypes = genesisState.CoinTypes
+	auth.InitGenesis(ctx,app.paramsKeeper.Setter(),authGenesis)
 
 	return abci.ResponseInitChain{}
 }

@@ -136,9 +136,11 @@ func (fck FeeCollectionKeeper) FeePreprocess(ctx sdk.Context, coins sdk.Coins, g
 	}
 */
 	equivalentTotalFee := coins[0].Amount
-	gasPrice := equivalentTotalFee.Div(sdk.NewInt(gasLimit))
+	gasLimitInt := sdk.NewInt(gasLimit)
+	minFee := gasLimitInt.Mul(threshold)
+	gasPrice := equivalentTotalFee.Div(gasLimitInt)
 	if gasPrice.LT(threshold) {
-		return sdk.ErrInsufficientCoins(fmt.Sprintf("equivalent gas price (%s%s) is less than threshold (%s%s)", gasPrice.String(), nativeFeeToken, threshold.String(), nativeFeeToken))
+		return sdk.ErrInsufficientCoins(fmt.Sprintf("equivalent gas price (%s%s) is less than threshold (%s%s),min fee is %s%s", gasPrice.String(), nativeFeeToken, threshold.String(), nativeFeeToken,minFee.String(),nativeFeeToken))
 	}
 	return nil
 }
@@ -146,11 +148,12 @@ func (fck FeeCollectionKeeper) FeePreprocess(ctx sdk.Context, coins sdk.Coins, g
 type GenesisState struct {
 	FeeTokenNative string `json:"fee_token_native"`
 	GasPriceThreshold int64 `json:"gas_price_threshold"`
+	CoinTypes		  []sdk.CoinType `json:"coin_types"`
 }
 
 func DefaultGenesisState() GenesisState {
 	return GenesisState{
-		FeeTokenNative: "steak",
+		FeeTokenNative: "steak-atto",
 		GasPriceThreshold: 20000000000, //2*10^10
 	}
 }
@@ -158,4 +161,8 @@ func DefaultGenesisState() GenesisState {
 func InitGenesis(ctx sdk.Context, setter params.SetterProxy, data GenesisState) {
 	setter.SetString(ctx, NativeFeeTokenKey, data.FeeTokenNative)
 	setter.GovSetter().SetString(ctx, NativeGasPriceThresholdKey, sdk.NewInt(data.GasPriceThreshold).String())
+
+	for _,typ := range data.CoinTypes {
+		setter.Set(ctx,sdk.CoinTypeKey(typ.Name),typ)
+	}
 }

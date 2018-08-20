@@ -93,11 +93,11 @@ func TestFeeCollectionKeeperPreprocess(t *testing.T) {
 	//err = fck.FeePreprocess(ctx, oneCoin, 10)
 	//require.Error(t,err,"")
 
-	fee1 := sdk.Coins{sdk.NewCoin("steak", 50)}
+	fee1 := sdk.Coins{sdk.NewCoin("steak-atto", 50)}
 	err = fck.FeePreprocess(ctx, fee1, 10)
 	require.Error(t,err,"")
 
-	fee2 := sdk.Coins{sdk.NewCoin("steak", 200000000000)}
+	fee2 := sdk.Coins{sdk.NewCoin("steak-atto", 200000000000)}
 	err = fck.FeePreprocess(ctx, fee2, 10)
 	require.NoError(t,err,"")
 }
