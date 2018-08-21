@@ -19,6 +19,7 @@ const (
 // NewAnteHandler returns an AnteHandler that checks
 // and increments sequence numbers, checks signatures & account numbers,
 // and deducts fees from the first signer.
+// nolint: gocyclo
 func NewAnteHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.AnteHandler {
 
 	return func(
@@ -33,6 +34,11 @@ func NewAnteHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.AnteHandler {
 
 		// set the gas meter
 		newCtx = ctx.WithGasMeter(sdk.NewGasMeter(stdTx.Fee.Gas))
+
+		// AnteHandlers must have their own defer/recover in order
+		// for the BaseApp to know how much gas was used!
+		// This is because the GasMeter is created in the AnteHandler,
+		// but if it panics the context won't be set properly in runTx's recover ...
 
 		defer func() {
 			if r := recover(); r != nil {
@@ -180,8 +186,8 @@ func NewFeeRefundHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.FeeRefun
 		fck.refundCollectedFees(ctx, refundCoins)                           // consume gas
 		// There must be just one fee token
 		result.FeeAmount = fee.Amount[0].Amount.Mul(sdk.NewInt(txResult.GasUsed)).Div(sdk.NewInt(txResult.GasWanted)).Int64()
-
 		return
+
 	}
 }
 

@@ -7,6 +7,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/params"
 )
 
+// nolint
+const (
+	ParamStoreKeyDepositProcedure  = "gov/depositprocedure"
+	ParamStoreKeyVotingProcedure   = "gov/votingprocedure"
+	ParamStoreKeyTallyingProcedure = "gov/tallyingprocedure"
+)
+
 // Governance Keeper
 type Keeper struct {
 	// The reference to the ParamSetter to get and set Global Params
@@ -32,6 +39,7 @@ type Keeper struct {
 }
 
 // NewGovernanceMapper returns a mapper that uses go-wire to (binary) encode and decode gov types.
+
 func NewKeeper(cdc *wire.Codec, key sdk.StoreKey, ps params.SetterProxy, ck bank.Keeper, ds sdk.DelegationSet, codespace sdk.CodespaceType) Keeper {
 	return Keeper{
 		storeKey:  key,
@@ -64,6 +72,7 @@ func (keeper Keeper) NewTextProposal(ctx sdk.Context, title string, description 
 		Description:      description,
 		ProposalType:     proposalType,
 		Status:           StatusDepositPeriod,
+		TallyResult:      EmptyTallyResult(),
 		TotalDeposit:     sdk.Coins{},
 		SubmitBlock:      ctx.BlockHeight(),
 		VotingStartBlock: -1, // TODO: Make Time
@@ -170,6 +179,18 @@ func (keeper Keeper) setInitialProposalID(ctx sdk.Context, proposalID int64) sdk
 	return nil
 }
 
+// Get the last used proposal ID
+func (keeper Keeper) GetLastProposalID(ctx sdk.Context) (proposalID int64) {
+	store := ctx.KVStore(keeper.storeKey)
+	bz := store.Get(KeyNextProposalID)
+	if bz == nil {
+		return 0
+	}
+	keeper.cdc.MustUnmarshalBinary(bz, &proposalID)
+	proposalID--
+	return
+}
+
 func (keeper Keeper) getNewProposalID(ctx sdk.Context) (proposalID int64, err sdk.Error) {
 	store := ctx.KVStore(keeper.storeKey)
 	bz := store.Get(KeyNextProposalID)
@@ -188,9 +209,6 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal Proposal) {
 	keeper.SetProposal(ctx, proposal)
 	keeper.ActiveProposalQueuePush(ctx, proposal)
 }
-
-// =====================================================
-// Votes
 
 // Adds a vote on a specific proposal
 func (keeper Keeper) AddVote(ctx sdk.Context, proposalID int64, voterAddr sdk.AccAddress, option VoteOption) sdk.Error {

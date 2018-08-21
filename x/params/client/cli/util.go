@@ -13,8 +13,8 @@ func ExportCmd(storeName string, cdc *wire.Codec) *cobra.Command {
 		Short: "export all keypair which begin with key from global store.(key can be 'gov','global',or full path such as 'gov/votingprocedure/votingPeriod')",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCoreContextFromViper()
-			res, err := ctx.QuerySubspace(cdc, []byte(args[0]), storeName)
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			res, err := cliCtx.QuerySubspace([]byte(args[0]), storeName)
 			if err != nil {
 				fmt.Println(err.Error())
 				return nil

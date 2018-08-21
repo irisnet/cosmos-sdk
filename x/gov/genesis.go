@@ -78,6 +78,19 @@ func InitGenesis(ctx sdk.Context, k Keeper, data GenesisState) {
 	k.setTallyingProcedure(ctx, ParamStoreKeyTallyingProcedurePenalty, data.TallyingProcedure.GovernancePenalty)
 }
 
+func WriteGenesis(ctx sdk.Context, k Keeper) GenesisState {
+	startingProposalID, _ := k.getNewProposalID(ctx)
+	depositProcedure := k.GetDepositProcedure(ctx)
+	votingProcedure := k.GetVotingProcedure(ctx)
+	tallyingProcedure := k.GetTallyingProcedure(ctx)
+	return GenesisState{
+		StartingProposalID: startingProposalID,
+		DepositProcedure:   depositProcedure,
+		VotingProcedure:    votingProcedure,
+		TallyingProcedure:  tallyingProcedure,
+	}
+}
+
 func Pow10(y int) sdk.Int {
 	result := sdk.NewInt(1)
 	x := sdk.NewInt(10)
@@ -89,3 +102,5 @@ func Pow10(y int) sdk.Int {
 	}
 	return result
 }
+
+

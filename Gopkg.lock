@@ -2,7 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
   name = "github.com/bartekn/go-bip39"
   packages = ["."]
   revision = "a05967ea095d81c8fe4833776774cfaff8e5036c"
@@ -39,8 +38,8 @@
 [[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/ebuchman/fail-test"
@@ -328,8 +327,8 @@
 [[projects]]
   name = "github.com/tendermint/go-amino"
   packages = ["."]
-  revision = "2106ca61d91029c931fd54968c2bb02dc96b1412"
-  version = "0.10.1"
+  revision = "a8328986c1608950fa5d3d1c0472cccc4f8fc02c"
+  version = "v0.12.0-rc0"
 
 [[projects]]
   name = "github.com/tendermint/iavl"
@@ -399,21 +398,23 @@
     "types",
     "version"
   ]
-  revision = "fb697db81e3f0b04fb9c6f393ce9a09b984a4687"
-  source = "https://github.com/irisnet/tendermint.git"
-  version = "v0.22.6-iris1"
+  revision = "013b9cef642f875634c614019ab13b17570778ad"
+  version = "v0.23.0"
 
 [[projects]]
   name = "github.com/zondax/ledger-goclient"
   packages = ["."]
-  revision = "39ba4728c137c75718a21f9b4b3280fa31b9139b"
+  revision = "4296ee5701e945f9b3a7dbe51f402e0b9be57259"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "blowfish",
+    "chacha20poly1305",
     "curve25519",
+    "hkdf",
+    "internal/chacha20",
     "internal/subtle",
     "nacl/box",
     "nacl/secretbox",
@@ -424,7 +425,7 @@
     "ripemd160",
     "salsa20/salsa"
   ]
-  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
+  revision = "614d502a4dac94afa3a6ce146bd1736da82514c6"
 
 [[projects]]
   name = "golang.org/x/net"
@@ -443,8 +444,11 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "14742f9018cd6651ec7364dc6ee08af0baaa1031"
+  packages = [
+    "cpu",
+    "unix"
+  ]
+  revision = "4ea2f632f6e912459fe60b26b1749377f0d889d5"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -471,7 +475,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "383e8b2c3b9e36c4076b235b32537292176bae20"
+  revision = "c66870c02cf823ceb633bcd05be3c7cda29976f4"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -514,6 +518,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "851887326646b383c061686cb68ab432cce91f3ee4745ab08ee941278733ede7"
+  inputs-digest = "7faac47b5652cdebc44861c7210e9f2fb59773bc907f822e1a69d843bc6830ea"
   solver-name = "gps-cdcl"
   solver-version = 1

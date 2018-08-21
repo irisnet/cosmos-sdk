@@ -30,7 +30,7 @@ func TestParameterProposal(t *testing.T) {
 
 	pp.Execute(ctx, keeper)
 	assert.Equal(t, keeper.GetDepositProcedure(ctx).MinDeposit,
-		sdk.Coins{sdk.NewCoin("iris", 200)})
+		sdk.Coins{sdk.NewCoin("iris", sdk.NewInt(200))})
 
 	assert.Equal(t, keeper.GetDepositProcedure(ctx).MaxDepositPeriod,int64(20))
 

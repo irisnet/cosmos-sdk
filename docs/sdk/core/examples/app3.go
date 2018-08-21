@@ -1,12 +1,14 @@
 package app
 
 import (
+	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 
 	bapp "github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/params"
@@ -19,10 +21,10 @@ const (
 func NewApp3(logger log.Logger, db dbm.DB) *bapp.BaseApp {
 
 	// Create the codec with registered Msg types
-	cdc := NewCodec()
+	cdc := UpdatedCodec()
 
 	// Create the base application object.
-	app := bapp.NewBaseApp(app3Name, cdc, logger, db)
+	app := bapp.NewBaseApp(app3Name, logger, db, auth.DefaultTxDecoder(cdc))
 
 	// Create a key for accessing the account store.
 	keyAccount := sdk.NewKVStoreKey("acc")
@@ -40,7 +42,7 @@ func NewApp3(logger log.Logger, db dbm.DB) *bapp.BaseApp {
 	// Register message routes.
 	// Note the handler gets access to
 	app.Router().
-		AddRoute("send", []*sdk.KVStoreKey{keyAccount}, bank.NewHandler(coinKeeper))
+		AddRoute("bank", []*sdk.KVStoreKey{keyAccount}, bank.NewHandler(coinKeeper))
 
 	// Mount stores and load the latest state.
 	app.MountStoresIAVL(keyAccount, keyFees, keyParams, keyFees)
@@ -49,4 +51,15 @@ func NewApp3(logger log.Logger, db dbm.DB) *bapp.BaseApp {
 		cmn.Exit(err.Error())
 	}
 	return app
+}
+
+// Update codec from app2 to register imported modules
+func UpdatedCodec() *wire.Codec {
+	cdc := wire.NewCodec()
+	cdc.RegisterInterface((*sdk.Msg)(nil), nil)
+	cdc.RegisterConcrete(MsgSend{}, "example/MsgSend", nil)
+	cdc.RegisterConcrete(MsgIssue{}, "example/MsgIssue", nil)
+	auth.RegisterWire(cdc)
+	cryptoAmino.RegisterAmino(cdc)
+	return cdc
 }
