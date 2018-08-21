@@ -349,17 +349,20 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 
 func (ctx CoreContext) GetCoinType(coinName string, cdc *wire.Codec) (sdk.CoinType, error) {
 	var coinType sdk.CoinType
-	//key := fmt.Sprintf("%s/%s","global",sdk.CoinTypeKey(coinName))
-	key := sdk.CoinTypeKey(coinName)
-	//TODO params StoreName
-	bz,err := ctx.QueryStore([]byte(key),"params")
-	if err != nil {
-		return coinType,err
+	if strings.ToLower(coinName) == "iris" {
+		coinType = sdk.NewDefaultCoinType("iris")
+	}else{
+		key := sdk.CoinTypeKey(coinName)
+		bz,err := ctx.QueryStore([]byte(key),"params")
+		if err != nil {
+			return coinType,err
+		}
+
+		if err = cdc.UnmarshalBinary(bz,&coinType);err != nil {
+			return coinType,err
+		}
 	}
 
-	if err = cdc.UnmarshalBinary(bz,&coinType);err != nil {
-		return coinType,err
-	}
 	return coinType, nil
 }
 
