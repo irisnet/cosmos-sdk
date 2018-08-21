@@ -43,7 +43,10 @@ type postProposalReq struct {
 	Description    string           `json:"description"`     //  Description of the proposal
 	ProposalType   gov.ProposalKind `json:"proposal_type"`   //  Type of proposal. Initial set {PlainTextProposal, SoftwareUpgradeProposal}
 	Proposer       sdk.AccAddress   `json:"proposer"`        //  Address of the proposer
-	InitialDeposit sdk.Coins        `json:"initial_deposit"` // Coins to add to the proposal's deposit
+	InitialDeposit sdk.Coins        `json:"initial_deposit"` //  Coins to add to the proposal's deposit
+	////////////////////  iris/cosmos-sdk start  ///////////////////////////
+	Params         gov.Params       `json:"params"` 		 //  Params
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
 }
 
 type depositReq struct {
@@ -71,7 +74,9 @@ func postProposalHandlerFn(cdc *wire.Codec, ctx context.CoreContext) http.Handle
 		}
 
 		// create the message
-		msg := gov.NewMsgSubmitProposal(req.Title, req.Description, req.ProposalType, req.Proposer, req.InitialDeposit)
+		////////////////////  iris/cosmos-sdk start  ///////////////////////////
+		msg := gov.NewSubmitProposal(req.Title, req.Description, req.ProposalType, req.Proposer, req.InitialDeposit,req.Params)
+		////////////////////  iris/cosmos-sdk end  ///////////////////////////
 		err = msg.ValidateBasic()
 		if err != nil {
 			writeErr(&w, http.StatusBadRequest, err.Error())

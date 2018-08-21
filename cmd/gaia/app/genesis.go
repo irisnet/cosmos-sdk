@@ -27,7 +27,9 @@ var (
 type GenesisState struct {
 	Accounts  []GenesisAccount   `json:"accounts"`
 	StakeData stake.GenesisState `json:"stake"`
+	////////////////////  iris/cosmos-sdk start  ///////////////////////////
 	CoinTypes []sdk.CoinType    `json:"coin_types"`
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
 }
 
 // GenesisAccount doesn't need pubkey or sequence
@@ -145,8 +147,9 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 	stakeData := stake.DefaultGenesisState()
 	// get genesis flag account information
 	genaccs := make([]GenesisAccount, len(appGenTxs))
-
+	////////////////////  iris/cosmos-sdk start  ///////////////////////////
 	coinTypeSet := sdk.NewCoinTypeSet()
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
 	for i, appGenTx := range appGenTxs {
 
 		var genTx GaiaGenTx
@@ -158,6 +161,7 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 		// create the genesis account, give'm few steaks and a buncha token with there name
 		accAuth := auth.NewBaseAccountWithAddress(genTx.Address)
 
+		////////////////////  iris/cosmos-sdk start  ///////////////////////////
 		coinType := sdk.NewDefaultCoinType(genTx.Name)
 		coinTypeSet.Add(coinType)
 		genTxCoin,_:= coinType.ConvertToMinCoin(fmt.Sprintf("%d%s",freeFermionVal,genTx.Name))
@@ -165,6 +169,7 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 		steakCoinType := sdk.NewDefaultCoinType("steak")
 		coinTypeSet.Add(steakCoinType)
 		steakGenTxCoin,_:= steakCoinType.ConvertToMinCoin(fmt.Sprintf("%d%s",freeFermionsAcc,"steak"))
+		////////////////////  iris/cosmos-sdk end  ///////////////////////////
 
 		accAuth.Coins = sdk.Coins{
 			genTxCoin,
@@ -204,7 +209,9 @@ func GaiaAppGenState(cdc *wire.Codec, appGenTxs []json.RawMessage) (genesisState
 	genesisState = GenesisState{
 		Accounts:  genaccs,
 		StakeData: stakeData,
+		////////////////////  iris/cosmos-sdk start  ///////////////////////////
 		CoinTypes: coinTypeSet.CoinTypes,
+		////////////////////  iris/cosmos-sdk end  ///////////////////////////
 	}
 	return
 }

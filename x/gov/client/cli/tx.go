@@ -47,8 +47,9 @@ func GetCmdSubmitProposal(cdc *wire.Codec) *cobra.Command {
 			}
 			// build and sign the transaction, then broadcast to Tendermint
 			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
-
+			////////////////////  iris/cosmos-sdk start  ///////////////////////////
 			amount, err := ctx.ParseCoins(initialDeposit,cdc)
+			////////////////////  iris/cosmos-sdk end  ///////////////////////////
 			if err != nil {
 				return err
 			}
@@ -59,6 +60,7 @@ func GetCmdSubmitProposal(cdc *wire.Codec) *cobra.Command {
 			}
 
 			// create the message
+			////////////////////  iris/cosmos-sdk start  ///////////////////////////
 			var params gov.Params
 			if(proposalType == gov.ProposalTypeParameterChange){
 				if err := json.Unmarshal([]byte(paramsStr),&params);err != nil{
@@ -66,6 +68,7 @@ func GetCmdSubmitProposal(cdc *wire.Codec) *cobra.Command {
 					return nil
 				}
 			}
+			////////////////////  iris/cosmos-sdk end  ///////////////////////////
 			msg := gov.NewSubmitProposal(title, description, proposalType, from, amount,params)
 
 			err = msg.ValidateBasic()

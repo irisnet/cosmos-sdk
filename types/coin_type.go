@@ -32,9 +32,6 @@ const (
 	UserIssued Origin = 0x03
 )
 
-
-
-
 var (
 	MainUnit = func(coinName string) Unit {
 		return NewUnit(coinName, 0)
@@ -73,16 +70,16 @@ var (
 
 type Origin = byte
 
-func ToOrigin(origin string) (og Origin,err error) {
+func ToOrigin(origin string) (og Origin, err error) {
 	switch strings.ToLower(origin) {
 	case "native":
-		return Native,nil
+		return Native, nil
 	case "external":
-		return External,nil
+		return External, nil
 	case "userissued":
-		return UserIssued,nil
+		return UserIssued, nil
 	}
-	return og,errors.New("not support type:"+origin)
+	return og, errors.New("not support type:" + origin)
 }
 
 type Unit struct {
@@ -138,10 +135,10 @@ func (ct CoinType) Convert(orgCoinStr string, denom string) (destCoinStr string,
 	if destUint, err = ct.GetUnit(denom); err != nil {
 		return destCoinStr, errors.New("not exist unit " + orgDenom)
 	}
-	// 目标Coin = 原金额 * (10^目标精度 / 10^原精度)
+	// target Coin = original amount * (10^(target decimal) / 10^(original decimal))
 	if orgUnit, err := ct.GetUnit(orgDenom); err == nil {
 		rat := NewRatFromInt(destUint.GetPrecision(), orgUnit.GetPrecision())
-		amount, _ := NewRatFromDecimal(orgAmt, destUint.Decimal) //将原金额按照目标精度转化
+		amount, _ := NewRatFromDecimal(orgAmt, destUint.Decimal) //Convert the original amount to the target accuracy
 		amt := amount.Mul(rat).DecimalString(destUint.Decimal)
 		destCoinStr = fmt.Sprintf("%s%s", amt, destUint.Denom)
 		return destCoinStr, nil
