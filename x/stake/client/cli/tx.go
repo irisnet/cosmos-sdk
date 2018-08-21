@@ -24,7 +24,9 @@ func GetCmdCreateValidator(cdc *wire.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
+			////////////////////  iris/cosmos-sdk start  ///////////////////////////
 			amount, err := ctx.ParseCoin(viper.GetString(FlagAmount),cdc)
+			////////////////////  iris/cosmos-sdk end  ///////////////////////////
 			if err != nil {
 				return err
 			}
@@ -124,7 +126,9 @@ func GetCmdDelegate(cdc *wire.Codec) *cobra.Command {
 			// build and sign the transaction, then broadcast to Tendermint
 			ctx := context.NewCoreContextFromViper().WithDecoder(authcmd.GetAccountDecoder(cdc))
 
+			////////////////////  iris/cosmos-sdk start  ///////////////////////////
 			amount, err := ctx.ParseCoin(viper.GetString(FlagAmount),cdc)
+			////////////////////  iris/cosmos-sdk end  ///////////////////////////
 			if err != nil {
 				return err
 			}

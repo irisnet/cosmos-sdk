@@ -144,7 +144,9 @@ func (ctx CoreContext) SignAndBuild(name, passphrase string, msgs []sdk.Msg, cdc
 
 	fee := sdk.Coin{}
 	if ctx.Fee != "" {
+		////////////////////  iris/cosmos-sdk begin  ///////////////////////////
 		parsedFee, err := ctx.ParseCoin(ctx.Fee,cdc)
+		////////////////////  iris/cosmos-sdk end  ///////////////////////////
 		if err != nil {
 			return nil, err
 		}
@@ -347,6 +349,9 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 	return ctx.Client, nil
 }
 
+
+////////////////////  iris/cosmos-sdk end  ///////////////////////////
+
 func (ctx CoreContext) GetCoinType(coinName string, cdc *wire.Codec) (sdk.CoinType, error) {
 	var coinType sdk.CoinType
 	if strings.ToLower(coinName) == "iris" {
@@ -396,3 +401,4 @@ func (ctx CoreContext) ParseCoins(coinsStr string, cdc *wire.Codec) (coins sdk.C
 	}
 	return coins,nil
 }
+////////////////////  iris/cosmos-sdk end  ///////////////////////////

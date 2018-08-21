@@ -162,7 +162,9 @@ func InitGenesis(ctx sdk.Context, setter params.SetterProxy, data GenesisState) 
 	setter.SetString(ctx, NativeFeeTokenKey, data.FeeTokenNative)
 	setter.GovSetter().SetString(ctx, NativeGasPriceThresholdKey, sdk.NewInt(data.GasPriceThreshold).String())
 
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
 	for _,typ := range data.CoinTypes {
 		setter.Set(ctx,sdk.CoinTypeKey(typ.Name),typ)
 	}
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
 }

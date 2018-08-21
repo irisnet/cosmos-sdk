@@ -40,7 +40,9 @@ func DefaultParams() Params {
 		GoalBonded:          sdk.NewRat(67, 100),
 		UnbondingTime:       defaultUnbondingTime,
 		MaxValidators:       100,
+		////////////////////  iris/cosmos-sdk start  ///////////////////////////
 		BondDenom:           "steak-atto",
+		////////////////////  iris/cosmos-sdk end  ///////////////////////////
 		DenomPrecision:       18,
 	}
 }
