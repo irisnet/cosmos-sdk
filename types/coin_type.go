@@ -100,10 +100,11 @@ func (u Unit) GetPrecision() Int {
 type Units = []Unit
 
 type CoinType struct {
-	Name         string `json:"name"`
-	MinUnitDenom string `json:"min_unit_denom"`
-	Units        Units  `json:"units"`
-	Origin       Origin `json:"origin"`
+	Name    string `json:"name"`
+	MinUnit Unit   `json:"min_unit"`
+	Units   Units  `json:"units"`
+	Origin  Origin `json:"origin"`
+	Desc    string `json:"desc"`
 }
 
 type CoinTypeSet struct {
@@ -167,12 +168,7 @@ func (ct CoinType) GetUnit(denom string) (u Unit, err error) {
 }
 
 func (ct CoinType) GetMinUnit() (unit Unit) {
-	for _, unit := range ct.Units {
-		if strings.ToLower(unit.Denom) == strings.ToLower(ct.MinUnitDenom) {
-			return unit
-		}
-	}
-	return unit
+	return ct.MinUnit
 }
 
 func (ct CoinType) GetMainUnit() (unit Unit) {
@@ -188,10 +184,11 @@ func (ct CoinType) String() string {
 func NewDefaultCoinType(name string) CoinType {
 	units := GetDefaultUnits(name)
 	return CoinType{
-		Name:         name,
-		Units:        units,
-		MinUnitDenom: units[6].Denom,
-		Origin:       Native,
+		Name:    name,
+		Units:   units,
+		MinUnit: units[6],
+		Origin:  Native,
+		Desc:	 "IRIS Network",
 	}
 }
 
