@@ -17,7 +17,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/cosmos/cosmos-sdk/x/params"
 
-	)
+	"strings"
+)
 
 func toBigInt(amount int) sdk.Int{
 	return Pow10(18).Mul(sdk.NewInt(int64(amount)))
@@ -46,7 +47,7 @@ func getMockApp(t *testing.T, numGenAccs int) (*mock.App, Keeper, stake.Keeper, 
 	mapp.SetEndBlocker(getEndBlocker(keeper))
 	mapp.SetInitChainer(getInitChainer(mapp, keeper, sk))
 
-	genAccs, addrs, pubKeys, privKeys := mock.CreateGenAccounts(numGenAccs, sdk.Coins{sdk.Coin{"steak", toBigInt(42)}})
+	genAccs, addrs, pubKeys, privKeys := mock.CreateGenAccounts(numGenAccs, sdk.Coins{sdk.Coin{"steak-atto", toBigInt(42)}})
 	mock.SetGenesis(mapp, genAccs)
 
 	return mapp, keeper, sk, addrs, pubKeys, privKeys
@@ -69,12 +70,13 @@ func getInitChainer(mapp *mock.App, keeper Keeper, stakeKeeper stake.Keeper) sdk
 
 		stakeGenesis := stake.DefaultGenesisState()
 		stakeGenesis.Pool.LooseTokens = sdk.NewRat(100000)
+		coinType := sdk.NewDefaultCoinType(strings.Split(stakeGenesis.Params.BondDenom,"-")[0])
 
 		err := stake.InitGenesis(ctx, stakeKeeper, stakeGenesis)
 		if err != nil {
 			panic(err)
 		}
-		InitGenesis(ctx, keeper, DefaultGenesisState())
+		InitGenesis(ctx, keeper, DefaultGenesisState([]sdk.CoinType{coinType}))
 		return abci.ResponseInitChain{}
 	}
 }

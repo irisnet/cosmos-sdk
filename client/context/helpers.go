@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"strings"
 )
 
 // Broadcast the transaction bytes to Tendermint
@@ -143,7 +144,9 @@ func (ctx CoreContext) SignAndBuild(name, passphrase string, msgs []sdk.Msg, cdc
 
 	fee := sdk.Coin{}
 	if ctx.Fee != "" {
-		parsedFee, err := sdk.ParseCoin(ctx.Fee)
+		////////////////////  iris/cosmos-sdk begin  ///////////////////////////
+		parsedFee, err := ctx.ParseCoin(ctx.Fee,cdc)
+		////////////////////  iris/cosmos-sdk end  ///////////////////////////
 		if err != nil {
 			return nil, err
 		}
@@ -345,3 +348,57 @@ func (ctx CoreContext) GetNode() (rpcclient.Client, error) {
 	}
 	return ctx.Client, nil
 }
+
+
+////////////////////  iris/cosmos-sdk end  ///////////////////////////
+
+func (ctx CoreContext) GetCoinType(coinName string, cdc *wire.Codec) (sdk.CoinType, error) {
+	var coinType sdk.CoinType
+	if strings.ToLower(coinName) == "iris" {
+		coinType = sdk.NewDefaultCoinType("iris")
+	}else{
+		key := sdk.CoinTypeKey(coinName)
+		bz,err := ctx.QueryStore([]byte(key),"params")
+		if err != nil {
+			return coinType,err
+		}
+
+		if err = cdc.UnmarshalBinary(bz,&coinType);err != nil {
+			return coinType,err
+		}
+	}
+
+	return coinType, nil
+}
+
+func (ctx CoreContext) ParseCoin(coinStr string, cdc *wire.Codec) (sdk.Coin, error) {
+	mainUnit,err := sdk.GetMainCoinDenom(coinStr)
+	coinType,err := ctx.GetCoinType(mainUnit,cdc)
+	if err != nil {
+		return sdk.Coin{},err
+	}
+
+	coin,err:=coinType.ConvertToMinCoin(coinStr)
+	if err != nil {
+		return sdk.Coin{},err
+	}
+	return coin,nil
+}
+
+func (ctx CoreContext) ParseCoins(coinsStr string, cdc *wire.Codec) (coins sdk.Coins, err error) {
+	coinsStr = strings.TrimSpace(coinsStr)
+	if len(coinsStr) == 0 {
+		return coins, nil
+	}
+
+	coinStrs := strings.Split(coinsStr, ",")
+	for _, coinStr := range coinStrs {
+		coin, err := ctx.ParseCoin(coinStr,cdc)
+		if err != nil {
+			return nil, err
+		}
+		coins = append(coins, coin)
+	}
+	return coins,nil
+}
+////////////////////  iris/cosmos-sdk end  ///////////////////////////

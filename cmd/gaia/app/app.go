@@ -182,9 +182,15 @@ func (app *GaiaApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci
 		// return sdk.ErrGenesisParse("").TraceCause(err, "")
 	}
 
-	gov.InitGenesis(ctx, app.govKeeper, gov.DefaultGenesisState())
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
+	gov.InitGenesis(ctx, app.govKeeper, gov.DefaultGenesisState(genesisState.CoinTypes))
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
 
-	auth.InitGenesis(ctx,app.paramsKeeper.Setter(),auth.DefaultGenesisState())
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
+	authGenesis := auth.DefaultGenesisState()
+	authGenesis.CoinTypes = genesisState.CoinTypes
+	auth.InitGenesis(ctx,app.paramsKeeper.Setter(),authGenesis)
+	////////////////////  iris/cosmos-sdk end  ///////////////////////////
 
 	return abci.ResponseInitChain{}
 }

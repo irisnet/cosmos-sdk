@@ -6,6 +6,7 @@ import (
 
 	wire "github.com/cosmos/cosmos-sdk/wire"
 	"github.com/stretchr/testify/require"
+	"fmt"
 )
 
 func TestNew(t *testing.T) {
@@ -314,4 +315,10 @@ func TestStringOverflow(t *testing.T) {
 		"29728537197630860939575850336935951464/37134458148982045574552091851127630409",
 		rat3.String(),
 	)
+}
+
+func TestRat_DecimalString(t *testing.T) {
+	rat1 := NewRat(1,1000)
+	fmt.Println(rat1.DecimalString(4))
+	fmt.Println(rat1.FloatString())
 }

@@ -42,11 +42,21 @@ func NewIrisGenesisState(minDeposit sdk.Coins, depositPeriod int64, votingPeriod
 ////////////////////  iris/cosmos-sdk end///////////////////////////
 
 // get raw genesis raw message for testing
-func DefaultGenesisState() GenesisState {
+
+////////////////////  iris/cosmos-sdk start  ///////////////////////////
+func DefaultGenesisState(coinTypes []sdk.CoinType) GenesisState {
+	var steakCoinType sdk.CoinType
+	for _,typ := range coinTypes {
+		if typ.Name == "steak" {
+			steakCoinType = typ
+			break
+		}
+	}
+	minDeposit,_ := steakCoinType.ConvertToMinCoin("10steak")
 	return GenesisState{
 		StartingProposalID: 1,
 		DepositProcedure: DepositProcedure{
-			MinDeposit:       sdk.Coins{sdk.Coin{Denom: "steak", Amount: sdk.NewInt(int64(10)).Mul(Pow10(18))}},
+			MinDeposit:      sdk.Coins{minDeposit} ,
 			MaxDepositPeriod: 10,
 		},
 		VotingProcedure: VotingProcedure{
@@ -59,6 +69,7 @@ func DefaultGenesisState() GenesisState {
 		},
 	}
 }
+////////////////////  iris/cosmos-sdk end  ///////////////////////////
 
 // InitGenesis - store genesis parameters
 func InitGenesis(ctx sdk.Context, k Keeper, data GenesisState) {
