@@ -316,7 +316,7 @@ func (v Validator) ABCIValidator() abci.Validator {
 	return abci.Validator{
 		PubKey:  tmtypes.TM2PB.PubKey(v.PubKey),
 		Address: v.PubKey.Address(),
-		Power:   v.BondedTokens().RoundInt64(),
+		Power:   v.GetPower().RoundInt64(),
 	}
 }
 
@@ -395,6 +395,24 @@ func (v Validator) AddTokensFromDel(pool Pool, amount int64) (Validator, Pool, s
 	return v, pool, issuedShares
 }
 
+// AddTokensFromDel adds tokens to a validator
+func (v Validator) AddTokensFromDelBigInt(pool Pool, amount sdk.Int) (Validator, Pool, sdk.Rat) {
+
+	// bondedShare/delegatedShare
+	exRate := v.DelegatorShareExRate()
+	amountRat := sdk.NewRatFromInt(amount)
+
+	if v.Status == sdk.Bonded {
+		pool = pool.looseTokensToBonded(amountRat)
+	}
+
+	v.Tokens = v.Tokens.Add(amountRat)
+	issuedShares := amountRat.Quo(exRate)
+	v.DelegatorShares = v.DelegatorShares.Add(issuedShares)
+
+	return v, pool, issuedShares
+}
+
 // RemoveDelShares removes delegator shares from a validator.
 func (v Validator) RemoveDelShares(pool Pool, delShares sdk.Rat) (Validator, Pool, sdk.Rat) {
 	issuedTokens := v.DelegatorShareExRate().Mul(delShares)
@@ -436,7 +454,11 @@ func (v Validator) GetMoniker() string          { return v.Description.Moniker }
 func (v Validator) GetStatus() sdk.BondStatus   { return v.Status }
 func (v Validator) GetOwner() sdk.AccAddress    { return v.Owner }
 func (v Validator) GetPubKey() crypto.PubKey    { return v.PubKey }
-func (v Validator) GetPower() sdk.Rat           { return v.BondedTokens() }
+func (v Validator) GetPower() sdk.Rat           {
+	tokenPrecision := sdk.NewInt(1000000000000000000) // iris = 10^18 iris-atto
+	power := v.BondedTokens().Quo(sdk.NewRatFromInt(tokenPrecision))
+	return power
+}
 func (v Validator) GetTokens() sdk.Rat          { return v.Tokens }
 func (v Validator) GetDelegatorShares() sdk.Rat { return v.DelegatorShares }
 func (v Validator) GetBondHeight() int64        { return v.BondHeight }
