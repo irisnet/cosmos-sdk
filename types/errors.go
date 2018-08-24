@@ -66,6 +66,10 @@ const (
 	MaximumCodespace CodespaceType = 65535
 )
 
+func unknownCodeMsg(code CodeType) string {
+	return fmt.Sprintf("unknown code %d", code)
+}
+
 // NOTE: Don't stringer this, we'll put better messages in later.
 // nolint: gocyclo
 func CodeToDefaultMsg(code CodeType) string {
@@ -99,7 +103,7 @@ func CodeToDefaultMsg(code CodeType) string {
 	case CodeOutOfService:
 		return "out of service"
 	default:
-		return fmt.Sprintf("unknown code %d", code)
+		return unknownCodeMsg(code)
 	}
 }
 

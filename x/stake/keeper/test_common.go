@@ -20,12 +20,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/stake/types"
+	"time"
 )
 
 // dummy addresses used for testing
 var (
-	Addrs       = createTestAddrs(100)
-	PKs         = createTestPubKeys(100)
+	Addrs       = createTestAddrs(500)
+	PKs         = createTestPubKeys(500)
 	emptyAddr   sdk.AccAddress
 	emptyPubkey crypto.PubKey
 
@@ -93,7 +94,7 @@ func defaultParamsForTest() types.Params {
 		InflationMax:        sdk.NewRat(20, 100),
 		InflationMin:        sdk.NewRat(7, 100),
 		GoalBonded:          sdk.NewRat(67, 100),
-		UnbondingTime:       int64(60 * 60 * 24 * 3),
+		UnbondingTime:       time.Duration(int64(60 * 60 * 24 * 3)),
 		MaxValidators:       100,
 		BondDenom:           "steak",
 		DenomPrecision:       0,

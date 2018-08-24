@@ -278,7 +278,6 @@ func TestGetter(t *testing.T) {
 	assert.Equal(t, def10, res)
 
 }
-
 func TestGetterSetterProxy(t *testing.T) {
 	skey := sdk.NewKVStoreKey("test")
 	ctx := defaultContext(skey)

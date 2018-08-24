@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"os"
 	"testing"
-
+	"time"
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -18,6 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 	"github.com/cosmos/cosmos-sdk/x/stake/types"
 )
@@ -35,7 +36,7 @@ var (
 		sdk.AccAddress(pks[1].Address()),
 		sdk.AccAddress(pks[2].Address()),
 	}
-	initCoins sdk.Int = sdk.NewInt(200)
+	initCoins = sdk.NewInt(200)
 )
 
 func createTestCodec() *wire.Codec {
@@ -47,7 +48,6 @@ func createTestCodec() *wire.Codec {
 	wire.RegisterCrypto(cdc)
 	return cdc
 }
-
 // DefaultParams returns a default set of parameters.
 func defaultParamsForTest() types.Params {
 	return types.Params{
@@ -55,34 +55,36 @@ func defaultParamsForTest() types.Params {
 		InflationMax:        sdk.NewRat(20, 100),
 		InflationMin:        sdk.NewRat(7, 100),
 		GoalBonded:          sdk.NewRat(67, 100),
-		UnbondingTime:       int64(60 * 60 * 24 * 3),
+		UnbondingTime:       time.Duration(60 * 60 * 24 * 3 * time.Second),
 		MaxValidators:       100,
 		BondDenom:           "steak",
 		DenomPrecision:       0,
 	}
 }
-
-func createTestInput(t *testing.T) (sdk.Context, bank.Keeper, stake.Keeper, Keeper) {
+func createTestInput(t *testing.T) (sdk.Context, bank.Keeper, stake.Keeper, params.SetterProxy, Keeper) {
 	keyAcc := sdk.NewKVStoreKey("acc")
 	keyStake := sdk.NewKVStoreKey("stake")
 	keySlashing := sdk.NewKVStoreKey("slashing")
+	keyParams := sdk.NewKVStoreKey("params")
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(keyAcc, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keyStake, sdk.StoreTypeIAVL, db)
 	ms.MountStoreWithDB(keySlashing, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(keyParams, sdk.StoreTypeIAVL, db)
 	err := ms.LoadLatestVersion()
 	require.Nil(t, err)
 	ctx := sdk.NewContext(ms, abci.Header{}, false, log.NewTMLogger(os.Stdout))
 	cdc := createTestCodec()
 	accountMapper := auth.NewAccountMapper(cdc, keyAcc, auth.ProtoBaseAccount)
 	ck := bank.NewKeeper(accountMapper)
+	params := params.NewKeeper(cdc, keyParams)
 	sk := stake.NewKeeper(cdc, keyStake, ck, stake.DefaultCodespace)
 	genesis := stake.DefaultGenesisState()
 	genesis.Params = defaultParamsForTest()
 	genesis.Pool.LooseTokens = sdk.NewRat(initCoins.MulRaw(int64(len(addrs))).Int64())
 
-	err = stake.InitGenesis(ctx, sk, genesis)
+	_, err = stake.InitGenesis(ctx, sk, genesis)
 	require.Nil(t, err)
 
 	for _, addr := range addrs {
@@ -91,8 +93,8 @@ func createTestInput(t *testing.T) (sdk.Context, bank.Keeper, stake.Keeper, Keep
 		})
 	}
 	require.Nil(t, err)
-	keeper := NewKeeper(cdc, keySlashing, sk, DefaultCodespace)
-	return ctx, ck, sk, keeper
+	keeper := NewKeeper(cdc, keySlashing, sk, params.Getter(), DefaultCodespace)
+	return ctx, ck, sk, params.Setter(), keeper
 }
 
 func newPubKey(pk string) (res crypto.PubKey) {
