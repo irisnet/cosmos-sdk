@@ -32,6 +32,7 @@ type UnrevokeBody struct {
 	AccountNumber    int64  `json:"account_number"`
 	Sequence         int64  `json:"sequence"`
 	Gas              int64  `json:"gas"`
+	Fee              string `json:"fee"`
 	ValidatorAddr    string `json:"validator_addr"`
 }
 
@@ -77,6 +78,7 @@ func unrevokeRequestHandlerFn(cdc *wire.Codec, kb keys.Keybase, cliCtx context.C
 			AccountNumber: m.AccountNumber,
 			Sequence:      m.Sequence,
 			Gas:           m.Gas,
+			Fee:           m.Fee,
 		}
 
 		msg := slashing.NewMsgUnrevoke(validatorAddr)
