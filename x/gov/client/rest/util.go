@@ -19,6 +19,7 @@ type baseReq struct {
 	AccountNumber int64  `json:"account_number"`
 	Sequence      int64  `json:"sequence"`
 	Gas           int64  `json:"gas"`
+	Fee           string `json:"fee"`
 }
 
 func buildReq(w http.ResponseWriter, r *http.Request, cdc *wire.Codec, req interface{}) error {
@@ -78,6 +79,7 @@ func signAndBuild(w http.ResponseWriter, cliCtx context.CLIContext, baseReq base
 		Sequence:      baseReq.Sequence,
 		ChainID:       baseReq.ChainID,
 		Gas:           baseReq.Gas,
+		Fee:           baseReq.Fee,
 	}
 
 	txBytes, err := txCtx.BuildAndSign(baseReq.Name, baseReq.Password, []sdk.Msg{msg})

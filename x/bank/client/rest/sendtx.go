@@ -30,6 +30,7 @@ type sendBody struct {
 	AccountNumber    int64     `json:"account_number"`
 	Sequence         int64     `json:"sequence"`
 	Gas              int64     `json:"gas"`
+	Fee              string    `json:"fee"`
 }
 
 var msgCdc = wire.NewCodec()
@@ -84,6 +85,7 @@ func SendRequestHandlerFn(cdc *wire.Codec, kb keys.Keybase, cliCtx context.CLICo
 		txCtx := authctx.TxContext{
 			Codec:         cdc,
 			Gas:           m.Gas,
+			Fee:           m.Fee,
 			ChainID:       m.ChainID,
 			AccountNumber: m.AccountNumber,
 			Sequence:      m.Sequence,

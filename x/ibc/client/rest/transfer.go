@@ -28,6 +28,7 @@ type transferBody struct {
 	AccountNumber    int64     `json:"account_number"`
 	Sequence         int64     `json:"sequence"`
 	Gas              int64     `json:"gas"`
+	Fee              string    `json:"fee"`
 }
 
 // TransferRequestHandler - http request handler to transfer coins to a address
@@ -77,6 +78,7 @@ func TransferRequestHandlerFn(cdc *wire.Codec, kb keys.Keybase, cliCtx context.C
 			AccountNumber: m.AccountNumber,
 			Sequence:      m.Sequence,
 			Gas:           m.Gas,
+			Fee:           m.Fee,
 		}
 
 		txBytes, err := txCtx.BuildAndSign(m.LocalAccountName, m.Password, []sdk.Msg{msg})
