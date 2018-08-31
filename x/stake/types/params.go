@@ -8,7 +8,7 @@ import (
 
 // defaultUnbondingTime reflects three weeks in seconds as the default
 // unbonding time.
-const defaultUnbondingTime int64 = 60 * 60 * 24 * 3
+const defaultUnbondingTime int64 = 60 * 60 * 2
 
 // Params defines the high level settings for staking
 type Params struct {
