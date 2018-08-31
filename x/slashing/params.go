@@ -14,7 +14,7 @@ var (
 	// SignedBlocksWindow - sliding window for downtime slashing
 	// TODO Governance parameter?
 	// TODO Temporarily set to 40000 blocks for testnets
-	SignedBlocksWindow int64 = 10000
+	SignedBlocksWindow int64 = 2000
 
 	// Downtime slashing threshold - 50%
 	// TODO Governance parameter?
