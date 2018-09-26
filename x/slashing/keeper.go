@@ -53,6 +53,12 @@ func (k Keeper) handleDoubleSign(ctx sdk.Context, addr crypto.Address, infractio
 		return
 	}
 
+	signInfo, found := k.getValidatorSigningInfo(ctx, address)
+	if !found {
+		logger.Info(fmt.Sprintf("There is no signing info for validator %s. It can't be slashed here", address))
+		return
+	}
+
 	// Double sign confirmed
 	logger.Info(fmt.Sprintf("Confirmed double sign from %s at height %d, age of %d less than max age of %d", pubkey.Address(), infractionHeight, age, maxEvidenceAge))
 
@@ -63,10 +69,6 @@ func (k Keeper) handleDoubleSign(ctx sdk.Context, addr crypto.Address, infractio
 	k.validatorSet.Revoke(ctx, pubkey)
 
 	// Jail validator
-	signInfo, found := k.getValidatorSigningInfo(ctx, address)
-	if !found {
-		panic(fmt.Sprintf("Expected signing info for validator %s but not found", address))
-	}
 	signInfo.JailedUntil = time.Add(k.DoubleSignUnbondDuration(ctx))
 	k.setValidatorSigningInfo(ctx, address, signInfo)
 }

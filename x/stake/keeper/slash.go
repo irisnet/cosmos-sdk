@@ -60,14 +60,14 @@ func (k Keeper) Slash(ctx sdk.Context, pubkey crypto.PubKey, infractionHeight in
 	remainingSlashAmount := slashAmount
 
 	switch {
-	case infractionHeight > ctx.BlockHeight():
+	case infractionHeight > ctx.BlockHeight() + 1:
 
 		// Can't slash infractions in the future
 		panic(fmt.Sprintf(
 			"impossible attempt to slash future infraction at height %d but we are at height %d",
 			infractionHeight, ctx.BlockHeight()))
 
-	case infractionHeight == ctx.BlockHeight():
+	case infractionHeight == ctx.BlockHeight() || infractionHeight == ctx.BlockHeight() + 1:
 
 		// Special-case slash at current height for efficiency - we don't need to look through unbonding delegations or redelegations
 		logger.Info(fmt.Sprintf(
