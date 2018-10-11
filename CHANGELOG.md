@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.2-iris2
+
+*October 11th, 2018*
+
+- Add check for iavl proof and value before building multistore proof
+
+
 ## 0.24.2-iris1
 
 *September 28th, 2018*
