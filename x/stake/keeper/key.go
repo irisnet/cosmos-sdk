@@ -32,7 +32,7 @@ var (
 	RedelegationByValDstIndexKey     = []byte{0x0F} // prefix for each key for an redelegation, by destination validator owner
 )
 
-const maxDigitsForAccount = 12 // ~220,000,000 atoms created at launch
+const maxDigitsForAccount = 30 // ~220,000,000 atoms created at launch
 
 // gets the key for the validator with address
 // VALUE: stake/types.Validator
