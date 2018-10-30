@@ -445,6 +445,10 @@ func (v Validator) GetPower() sdk.Dec           {
 	tokenPrecision := sdk.NewIntWithDecimal(1, 18)
 	return v.BondedTokens().QuoInt(tokenPrecision)
 }
+func (v Validator) GetPotentialPower() sdk.Dec           {
+	tokenPrecision := sdk.NewIntWithDecimal(1, 18)
+	return v.Tokens.QuoInt(tokenPrecision)
+}
 func (v Validator) GetTokens() sdk.Dec           { return v.Tokens }
 func (v Validator) GetCommission() sdk.Dec       { return v.Commission.Rate }
 func (v Validator) GetDelegatorShares() sdk.Dec  { return v.DelegatorShares }
