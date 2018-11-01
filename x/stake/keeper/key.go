@@ -38,7 +38,7 @@ var (
 	ValidatorQueueKey    = []byte{0x43} // prefix for the timestamps in validator queue
 )
 
-const maxDigitsForAccount = 30 // ~220,000,000 atoms created at launch
+const maxDigitsForAccount = 12 // ~220,000,000 atoms created at launch
 
 // gets the key for the validator with address
 // VALUE: stake/types.Validator

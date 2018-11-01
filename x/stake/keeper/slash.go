@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	types "github.com/cosmos/cosmos-sdk/x/stake/types"
-	"math"
+	"github.com/cosmos/cosmos-sdk/x/stake/types"
 )
 
 // Slash a validator for an infraction committed at a known height
@@ -36,11 +35,7 @@ func (k Keeper) Slash(ctx sdk.Context, consAddr sdk.ConsAddress, infractionHeigh
 
 	validator, found := k.GetValidatorByConsAddr(ctx, consAddr)
 
-	precisionNumber := math.Pow10(18)
-	if precisionNumber > math.MaxInt64 {
-		panic(fmt.Errorf("precision is too high, int64 is overflow"))
-	}
-	tokenPrecision := sdk.NewInt(int64(precisionNumber))
+	tokenPrecision := sdk.NewIntWithDecimal(1, 18)
 	slashAmount = slashAmount.MulInt(tokenPrecision)
 
 	if !found {
