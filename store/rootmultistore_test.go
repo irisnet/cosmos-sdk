@@ -262,7 +262,7 @@ func getExpectedCommitID(store *rootMultiStore, ver int64) CommitID {
 }
 
 func hashStores(stores map[StoreKey]CommitStore) []byte {
-	m := make(map[string]merkle.Hasher, len(stores))
+	m := make(map[string][]byte, len(stores))
 	for key, store := range stores {
 		name := key.Name()
 		m[name] = storeInfo{
@@ -271,7 +271,7 @@ func hashStores(stores map[StoreKey]CommitStore) []byte {
 				CommitID: store.LastCommitID(),
 				// StoreType: store.GetStoreType(),
 			},
-		}
+		}.Hash()
 	}
 	return merkle.SimpleHashFromMap(m)
 }
