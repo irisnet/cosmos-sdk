@@ -23,8 +23,8 @@ import (
 	govcmd "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	slashingcmd "github.com/cosmos/cosmos-sdk/x/slashing/client/cli"
 	stakecmd "github.com/cosmos/cosmos-sdk/x/stake/client/cli"
-
 	_ "github.com/cosmos/cosmos-sdk/client/lcd/statik"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
@@ -45,6 +45,13 @@ var (
 func main() {
 	cobra.EnableCommandSorting = false
 	cdc := app.MakeCodec()
+
+
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(sdk.Bech32PrefixAccAddr, sdk.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(sdk.Bech32PrefixValAddr, sdk.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(sdk.Bech32PrefixConsAddr, sdk.Bech32PrefixConsPub)
+	config.Seal()
 
 	// TODO: setup keybase, viper object, etc. to be passed into
 	// the below functions and eliminate global vars, like we do
