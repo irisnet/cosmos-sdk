@@ -80,6 +80,7 @@ func tally(ctx sdk.Context, keeper Keeper, proposal Proposal) (passes bool, tall
 		results[val.Vote] = results[val.Vote].Add(votingPower)
 		totalVotingPower = totalVotingPower.Add(votingPower)
 	}
+	SortAddresses(nonVoting)
 
 	tallyingProcedure := keeper.GetTallyingProcedure(ctx)
 
