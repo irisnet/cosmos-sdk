@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"time"
 )
 
 // query endpoints supported by the governance Querier
@@ -40,6 +41,58 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 	}
 }
 
+type ProposalOutput struct {
+	ProposalID   int64            `json:"proposal_id"`   //  ID of the proposal
+	Title        string           `json:"title"`         //  Title of the proposal
+	Description  string           `json:"description"`   //  Description of the proposal
+	ProposalType ProposalKind `json:"proposal_type"` //  Type of proposal. Initial set {PlainTextProposal, SoftwareUpgradeProposal}
+
+	Status       ProposalStatus `json:"proposal_status"` //  Status of the Proposal {Pending, Active, Passed, Rejected}
+	TallyResult  TallyResult    `json:"tally_result"`    //  Result of Tallys
+
+	SubmitTime   time.Time `json:"submit_time"`   //  Height of the block where TxGovSubmitProposal was included
+	TotalDeposit sdk.Coins `json:"total_deposit"` //  Current deposit on this proposal. Initial value is set at InitialDeposit
+
+	VotingStartTime time.Time `json:"voting_start_time"` //  Height of the block where MinDeposit was reached. -1 if MinDeposit is not reached
+
+	Param        Param `json:"param"`
+}
+
+type ProposalOutputs []ProposalOutput
+
+func ConvertProposalToProposalOutput(proposal Proposal) ProposalOutput {
+
+	proposalOutput := ProposalOutput{
+		ProposalID:   proposal.GetProposalID(),
+		Title:        proposal.GetTitle(),
+		Description:  proposal.GetDescription(),
+		ProposalType: proposal.GetProposalType(),
+
+		Status:      proposal.GetStatus(),
+		TallyResult: proposal.GetTallyResult(),
+
+		SubmitTime:  proposal.GetSubmitTime(),
+		TotalDeposit: proposal.GetTotalDeposit(),
+
+		VotingStartTime: proposal.GetVotingStartTime(),
+		Param:           Param{},
+	}
+
+	if proposal.GetProposalType() == ProposalTypeParameterChange {
+		proposalOutput.Param = proposal.(*ParameterProposal).Param
+	}
+	return proposalOutput
+}
+
+func ConvertProposalsToProposalOutputs(proposals []Proposal) ProposalOutputs {
+
+     var proposalOutputs ProposalOutputs
+     for _,proposal :=range proposals{
+		 proposalOutputs= append(proposalOutputs,ConvertProposalToProposalOutput(proposal))
+	}
+	return  proposalOutputs
+}
+
 // Params for query 'custom/gov/proposal'
 type QueryProposalParams struct {
 	ProposalID int64
@@ -58,7 +111,9 @@ func queryProposal(ctx sdk.Context, path []string, req abci.RequestQuery, keeper
 		return nil, ErrUnknownProposal(DefaultCodespace, params.ProposalID)
 	}
 
-	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, proposal)
+	proposalOutput := ConvertProposalToProposalOutput(proposal)
+
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, proposalOutput)
 	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
@@ -184,7 +239,9 @@ func queryProposals(ctx sdk.Context, path []string, req abci.RequestQuery, keepe
 
 	proposals := keeper.GetProposalsFiltered(ctx, params.Voter, params.Depositer, params.ProposalStatus, params.NumLatestProposals)
 
-	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, proposals)
+	proposalOutputs := ConvertProposalsToProposalOutputs(proposals)
+
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, proposalOutputs)
 	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
@@ -200,15 +257,15 @@ type QueryTallyParams struct {
 func queryTally(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) (res []byte, err sdk.Error) {
 	// TODO: Dependant on #1914
 
-	var proposalID int64
-	err2 := keeper.cdc.UnmarshalJSON(req.Data, proposalID)
+	var param QueryTallyParams
+	err2 := keeper.cdc.UnmarshalJSON(req.Data, &param)
 	if err2 != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err2.Error()))
 	}
 
-	proposal := keeper.GetProposal(ctx, proposalID)
+	proposal := keeper.GetProposal(ctx, param.ProposalID)
 	if proposal == nil {
-		return nil, ErrUnknownProposal(DefaultCodespace, proposalID)
+		return nil, ErrUnknownProposal(DefaultCodespace, param.ProposalID)
 	}
 
 	var tallyResult TallyResult

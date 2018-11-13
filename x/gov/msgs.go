@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/irisnet/irishub/iparam"
 )
 
 // name to idetify transaction types
@@ -19,15 +20,21 @@ type MsgSubmitProposal struct {
 	ProposalType   ProposalKind   `json:"proposal_type"`   //  Type of proposal. Initial set {PlainTextProposal, SoftwareUpgradeProposal}
 	Proposer       sdk.AccAddress `json:"proposer"`        //  Address of the proposer
 	InitialDeposit sdk.Coins      `json:"initial_deposit"` //  Initial deposit paid by sender. Must be strictly positive.
+	////////////////////  iris begin  ///////////////////////////
+	Param          Param
+	////////////////////  iris end  /////////////////////////////
 }
 
-func NewMsgSubmitProposal(title string, description string, proposalType ProposalKind, proposer sdk.AccAddress, initialDeposit sdk.Coins) MsgSubmitProposal {
+func NewMsgSubmitProposal(title string, description string, proposalType ProposalKind, proposer sdk.AccAddress, initialDeposit sdk.Coins, param Param) MsgSubmitProposal {
 	return MsgSubmitProposal{
 		Title:          title,
 		Description:    description,
 		ProposalType:   proposalType,
 		Proposer:       proposer,
 		InitialDeposit: initialDeposit,
+		////////////////////  iris begin  ///////////////////////////
+		Param:          param,
+		////////////////////  iris end  /////////////////////////////
 	}
 }
 
@@ -55,6 +62,21 @@ func (msg MsgSubmitProposal) ValidateBasic() sdk.Error {
 	if !msg.InitialDeposit.IsNotNegative() {
 		return sdk.ErrInvalidCoins(msg.InitialDeposit.String())
 	}
+	////////////////////  iris begin  ///////////////////////////
+	if msg.ProposalType == ProposalTypeParameterChange {
+
+		if msg.Param.Op != Update && msg.Param.Op != Insert {
+			return ErrInvalidParamOp(DefaultCodespace, msg.Param.Op)
+		}
+
+		if p, ok := iparam.ParamMapping[msg.Param.Key]; ok {
+			return p.Valid(msg.Param.Value)
+		} else {
+			return ErrInvalidParam(DefaultCodespace)
+		}
+
+	}
+	////////////////////  iris end  /////////////////////////////
 	return nil
 }
 

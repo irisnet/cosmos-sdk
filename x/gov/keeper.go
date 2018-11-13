@@ -1,40 +1,17 @@
 package gov
 
 import (
-	codec "github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/params"
+	"github.com/irisnet/irishub/modules/gov/params"
+	"github.com/irisnet/irishub/iparam"
 )
 
-// Parameter store default namestore
-const (
-	DefaultParamspace = "gov"
-)
-
-// Parameter store key
-var (
-	ParamStoreKeyDepositProcedure  = []byte("depositprocedure")
-	ParamStoreKeyVotingProcedure   = []byte("votingprocedure")
-	ParamStoreKeyTallyingProcedure = []byte("tallyingprocedure")
-)
-
-// Type declaration for parameters
-func ParamTypeTable() params.TypeTable {
-	return params.NewTypeTable(
-		ParamStoreKeyDepositProcedure, DepositProcedure{},
-		ParamStoreKeyVotingProcedure, VotingProcedure{},
-		ParamStoreKeyTallyingProcedure, TallyingProcedure{},
-	)
-}
+// nolint
 
 // Governance Keeper
 type Keeper struct {
-	// The reference to the Param Keeper to get and set Global Params
-	paramsKeeper params.Keeper
-
-	// The reference to the Paramstore to get and set gov specific params
-	paramSpace params.Subspace
 
 	// The reference to the CoinKeeper to modify balances
 	ck bank.Keeper
@@ -60,11 +37,9 @@ type Keeper struct {
 // - depositing funds into proposals, and activating upon sufficient funds being deposited
 // - users voting on proposals, with weight proportional to stake in the system
 // - and tallying the result of the vote.
-func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, paramsKeeper params.Keeper, paramSpace params.Subspace, ck bank.Keeper, ds sdk.DelegationSet, codespace sdk.CodespaceType) Keeper {
+func NewKeeper(cdc *codec.Codec, key sdk.StoreKey,ck bank.Keeper, ds sdk.DelegationSet, codespace sdk.CodespaceType) Keeper {
 	return Keeper{
 		storeKey:     key,
-		paramsKeeper: paramsKeeper,
-		paramSpace:   paramSpace.WithTypeTable(ParamTypeTable()),
 		ck:           ck,
 		ds:           ds,
 		vs:           ds.GetValidatorSet(),
@@ -72,6 +47,24 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, paramsKeeper params.Keeper, p
 		codespace:    codespace,
 	}
 }
+
+// =====================================================
+// Proposals
+
+////////////////////  iris begin  ///////////////////////////
+func (keeper Keeper) NewProposal(ctx sdk.Context, title string, description string, proposalType ProposalKind, param Param) Proposal {
+	switch proposalType {
+	case ProposalTypeText:
+		return keeper.NewTextProposal(ctx, title, description, proposalType)
+	case ProposalTypeParameterChange:
+		return keeper.NewParametersProposal(ctx, title, description, proposalType, param)
+	case ProposalTypeSoftwareUpgrade:
+		return keeper.NewUpgradeProposal(ctx, title, description, proposalType)
+	}
+	return nil
+}
+////////////////////  iris end  /////////////////////////////
+
 
 // =====================================================
 // Proposals
@@ -96,6 +89,59 @@ func (keeper Keeper) NewTextProposal(ctx sdk.Context, title string, description 
 	keeper.InactiveProposalQueuePush(ctx, proposal)
 	return proposal
 }
+
+////////////////////  iris begin  ///////////////////////////
+func (keeper Keeper) NewParametersProposal(ctx sdk.Context, title string, description string, proposalType ProposalKind, param Param) Proposal {
+	proposalID, err := keeper.getNewProposalID(ctx)
+	if err != nil {
+		return nil
+	}
+	var textProposal = TextProposal{
+		ProposalID:   proposalID,
+		Title:        title,
+		Description:  description,
+		ProposalType: proposalType,
+		Status:       StatusDepositPeriod,
+		TallyResult:  EmptyTallyResult(),
+		TotalDeposit: sdk.Coins{},
+		SubmitTime:   ctx.BlockHeader().Time,
+	}
+
+	param.Value = iparam.ParamMapping[param.Key].ToJson(param.Value)
+
+	var proposal Proposal = &ParameterProposal{
+		textProposal,
+		param,
+	}
+	keeper.SetProposal(ctx, proposal)
+	keeper.InactiveProposalQueuePush(ctx, proposal)
+	return proposal
+}
+
+func (keeper Keeper) NewUpgradeProposal(ctx sdk.Context, title string, description string, proposalType ProposalKind) Proposal {
+	proposalID, err := keeper.getNewProposalID(ctx)
+	if err != nil {
+		return nil
+	}
+	var textProposal = TextProposal{
+		ProposalID:   proposalID,
+		Title:        title,
+		Description:  description,
+		ProposalType: proposalType,
+		Status:       StatusDepositPeriod,
+		TallyResult:  EmptyTallyResult(),
+		TotalDeposit: sdk.Coins{},
+		SubmitTime:   ctx.BlockHeader().Time,
+	}
+	var proposal Proposal = &SoftwareUpgradeProposal{
+		textProposal,
+	}
+	keeper.SetProposal(ctx, proposal)
+	keeper.InactiveProposalQueuePush(ctx, proposal)
+	return proposal
+}
+////////////////////  iris end  /////////////////////////////
+
 
 // Get Proposal from store by ProposalID
 func (keeper Keeper) GetProposal(ctx sdk.Context, proposalID int64) Proposal {
@@ -221,51 +267,6 @@ func (keeper Keeper) activateVotingPeriod(ctx sdk.Context, proposal Proposal) {
 	keeper.ActiveProposalQueuePush(ctx, proposal)
 }
 
-// =====================================================
-// Procedures
-
-// Returns the current Deposit Procedure from the global param store
-// nolint: errcheck
-func (keeper Keeper) GetDepositProcedure(ctx sdk.Context) DepositProcedure {
-	var depositProcedure DepositProcedure
-	keeper.paramSpace.Get(ctx, ParamStoreKeyDepositProcedure, &depositProcedure)
-	return depositProcedure
-}
-
-// Returns the current Voting Procedure from the global param store
-// nolint: errcheck
-func (keeper Keeper) GetVotingProcedure(ctx sdk.Context) VotingProcedure {
-	var votingProcedure VotingProcedure
-	keeper.paramSpace.Get(ctx, ParamStoreKeyVotingProcedure, &votingProcedure)
-	return votingProcedure
-}
-
-// Returns the current Tallying Procedure from the global param store
-// nolint: errcheck
-func (keeper Keeper) GetTallyingProcedure(ctx sdk.Context) TallyingProcedure {
-	var tallyingProcedure TallyingProcedure
-	keeper.paramSpace.Get(ctx, ParamStoreKeyTallyingProcedure, &tallyingProcedure)
-	return tallyingProcedure
-}
-
-// nolint: errcheck
-func (keeper Keeper) setDepositProcedure(ctx sdk.Context, depositProcedure DepositProcedure) {
-	keeper.paramSpace.Set(ctx, ParamStoreKeyDepositProcedure, &depositProcedure)
-}
-
-// nolint: errcheck
-func (keeper Keeper) setVotingProcedure(ctx sdk.Context, votingProcedure VotingProcedure) {
-	keeper.paramSpace.Set(ctx, ParamStoreKeyVotingProcedure, &votingProcedure)
-}
-
-// nolint: errcheck
-func (keeper Keeper) setTallyingProcedure(ctx sdk.Context, tallyingProcedure TallyingProcedure) {
-	keeper.paramSpace.Set(ctx, ParamStoreKeyTallyingProcedure, &tallyingProcedure)
-}
-
-// =====================================================
-// Votes
-
 // Adds a vote on a specific proposal
 func (keeper Keeper) AddVote(ctx sdk.Context, proposalID int64, voterAddr sdk.AccAddress, option VoteOption) sdk.Error {
 	proposal := keeper.GetProposal(ctx, proposalID)
@@ -367,7 +368,9 @@ func (keeper Keeper) AddDeposit(ctx sdk.Context, proposalID int64, depositerAddr
 	// Check if deposit tipped proposal into voting period
 	// Active voting period if so
 	activatedVotingPeriod := false
-	if proposal.GetStatus() == StatusDepositPeriod && proposal.GetTotalDeposit().IsGTE(keeper.GetDepositProcedure(ctx).MinDeposit) {
+	////////////////////  iris begin  ///////////////////////////
+	if proposal.GetStatus() == StatusDepositPeriod && proposal.GetTotalDeposit().IsGTE(govparams.GetDepositProcedure(ctx).MinDeposit) {
+	////////////////////  iris end  /////////////////////////////
 		keeper.activateVotingPeriod(ctx, proposal)
 		activatedVotingPeriod = true
 	}
