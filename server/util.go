@@ -102,7 +102,7 @@ func interceptLoadConfig() (conf *cfg.Config, err error) {
 		conf, err = tcmd.ParseConfig() // NOTE: ParseConfig() creates dir/files as necessary.
 	}
 
-	cosmosConfigFilePath := filepath.Join(rootDir, "config/gaiad.toml")
+	cosmosConfigFilePath := filepath.Join(rootDir, "config/iris.toml")
 	viper.SetConfigName("cosmos")
 	_ = viper.MergeInConfig()
 	var cosmosConf *config.Config
