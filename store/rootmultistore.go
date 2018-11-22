@@ -101,7 +101,7 @@ func (rs *rootMultiStore) LoadVersion(ver int64, overwrite bool) error {
 	if ver == 0 {
 		for key, storeParams := range rs.storesParams {
 			id := CommitID{}
-			store, err := rs.loadCommitStoreFromParams(key, id, storeParams)
+			store, err := rs.loadCommitStoreFromParams(key, id, storeParams, overwrite)
 			if err != nil {
 				return fmt.Errorf("failed to load rootMultiStore: %v", err)
 			}
@@ -134,7 +134,7 @@ func (rs *rootMultiStore) LoadVersion(ver int64, overwrite bool) error {
 			id = info.Core.CommitID
 		}
 
-		store, err := rs.loadCommitStoreFromParams(key, id, storeParams)
+		store, err := rs.loadCommitStoreFromParams(key, id, storeParams, overwrite)
 		if err != nil {
 			return fmt.Errorf("failed to load rootMultiStore: %v", err)
 		}

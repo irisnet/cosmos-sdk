@@ -293,6 +293,10 @@ func (app *GaiaApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci
 	}
 }
 
+func (app *GaiaApp) LoadHeight(height int64) error {
+	return app.LoadVersion(height, app.keyMain, false)
+}
+
 // export the state of gaia for a genesis file
 func (app *GaiaApp) ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
 	ctx := app.NewContext(true, abci.Header{})
