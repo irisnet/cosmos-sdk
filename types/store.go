@@ -112,7 +112,7 @@ type CommitMultiStore interface {
 	// version, or when the last commit attempt didn't complete,
 	// the next commit after loading must be idempotent (return the
 	// same commit id).  Otherwise the behavior is undefined.
-	LoadVersion(ver int64) error
+	LoadVersion(ver int64, overwrite bool) error
 }
 
 //---------subsp-------------------------------

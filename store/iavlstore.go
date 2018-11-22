@@ -19,9 +19,14 @@ const (
 )
 
 // load the iavl store
-func LoadIAVLStore(db dbm.DB, id CommitID, pruning sdk.PruningStrategy) (CommitStore, error) {
+func LoadIAVLStore(db dbm.DB, id CommitID, pruning sdk.PruningStrategy, overwrite bool) (CommitStore, error) {
 	tree := iavl.NewMutableTree(db, defaultIAVLCacheSize)
-	_, err := tree.LoadVersionForOverwriting(id.Version)
+	var err error
+	if overwrite {
+		_, err = tree.LoadVersionForOverwriting(id.Version)
+	} else {
+		_, err = tree.LoadVersion(id.Version)
+	}
 	if err != nil {
 		return nil, err
 	}
