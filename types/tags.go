@@ -60,4 +60,5 @@ var (
 	TagSrcValidator = "source-validator"
 	TagDstValidator = "destination-validator"
 	TagDelegator    = "delegator"
+	TagReward       = "withdraw-reward"
 )
