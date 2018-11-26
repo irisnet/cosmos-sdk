@@ -91,17 +91,17 @@ func (rs *rootMultiStore) GetCommitKVStore(key StoreKey) CommitKVStore {
 // Implements CommitMultiStore.
 func (rs *rootMultiStore) LoadLatestVersion() error {
 	ver := getLatestVersion(rs.db)
-	return rs.LoadVersion(ver)
+	return rs.LoadVersion(ver, false)
 }
 
 // Implements CommitMultiStore.
-func (rs *rootMultiStore) LoadVersion(ver int64) error {
+func (rs *rootMultiStore) LoadVersion(ver int64, overwrite bool) error {
 
 	// Special logic for version 0
 	if ver == 0 {
 		for key, storeParams := range rs.storesParams {
 			id := CommitID{}
-			store, err := rs.loadCommitStoreFromParams(key, id, storeParams)
+			store, err := rs.loadCommitStoreFromParams(key, id, storeParams, overwrite)
 			if err != nil {
 				return fmt.Errorf("failed to load rootMultiStore: %v", err)
 			}
@@ -134,7 +134,7 @@ func (rs *rootMultiStore) LoadVersion(ver int64) error {
 			id = info.Core.CommitID
 		}
 
-		store, err := rs.loadCommitStoreFromParams(key, id, storeParams)
+		store, err := rs.loadCommitStoreFromParams(key, id, storeParams, overwrite)
 		if err != nil {
 			return fmt.Errorf("failed to load rootMultiStore: %v", err)
 		}
@@ -336,7 +336,7 @@ func parsePath(path string) (storeName string, subpath string, err sdk.Error) {
 
 //----------------------------------------
 
-func (rs *rootMultiStore) loadCommitStoreFromParams(key sdk.StoreKey, id CommitID, params storeParams) (store CommitStore, err error) {
+func (rs *rootMultiStore) loadCommitStoreFromParams(key sdk.StoreKey, id CommitID, params storeParams, overwrite bool) (store CommitStore, err error) {
 	var db dbm.DB
 	if params.db != nil {
 		db = dbm.NewPrefixDB(params.db, []byte("s/_/"))
@@ -349,7 +349,7 @@ func (rs *rootMultiStore) loadCommitStoreFromParams(key sdk.StoreKey, id CommitI
 		// TODO: id?
 		// return NewCommitMultiStore(db, id)
 	case sdk.StoreTypeIAVL:
-		store, err = LoadIAVLStore(db, id, rs.pruning)
+		store, err = LoadIAVLStore(db, id, rs.pruning, overwrite)
 		return
 	case sdk.StoreTypeDB:
 		panic("dbm.DB is not a CommitStore")

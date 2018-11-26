@@ -74,7 +74,7 @@ func runHackCmd(cmd *cobra.Command, args []string) error {
 	checkHeight := topHeight
 	for {
 		// load the given version of the state
-		err = app.LoadVersion(checkHeight, app.keyMain)
+		err = app.LoadVersion(checkHeight, app.keyMain, false)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

@@ -70,7 +70,7 @@ func (ms multiStore) LoadLatestVersion() error {
 	return nil
 }
 
-func (ms multiStore) LoadVersion(ver int64) error {
+func (ms multiStore) LoadVersion(ver int64, overwrite bool) error {
 	panic("not implemented")
 }
 

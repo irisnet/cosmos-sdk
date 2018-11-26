@@ -124,7 +124,7 @@ func TestLoadVersion(t *testing.T) {
 	// the same result
 	app = NewBaseApp(name, logger, db, nil)
 	app.MountStoresIAVL(capKey)
-	err = app.LoadVersion(1, capKey)
+	err = app.LoadVersion(1, capKey, false)
 	require.Nil(t, err)
 	testLoadVersionHelper(t, app, int64(1), commitID1)
 	app.BeginBlock(abci.RequestBeginBlock{Header: header})
