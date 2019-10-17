@@ -36,13 +36,14 @@ func GetQueryCmd(queryRouter string, cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryHeader(cdc),
 		GetCmdQueryClientState(queryRouter, cdc),
 		GetCmdQueryRoot(queryRouter, cdc),
+		GetCmdQuerySelfConsensusState(cdc),
 	)...)
 	return ics02ClientQueryCmd
 }
 
 // GetCmdQueryClientState defines the command to query the state of a client with
 // a given id as defined in https://github.com/cosmos/ics/tree/master/spec/ics-002-client-semantics#query
-func GetCmdQueryClientState(storeKey string, cdc *codec.Codec) *cobra.Command {
+func GetCmdQueryClientState(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "state [client-id]",
 		Short: "Query a client state",
@@ -66,7 +67,7 @@ $ %s query ibc client state [client-id]
 				return err
 			}
 
-			res, _, err := cliCtx.QueryWithData(types.ClientStatePath(clientID), bz)
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/client_state", queryRoute), bz)
 			if err != nil {
 				return err
 			}
@@ -82,7 +83,7 @@ $ %s query ibc client state [client-id]
 }
 
 // GetCmdQueryRoot defines the command to query
-func GetCmdQueryRoot(storeKey string, cdc *codec.Codec) *cobra.Command {
+func GetCmdQueryRoot(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "root [client-id] [height]",
 		Short: "Query stored root",
@@ -111,7 +112,7 @@ $ %s query ibc client root [client-id] [height]
 				return err
 			}
 
-			res, _, err := cliCtx.QueryWithData(types.RootPath(clientID, height), bz)
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/commitment_path", queryRoute), bz)
 			if err != nil {
 				return err
 			}
@@ -128,7 +129,7 @@ $ %s query ibc client root [client-id] [height]
 
 // GetCmdQueryConsensusState defines the command to query the consensus state of
 // the chain as defined in https://github.com/cosmos/ics/tree/master/spec/ics-002-client-semantics#query
-func GetCmdQueryConsensusState(storeKey string, cdc *codec.Codec) *cobra.Command {
+func GetCmdQueryConsensusState(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "consensus-state [client-id]",
 		Short: "Query the latest consensus state of the client",
@@ -152,7 +153,7 @@ $ %s query ibc client consensus-state [client-id]
 				return err
 			}
 
-			res, _, err := cliCtx.QueryWithData(types.ConsensusStatePath(clientID), bz)
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/consensus_state", queryRoute), bz)
 			if err != nil {
 				return err
 			}
@@ -168,7 +169,7 @@ $ %s query ibc client consensus-state [client-id]
 }
 
 // GetCmdQueryPath defines the command to query the commitment path
-func GetCmdQueryPath(storeName string, cdc *codec.Codec) *cobra.Command {
+func GetCmdQueryPath(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "path",
 		Short: "Query the commitment path of the running chain",
@@ -247,6 +248,49 @@ $ %s query ibc client header
 			}
 
 			return cliCtx.PrintOutput(header)
+		},
+	}
+}
+
+// GetCmdQueryConsensusState defines the command to query the self ConsensusState
+func GetCmdQuerySelfConsensusState(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "self-consensus-state",
+		Short: "Query the self consensus state of the running chain",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCLIContext().WithCodec(cdc)
+
+			node, err := ctx.GetNode()
+			if err != nil {
+				return err
+			}
+
+			info, err := node.ABCIInfo()
+			if err != nil {
+				return err
+			}
+
+			height := info.Response.LastBlockHeight
+			prevheight := height - 1
+
+			commit, err := node.Commit(&height)
+			if err != nil {
+				return err
+			}
+
+			validators, err := node.Validators(&prevheight)
+			if err != nil {
+				return err
+			}
+
+			state := tendermint.ConsensusState{
+				ChainID:          commit.ChainID,
+				Height:           uint64(commit.Height),
+				Root:             merkle.NewRoot(commit.AppHash),
+				NextValidatorSet: tmtypes.NewValidatorSet(validators.Validators),
+			}
+
+			return ctx.PrintOutput(state)
 		},
 	}
 }
