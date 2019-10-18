@@ -30,7 +30,6 @@ func GetQueryCmd(queryRouter string, cdc *codec.Codec) *cobra.Command {
 	}
 
 	ics02ClientQueryCmd.AddCommand(client.GetCommands(
-		GetCmdQueryConsensusStateInit(queryRouter, cdc),
 		GetCmdQueryConsensusState(queryRouter, cdc),
 		GetCmdQueryPath(queryRouter, cdc),
 		GetCmdQueryHeader(cdc),
@@ -124,48 +123,6 @@ $ %s query ibc client root [client-id] [height]
 			}
 
 			return cliCtx.PrintOutput(root)
-		},
-	}
-}
-
-func GetCmdQueryConsensusStateInit(storeKey string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "consensus-state-init",
-		Short: "Query the latest consensus state of the running chain",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.NewCLIContext().WithCodec(cdc)
-
-			node, err := ctx.GetNode()
-			if err != nil {
-				return err
-			}
-
-			info, err := node.ABCIInfo()
-			if err != nil {
-				return err
-			}
-
-			height := info.Response.LastBlockHeight
-			prevheight := height - 1
-
-			commit, err := node.Commit(&height)
-			if err != nil {
-				return err
-			}
-
-			validators, err := node.Validators(&prevheight)
-			if err != nil {
-				return err
-			}
-
-			state := tendermint.ConsensusState{
-				ChainID:          commit.ChainID,
-				Height:           uint64(commit.Height),
-				Root:             merkle.NewRoot(commit.AppHash),
-				NextValidatorSet: tmtypes.NewValidatorSet(validators.Validators),
-			}
-
-			return ctx.PrintOutput(state)
 		},
 	}
 }

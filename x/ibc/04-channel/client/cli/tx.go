@@ -329,8 +329,8 @@ func validateChannelHops(hops string) ([]string, error) {
 
 func validateProofHeight(height string) (uint64, error) {
 	// TODO: More validation?
-	i, err := strconv.ParseInt(height, 10, 64)
-	return uint64(i), err
+	i, err := strconv.ParseUint(height, 10, 64)
+	return i, err
 }
 
 func createChannelFromArgs(pid string, cid string, hops string) (types.Channel, error) {

@@ -2,15 +2,15 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
-
-	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
+	connection "github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
+	"github.com/spf13/cobra"
 )
 
 // TODO: get proofs
@@ -29,6 +29,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 
 	ics03ConnectionQueryCmd.AddCommand(client.GetCommands(
 		GetCmdQueryConnection(storeKey, cdc),
+		GetCmdQueryConnectionProof(storeKey, cdc),
 		GetCmdQueryClientConnections(storeKey, cdc),
 	)...)
 	return ics03ConnectionQueryCmd
@@ -55,12 +56,12 @@ $ %s query ibc connection end [connection-id]
 			//	return err
 			//}
 
-			res, _, err := cliCtx.QueryStore(append([]byte("connection/"), types.KeyConnection(connectionID)...), "ibc")
+			res, _, err := cliCtx.QueryStore(append([]byte("connection/"), connection.KeyConnection(connectionID)...), "ibc")
 			if err != nil {
 				return err
 			}
 
-			var connection types.ConnectionEnd
+			var connection connection.ConnectionEnd
 			if err := cdc.UnmarshalBinaryLengthPrefixed(res, &connection); err != nil {
 				return err
 			}
@@ -94,7 +95,7 @@ $ %s query ibc connection client [client-id]
 			//	return err
 			//}
 
-			res, _, err := cliCtx.QueryStore(append([]byte("connection/"), types.KeyClientConnections(clientID)...), "ibc")
+			res, _, err := cliCtx.QueryStore(append([]byte("connection/"), connection.KeyClientConnections(clientID)...), "ibc")
 
 			if err != nil {
 				return err
@@ -108,4 +109,33 @@ $ %s query ibc connection client [client-id]
 			return cliCtx.PrintOutput(connectionPaths)
 		},
 	}
+}
+
+// GetCmdQueryConnectionProof defines the command to query a connection end proof
+func GetCmdQueryConnectionProof(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "proof [connection-id] [proof-height]",
+		Short: "Query connection end proof",
+		Long: strings.TrimSpace(fmt.Sprintf(`Query connection end proof
+		
+Example:
+$ %s query ibc connection proof [connection-id] [proof-height]
+		`, version.ClientName),
+		),
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			connectionID := args[0]
+			proofHeight, _ := strconv.ParseInt(args[1], 10, 64)
+
+			connProof, err := cliCtx.QueryStoreProof(append([]byte("connection/"), connection.KeyConnection(connectionID)...), "ibc", proofHeight)
+			if err != nil {
+				return err
+			}
+
+			return cliCtx.PrintOutput(connProof)
+		},
+	}
+
+	return cmd
 }

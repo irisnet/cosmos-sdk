@@ -2,15 +2,15 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
-
-	"github.com/spf13/cobra"
 
 	cli "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
+	channel "github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
+	"github.com/spf13/cobra"
 )
 
 // TODO: get proofs
@@ -28,6 +28,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 
 	ics04ChannelQueryCmd.AddCommand(cli.GetCommands(
 		GetCmdQueryChannel(storeKey, cdc),
+		GetCmdQueryChannelProof(storeKey, cdc),
 	)...)
 
 	return ics04ChannelQueryCmd
@@ -50,17 +51,17 @@ $ %s query ibc channel end [port-id] [channel-id]
 			portID := args[0]
 			channelID := args[1]
 
-			bz, err := cdc.MarshalJSON(types.NewQueryChannelParams(portID, channelID))
+			bz, err := cdc.MarshalJSON(channel.NewQueryChannelParams(portID, channelID))
 			if err != nil {
 				return err
 			}
 
-			res, _, err := cliCtx.QueryWithData(types.ChannelPath(portID, channelID), bz)
+			res, _, err := cliCtx.QueryWithData(channel.ChannelPath(portID, channelID), bz)
 			if err != nil {
 				return err
 			}
 
-			var channel types.Channel
+			var channel channel.Channel
 			if err := cdc.UnmarshalJSON(res, &channel); err != nil {
 				return err
 			}
@@ -70,6 +71,36 @@ $ %s query ibc channel end [port-id] [channel-id]
 	}
 
 	// cmd.Flags().Bool(FlagProve, false, "(optional) show proofs for the query results")
+
+	return cmd
+}
+
+// GetCmdQueryChannelProof defines the command to query a channel proof
+func GetCmdQueryChannelProof(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "proof [port-id] [channel-id] [proof-height]",
+		Short: "Query channel proof",
+		Long: strings.TrimSpace(fmt.Sprintf(`Query channel proof
+		
+Example:
+$ %s query ibc channel proof [channel-id] [proof-height]
+		`, version.ClientName),
+		),
+		Args: cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			portID := args[0]
+			channelID := args[1]
+			proofHeight, _ := strconv.ParseInt(args[1], 10, 64)
+
+			channProof, err := cliCtx.QueryStoreProof(append([]byte("connection/"), channel.KeyChannel(portID, channelID)...), "ibc", proofHeight)
+			if err != nil {
+				return err
+			}
+
+			return cliCtx.PrintOutput(channProof)
+		},
+	}
 
 	return cmd
 }

@@ -50,9 +50,9 @@ func (ctx CLIContext) QueryStore(key cmn.HexBytes, storeName string) ([]byte, in
 	return ctx.queryStore(key, storeName, "key")
 }
 
-func (ctx CLIContext) QueryStoreProof(key cmn.HexBytes, storeName string) (merkle1.Proof, error) {
+func (ctx CLIContext) QueryStoreProof(key cmn.HexBytes, storeName string, height int64) (merkle1.Proof, error) {
 	path := fmt.Sprintf("/store/%s/%s", storeName, "key")
-	proof, err := ctx.queryProof(path, key)
+	proof, err := ctx.queryProof(path, key, height)
 	return merkle1.Proof{Proof: proof, Key: key}, err
 }
 
@@ -148,13 +148,13 @@ func (ctx CLIContext) query(path string, key cmn.HexBytes) (res []byte, height i
 	return resp.Value, resp.Height, nil
 }
 
-func (ctx CLIContext) queryProof(path string, key cmn.HexBytes) (prrof *merkle.Proof, err error) {
+func (ctx CLIContext) queryProof(path string, key cmn.HexBytes, height int64) (proof *merkle.Proof, err error) {
 	req := abci.RequestQuery{
 		Path: path,
 		Data: key,
 	}
 
-	node, err := ctx.GetNode()
+	node, _ := ctx.GetNode()
 
 	// When a client did not provide a query height, manually query for it so it can
 	// be injected downstream into responses.
@@ -167,7 +167,7 @@ func (ctx CLIContext) queryProof(path string, key cmn.HexBytes) (prrof *merkle.P
 	}
 
 	opts := rpcclient.ABCIQueryOptions{
-		Height: ctx.Height,
+		Height: height,
 		Prove:  !ctx.TrustNode,
 	}
 
