@@ -30,12 +30,13 @@ type MsgSendTransferPacket struct {
 
 func NewMsgTransfer(srcPort, srcChannel string, denom string, amount sdk.Int, sender sdk.AccAddress, receiver string, source bool) MsgTransfer {
 	return MsgTransfer{
-		SrcPort:    srcPort,
-		SrcChannel: srcChannel,
-		Amount:     amount,
-		Sender:     sender,
-		Receiver:   receiver,
-		Source:     source,
+		SrcPort:      srcPort,
+		SrcChannel:   srcChannel,
+		Denomination: denom,
+		Amount:       amount,
+		Sender:       sender,
+		Receiver:     receiver,
+		Source:       source,
 	}
 }
 

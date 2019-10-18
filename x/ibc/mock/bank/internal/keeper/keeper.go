@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DefaultPacketTimeoutOff = 1000 // default timeout off
+	DefaultPacketTimeout = 1000 // default packet timeout relative to the current block height
 )
 
 type Keeper struct {
@@ -152,7 +152,7 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcCh
 		sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeInvalidPacketData, "invalid packet data")
 	}
 
-	packet := types.NewPacket(seq, uint64(ctx.BlockHeight())+DefaultPacketTimeoutOff, srcPort, srcChan, dstPort, dstChan, packetDataBz)
+	packet := types.NewPacket(seq, uint64(ctx.BlockHeight())+DefaultPacketTimeout, srcPort, srcChan, dstPort, dstChan, packetDataBz)
 
 	err = k.ibck.ChannelKeeper.SendPacket(ctx, packet)
 	if err != nil {
