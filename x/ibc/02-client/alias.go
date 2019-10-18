@@ -37,7 +37,7 @@ var (
 	NewKeeper                    = keeper.NewKeeper
 	NewQuerier                   = keeper.NewQuerier
 	RegisterCodec                = types.RegisterCodec
-	SetMsgClientCodec            = types.SetMsgClientCodec
+	SetMsgCodec                  = types.SetMsgCodec
 	ErrClientExists              = types.ErrClientExists
 	ErrClientNotFound            = types.ErrClientNotFound
 	ErrClientFrozen              = types.ErrClientFrozen

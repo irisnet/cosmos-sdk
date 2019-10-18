@@ -14,6 +14,6 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(ConnectionEnd{}, "ibc/connection/ConnectionEnd", nil)
 }
 
-func SetMsgConnectionCodec(cdc *codec.Codec) {
+func SetMsgCodec(cdc *codec.Codec) {
 	SubModuleCdc = cdc
 }

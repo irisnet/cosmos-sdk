@@ -35,7 +35,7 @@ var (
 	// functions aliases
 	NewKeeper                        = keeper.NewKeeper
 	RegisterCodec                    = types.RegisterCodec
-	SetMsgConnectionCodec            = types.SetMsgConnectionCodec
+	SetMsgCodec                      = types.SetMsgCodec
 	NewConnectionEnd                 = types.NewConnectionEnd
 	NewCounterparty                  = types.NewCounterparty
 	ErrConnectionExists              = types.ErrConnectionExists

@@ -29,6 +29,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 
 	ics03ConnectionQueryCmd.AddCommand(client.GetCommands(
 		GetCmdQueryConnection(storeKey, cdc),
+		GetCmdQueryClientConnections(storeKey, cdc),
 	)...)
 	return ics03ConnectionQueryCmd
 }

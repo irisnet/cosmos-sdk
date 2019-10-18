@@ -22,6 +22,6 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(tendermint.Header{}, "ibc/client/tendermint/Header", nil)
 }
 
-func SetMsgClientCodec(cdc *codec.Codec) {
+func SetMsgCodec(cdc *codec.Codec) {
 	SubModuleCdc = cdc
 }

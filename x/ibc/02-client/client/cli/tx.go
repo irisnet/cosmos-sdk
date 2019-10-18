@@ -22,7 +22,7 @@ import (
 func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	ics02ClientTxCmd := &cobra.Command{
 		Use:                        "client",
-		Short:                      "Client transaction subcommands",
+		Short:                      "IBC client transaction subcommands",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 	}
@@ -63,8 +63,8 @@ $ %s tx ibc client create [client-id] [path/to/consensus_state.json] --from node
 			}
 
 			msg := types.MsgCreateClient{
-				ClientID: args[0],
-
+				ClientID:       args[0],
+				ClientType:     "tendermint",
 				ConsensusState: state,
 				Signer:         cliCtx.GetFromAddress(),
 			}
@@ -84,7 +84,7 @@ func GetCmdUpdateClient(cdc *codec.Codec) *cobra.Command {
 		Long: strings.TrimSpace(fmt.Sprintf(`update existing client with a header:
 
 Example:
-$ %s tx ibc client create [client-id] [path/to/header.json] --from node0 --home ../node0/<app>cli --chain-id $CID
+$ %s tx ibc client update [client-id] [path/to/header.json] --from node0 --home ../node0/<app>cli --chain-id $CID
 		`, version.ClientName),
 		),
 		Args: cobra.ExactArgs(2),

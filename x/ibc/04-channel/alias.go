@@ -45,7 +45,7 @@ var (
 	NewChannel                    = types.NewChannel
 	NewCounterparty               = types.NewCounterparty
 	RegisterCodec                 = types.RegisterCodec
-	SetMsgChanCodec               = types.SetMsgChanCodec
+	SetMsgCodec                   = types.SetMsgCodec
 	ErrChannelExists              = types.ErrChannelExists
 	ErrChannelNotFound            = types.ErrChannelNotFound
 	ErrInvalidConnectionHops      = types.ErrInvalidConnectionHops

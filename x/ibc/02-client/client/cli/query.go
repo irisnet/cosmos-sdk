@@ -6,10 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-
-	tmtypes "github.com/tendermint/tendermint/types"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,6 +15,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc/02-client/types/tendermint"
 	ics23 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 	"github.com/cosmos/cosmos-sdk/x/ibc/23-commitment/merkle"
+	ibcversion "github.com/cosmos/cosmos-sdk/x/ibc/version"
+	"github.com/spf13/cobra"
+	tmtypes "github.com/tendermint/tendermint/types"
 )
 
 // GetQueryCmd returns the query commands for IBC clients
@@ -31,6 +30,7 @@ func GetQueryCmd(queryRouter string, cdc *codec.Codec) *cobra.Command {
 	}
 
 	ics02ClientQueryCmd.AddCommand(client.GetCommands(
+		GetCmdQueryConsensusStateInit(queryRouter, cdc),
 		GetCmdQueryConsensusState(queryRouter, cdc),
 		GetCmdQueryPath(queryRouter, cdc),
 		GetCmdQueryHeader(cdc),
@@ -68,6 +68,10 @@ $ %s query ibc client state [client-id]
 			}
 
 			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/client_state", queryRoute), bz)
+
+			// println(types.ClientStatePath(clientID))
+			// res, _, err := cliCtx.QueryWithData("/custom/ibc/client_state", bz)
+
 			if err != nil {
 				return err
 			}
@@ -127,6 +131,48 @@ $ %s query ibc client root [client-id] [height]
 	}
 }
 
+func GetCmdQueryConsensusStateInit(storeKey string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "consensus-state-init",
+		Short: "Query the latest consensus state of the running chain",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCLIContext().WithCodec(cdc)
+
+			node, err := ctx.GetNode()
+			if err != nil {
+				return err
+			}
+
+			info, err := node.ABCIInfo()
+			if err != nil {
+				return err
+			}
+
+			height := info.Response.LastBlockHeight
+			prevheight := height - 1
+
+			commit, err := node.Commit(&height)
+			if err != nil {
+				return err
+			}
+
+			validators, err := node.Validators(&prevheight)
+			if err != nil {
+				return err
+			}
+
+			state := tendermint.ConsensusState{
+				ChainID:          commit.ChainID,
+				Height:           uint64(commit.Height),
+				Root:             merkle.NewRoot(commit.AppHash),
+				NextValidatorSet: tmtypes.NewValidatorSet(validators.Validators),
+			}
+
+			return ctx.PrintOutput(state)
+		},
+	}
+}
+
 // GetCmdQueryConsensusState defines the command to query the consensus state of
 // the chain as defined in https://github.com/cosmos/ics/tree/master/spec/ics-002-client-semantics#query
 func GetCmdQueryConsensusState(queryRoute string, cdc *codec.Codec) *cobra.Command {
@@ -153,7 +199,10 @@ $ %s query ibc client consensus-state [client-id]
 				return err
 			}
 
+			// res, _, err := cliCtx.QueryWithData(types.ConsensusStatePath(clientID), bz)
 			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/consensus_state", queryRoute), bz)
+			// TODO: bug fix
+
 			if err != nil {
 				return err
 			}
@@ -182,16 +231,10 @@ $ %s query ibc client path
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			// TODO: get right path
-			res, _, err := cliCtx.Query("")
-			if err != nil {
-				return err
-			}
-
-			var path merkle.Prefix
-			if err := cdc.UnmarshalJSON(res, &path); err != nil {
-				return err
-			}
+			prefixVersion := ibcversion.Prefix(ibcversion.Version)
+			keyprefix := make([]byte, len(prefixVersion))
+			copy(keyprefix, prefixVersion)
+			path := merkle.NewPrefix([][]byte{[]byte(queryRoute)}, keyprefix)
 
 			return cliCtx.PrintOutput(path)
 		},

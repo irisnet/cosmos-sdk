@@ -19,6 +19,6 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgChannelCloseConfirm{}, "ibc/channel/MsgChannelCloseConfirm", nil)
 }
 
-func SetMsgChanCodec(cdc *codec.Codec) {
+func SetMsgCodec(cdc *codec.Codec) {
 	SubModuleCdc = cdc
 }
