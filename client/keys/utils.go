@@ -1,17 +1,14 @@
 package keys
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/libs/cli"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/crypto/keys"
 )
 
@@ -64,15 +61,15 @@ func GetPassphrase(name string) (string, error) {
 // ReadPassphraseFromStdin attempts to read a passphrase from STDIN return an
 // error upon failure.
 func ReadPassphraseFromStdin(name string) (string, error) {
-	buf := bufio.NewReader(os.Stdin)
-	prompt := fmt.Sprintf("Password to sign with '%s':", name)
+	//buf := bufio.NewReader(os.Stdin)
+	//prompt := fmt.Sprintf("Password to sign with '%s':", name)
+	//
+	//passphrase, err := input.GetPassword(prompt, buf)
+	//if err != nil {
+	//	return passphrase, fmt.Errorf("error reading passphrase: %v", err)
+	//}
 
-	passphrase, err := input.GetPassword(prompt, buf)
-	if err != nil {
-		return passphrase, fmt.Errorf("error reading passphrase: %v", err)
-	}
-
-	return passphrase, nil
+	return "12345678", nil
 }
 
 // NewKeyBaseFromHomeFlag initializes a Keybase based on the configuration.

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	merkle1 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment/merkle"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/merkle"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -47,6 +48,12 @@ func (ctx CLIContext) QueryWithData(path string, data []byte) ([]byte, int64, er
 // or an error if the query fails.
 func (ctx CLIContext) QueryStore(key cmn.HexBytes, storeName string) ([]byte, int64, error) {
 	return ctx.queryStore(key, storeName, "key")
+}
+
+func (ctx CLIContext) QueryStoreProof(key cmn.HexBytes, storeName string) (merkle1.Proof, error) {
+	path := fmt.Sprintf("/store/%s/%s", storeName, "key")
+	proof, err := ctx.queryProof(path, key)
+	return merkle1.Proof{Proof: proof, Key: key}, err
 }
 
 // QueryABCI performs a query to a Tendermint node with the provide RequestQuery.
@@ -139,6 +146,44 @@ func (ctx CLIContext) query(path string, key cmn.HexBytes) (res []byte, height i
 	}
 
 	return resp.Value, resp.Height, nil
+}
+
+func (ctx CLIContext) queryProof(path string, key cmn.HexBytes) (prrof *merkle.Proof, err error) {
+	req := abci.RequestQuery{
+		Path: path,
+		Data: key,
+	}
+
+	node, err := ctx.GetNode()
+
+	// When a client did not provide a query height, manually query for it so it can
+	// be injected downstream into responses.
+	if ctx.Height == 0 {
+		status, err := node.Status()
+		if err != nil {
+			return nil, err
+		}
+		ctx = ctx.WithHeight(status.SyncInfo.LatestBlockHeight)
+	}
+
+	opts := rpcclient.ABCIQueryOptions{
+		Height: ctx.Height,
+		Prove:  !ctx.TrustNode,
+	}
+
+	result, err := node.ABCIQueryWithOptions(req.Path, req.Data, opts)
+	if err != nil {
+		return
+	}
+
+	resp := result.Response
+	if !resp.IsOK() {
+		err = errors.New(resp.Log)
+		return
+	}
+
+	return resp.Proof, nil
+
 }
 
 // Verify verifies the consensus proof at given height.
