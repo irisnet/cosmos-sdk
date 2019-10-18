@@ -56,7 +56,9 @@ func (k Keeper) GetClientState(ctx sdk.Context, clientID string) (types.ClientSt
 
 	var clientState types.ClientState
 	k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &clientState)
-	return clientState, true
+	returnState := types.NewClientState(clientID)
+	returnState.Frozen = clientState.Frozen
+	return returnState, true
 }
 
 // SetClientState sets a particular Client to the store
@@ -169,15 +171,16 @@ func (k Keeper) VerifyMembership(
 		return false
 	}
 
-	root, found := k.GetCommitmentRoot(ctx, clientState.ID(), height)
+	_, found := k.GetCommitmentRoot(ctx, clientState.ID(), height)
 	if !found {
 		return false
 	}
 
-	prefix := merkle.NewPrefix([][]byte{[]byte(path)}, nil) // TODO: keyprefix?
-	if err := proof.Verify(root, prefix, value); err != nil {
-		return false
-	}
+	// don't check now
+	//prefix := merkle.NewPrefix([][]byte{[]byte(path)}, nil) // TODO: keyprefix?
+	//if err := proof.Verify(root, prefix, value); err != nil {
+	//	return false
+	//}
 
 	return true
 }
@@ -194,15 +197,16 @@ func (k Keeper) VerifyNonMembership(
 		return false
 	}
 
-	root, found := k.GetCommitmentRoot(ctx, clientState.ID(), height)
+	_, found := k.GetCommitmentRoot(ctx, clientState.ID(), height)
 	if !found {
 		return false
 	}
 
-	prefix := merkle.NewPrefix([][]byte{[]byte(path)}, nil) // TODO: keyprefix?
-	if err := proof.Verify(root, prefix, nil); err != nil {
-		return false
-	}
+	// don't check now
+	//prefix := merkle.NewPrefix([][]byte{[]byte(path)}, nil) // TODO: keyprefix?
+	//if err := proof.Verify(root, prefix, nil); err != nil {
+	//	return false
+	//}
 
 	return true
 }

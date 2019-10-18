@@ -85,10 +85,10 @@ func (k Keeper) SetClientConnectionPaths(ctx sdk.Context, clientID string, paths
 //
 // CONTRACT: client must already exist
 func (k Keeper) addConnectionToClient(ctx sdk.Context, clientID, connectionID string) sdk.Error {
-	conns, found := k.GetClientConnectionPaths(ctx, clientID)
-	if !found {
-		return types.ErrClientConnectionPathsNotFound(k.codespace, clientID)
-	}
+	conns, _ := k.GetClientConnectionPaths(ctx, clientID)
+	//if !found {
+	//	return types.ErrClientConnectionPathsNotFound(k.codespace, clientID)
+	//}
 
 	conns = append(conns, connectionID)
 	k.SetClientConnectionPaths(ctx, clientID, conns)
