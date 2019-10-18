@@ -42,7 +42,7 @@ func handleMsgTransfer(ctx sdk.Context, k Keeper, msg MsgTransfer) (res sdk.Resu
 }
 
 func handleMsgSendTransferPacket(ctx sdk.Context, k Keeper, msg MsgSendTransferPacket) (res sdk.Result) {
-	err := k.ReceiveTransfer(ctx, msg.SrcPort, msg.Packet, msg.Proofs, msg.Height)
+	err := k.ReceiveTransfer(ctx, msg.Packet, msg.Proofs[0], msg.Height)
 	if err != nil {
 		return err.Result()
 	}

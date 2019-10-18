@@ -1,6 +1,9 @@
 package keeper
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
@@ -9,6 +12,10 @@ import (
 	ics23 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 	"github.com/cosmos/cosmos-sdk/x/ibc/mock/bank/internal/types"
 	"github.com/tendermint/tendermint/crypto"
+)
+
+const (
+	DefaultPacketTimeoutOff = 1000 // default timeout off
 )
 
 type Keeper struct {
@@ -48,14 +55,14 @@ func (k Keeper) SendTransfer(ctx sdk.Context, srcPort, srcChan string, denom str
 }
 
 // ReceiveTransfer handles transfer receiving logic
-func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proofs ics23.Proof, height uint64) sdk.Error {
-	_, err := k.ibck.ChannelKeeper.RecvPacket(ctx, packet, proofs, height, nil)
+func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proof ics23.Proof, height uint64) sdk.Error {
+	_, err := k.ibck.ChannelKeeper.RecvPacket(ctx, packet, proof, height, nil)
 	if err != nil {
 		return sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeErrReceivePacket, "failed to receive packet")
 	}
 
 	var data types.TransferPacketData
-	err = data.UnmarshalJSON(packet.Data)
+	err = data.UnmarshalJSON(packet.Data())
 	if err != nil {
 		return sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeInvalidPacketData, "invalid packet data")
 	}
@@ -67,6 +74,13 @@ func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proofs
 
 	if data.Source {
 		// mint tokens
+
+		// check the denom prefix
+		prefix := fmt.Sprintf("%s/%s", packet.DestPort(), packet.DestChannel())
+		if !strings.HasPrefix(data.Denomination, prefix) {
+			sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
+		}
+
 		_, err := k.bk.AddCoins(ctx, receiverAddr, sdk.Coins{sdk.NewCoin(data.Denomination, data.Amount)})
 		if err != nil {
 			return err
@@ -74,8 +88,15 @@ func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proofs
 
 	} else {
 		// unescrow tokens
+
+		// check the denom prefix
+		prefix := fmt.Sprintf("%s/%s", packet.SourcePort(), packet.SourceChannel())
+		if !strings.HasPrefix(data.Denomination, prefix) {
+			sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
+		}
+
 		escrowAddress := k.GetEscrowAddress(packet.DestChannel())
-		err := k.bk.SendCoins(ctx, escrowAddress, receiverAddr, sdk.Coins{sdk.NewCoin(data.Denomination, data.Amount)})
+		err := k.bk.SendCoins(ctx, escrowAddress, receiverAddr, sdk.Coins{sdk.NewCoin(data.Denomination[len(prefix):], data.Amount)})
 		if err != nil {
 			return err
 		}
@@ -87,14 +108,30 @@ func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proofs
 func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcChan, dstPort, dstChan string, denom string, amount sdk.Int, sender sdk.AccAddress, receiver string, source bool) sdk.Error {
 	if source {
 		// escrow tokens
+
+		// get escrow address
 		escrowAddress := k.GetEscrowAddress(srcChan)
-		err := k.bk.SendCoins(ctx, sender, escrowAddress, sdk.Coins{sdk.NewCoin(denom, amount)})
+
+		// check the denom prefix
+		prefix := fmt.Sprintf("%s/%s", dstPort, dstChan)
+		if !strings.HasPrefix(denom, prefix) {
+			sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
+		}
+
+		err := k.bk.SendCoins(ctx, sender, escrowAddress, sdk.Coins{sdk.NewCoin(denom[len(prefix):], amount)})
 		if err != nil {
 			return err
 		}
 
 	} else {
 		// burn vouchers from sender
+
+		// check the denom prefix
+		prefix := fmt.Sprintf("%s/%s", srcPort, srcChan)
+		if !strings.HasPrefix(denom, prefix) {
+			sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
+		}
+
 		err := k.bk.BurnCoins(ctx, sender, sdk.Coins{sdk.NewCoin(denom, amount)})
 		if err != nil {
 			return err
@@ -115,7 +152,7 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcCh
 		sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeInvalidPacketData, "invalid packet data")
 	}
 
-	packet := ics04.NewPacket(seq, 0, srcPort, srcChan, dstPort, dstChan, packetDataBz)
+	packet := types.NewPacket(seq, uint64(ctx.BlockHeight())+DefaultPacketTimeoutOff, srcPort, srcChan, dstPort, dstChan, packetDataBz)
 
 	err = k.ibck.ChannelKeeper.SendPacket(ctx, packet)
 	if err != nil {
