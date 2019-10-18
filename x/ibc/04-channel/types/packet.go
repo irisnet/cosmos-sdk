@@ -18,7 +18,7 @@ type packet struct {
 }
 
 // newPacket creates a new Packet instance
-func NewPacket(
+func newPacket(
 	sequence, timeout uint64, sourcePort, sourceChannel,
 	destinationPort, destinationChannel string, data []byte,
 ) packet {
