@@ -86,7 +86,7 @@ func (k Keeper) SetClientType(ctx sdk.Context, clientID string, clientType expor
 // GetConsensusState creates a new client state and populates it with a given consensus state
 func (k Keeper) GetConsensusState(ctx sdk.Context, clientID string) (exported.ConsensusState, bool) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.prefix)
-	bz := store.Get(types.KeyClientState(clientID))
+	bz := store.Get(types.KeyConsensusState(clientID))
 	if bz == nil {
 		return nil, false
 	}
@@ -100,7 +100,7 @@ func (k Keeper) GetConsensusState(ctx sdk.Context, clientID string) (exported.Co
 func (k Keeper) SetConsensusState(ctx sdk.Context, clientID string, consensusState exported.ConsensusState) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.prefix)
 	bz := k.cdc.MustMarshalBinaryLengthPrefixed(consensusState)
-	store.Set(types.KeyClientState(clientID), bz)
+	store.Set(types.KeyConsensusState(clientID), bz)
 }
 
 // GetCommitmentRoot gets a commitment Root from a particular height to a client
