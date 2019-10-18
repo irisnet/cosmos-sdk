@@ -52,7 +52,7 @@ $ %s tx ibc connection open-init [connection-id] [client-id] [counterparty-conne
 [counterparty-client-id] [path/to/counterparty_prefix.json]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(6),
+		Args: cobra.ExactArgs(5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)

@@ -35,7 +35,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 }
 
 // GetCmdQueryConnection defines the command to query a connection end
-func GetCmdQueryConnection(storeKey string, cdc *codec.Codec) *cobra.Command {
+func GetCmdQueryConnection(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "end [connection-id]",
 		Short: "Query stored connection end",
@@ -50,18 +50,18 @@ $ %s query ibc connection end [connection-id]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			connectionID := args[0]
 
-			bz, err := cdc.MarshalJSON(types.NewQueryConnectionParams(connectionID))
-			if err != nil {
-				return err
-			}
+			//bz, err := cdc.MarshalJSON(types.NewQueryConnectionParams(connectionID))
+			//if err != nil {
+			//	return err
+			//}
 
-			res, _, err := cliCtx.QueryWithData(types.ConnectionPath(connectionID), bz)
+			res, _, err := cliCtx.QueryStore(append([]byte("connection/"), types.KeyConnection(connectionID)...), "ibc")
 			if err != nil {
 				return err
 			}
 
 			var connection types.ConnectionEnd
-			if err := cdc.UnmarshalJSON(res, &connection); err != nil {
+			if err := cdc.UnmarshalBinaryLengthPrefixed(res, &connection); err != nil {
 				return err
 			}
 
@@ -74,7 +74,7 @@ $ %s query ibc connection end [connection-id]
 }
 
 // GetCmdQueryClientConnections defines the command to query a client connections
-func GetCmdQueryClientConnections(storeKey string, cdc *codec.Codec) *cobra.Command {
+func GetCmdQueryClientConnections(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "client [client-id]",
 		Short: "Query stored client connection paths",
@@ -89,18 +89,19 @@ $ %s query ibc connection client [client-id]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			clientID := args[0]
 
-			bz, err := cdc.MarshalJSON(types.NewQueryClientConnectionsParams(clientID))
-			if err != nil {
-				return err
-			}
+			//bz, err := cdc.MarshalJSON(types.NewQueryClientConnectionsParams(clientID))
+			//if err != nil {
+			//	return err
+			//}
 
-			res, _, err := cliCtx.QueryWithData(types.ClientConnectionsPath(clientID), bz)
+			res, _, err := cliCtx.QueryStore(append([]byte("connection/"), types.KeyClientConnections(clientID)...), "ibc")
+
 			if err != nil {
 				return err
 			}
 
 			var connectionPaths []string
-			if err := cdc.UnmarshalJSON(res, &connectionPaths); err != nil {
+			if err := cdc.UnmarshalBinaryLengthPrefixed(res, &connectionPaths); err != nil {
 				return err
 			}
 

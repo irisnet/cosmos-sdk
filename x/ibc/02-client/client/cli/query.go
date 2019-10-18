@@ -69,9 +69,6 @@ $ %s query ibc client state [client-id]
 
 			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/client_state", queryRoute), bz)
 
-			// println(types.ClientStatePath(clientID))
-			// res, _, err := cliCtx.QueryWithData("/custom/ibc/client_state", bz)
-
 			if err != nil {
 				return err
 			}
@@ -199,7 +196,6 @@ $ %s query ibc client consensus-state [client-id]
 				return err
 			}
 
-			// res, _, err := cliCtx.QueryWithData(types.ConsensusStatePath(clientID), bz)
 			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/consensus_state", queryRoute), bz)
 			// TODO: bug fix
 
