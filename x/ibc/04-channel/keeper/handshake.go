@@ -6,7 +6,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	connectiontypes "github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
 	"github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
-	porttypes "github.com/cosmos/cosmos-sdk/x/ibc/05-port/types"
 	ics23 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 )
 
@@ -40,10 +39,11 @@ func (k Keeper) ChanOpenInit(
 		return "", errors.New("connection is closed")
 	}
 
-	_, found = k.portKeeper.GetPort(ctx, portID)
-	if !found {
-		return "", porttypes.ErrPortNotFound(k.codespace, portID)
-	}
+	// TODO:
+	// _, found = k.portKeeper.GetPort(ctx, portID)
+	// if !found {
+	// 	return "", porttypes.ErrPortNotFound(k.codespace, portID)
+	// }
 
 	// if !k.portKeeper.AuthenticatePort(port.ID()) {
 	// 	return errors.New("port is not valid") // TODO: ics05 sdk.Error
@@ -84,10 +84,11 @@ func (k Keeper) ChanOpenTry(
 		return "", types.ErrChannelExists(k.codespace, channelID)
 	}
 
-	_, found = k.portKeeper.GetPort(ctx, portID)
-	if !found {
-		return "", porttypes.ErrPortNotFound(k.codespace, portID)
-	}
+	// TODO:
+	// _, found = k.portKeeper.GetPort(ctx, portID)
+	// if !found {
+	// 	return "", porttypes.ErrPortNotFound(k.codespace, portID)
+	// }
 
 	// if !k.portKeeper.AuthenticatePort(port.ID()) {
 	// 	return errors.New("port is not valid") // TODO: ics05 sdk.Error

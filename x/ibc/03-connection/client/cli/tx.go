@@ -100,7 +100,7 @@ $ %s tx ibc connection open-try [connection-id] [client-id]
 [counterparty-versions] [path/to/proof_init.json]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(6),
+		Args: cobra.ExactArgs(7),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().
