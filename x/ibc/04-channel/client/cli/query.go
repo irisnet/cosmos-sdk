@@ -51,18 +51,13 @@ $ %s query ibc channel end [port-id] [channel-id]
 			portID := args[0]
 			channelID := args[1]
 
-			bz, err := cdc.MarshalJSON(channel.NewQueryChannelParams(portID, channelID))
-			if err != nil {
-				return err
-			}
-
-			res, _, err := cliCtx.QueryWithData(channel.ChannelPath(portID, channelID), bz)
+			res, _, err := cliCtx.QueryStore(append([]byte("channels/"), channel.KeyChannel(portID, channelID)...), "ibc")
 			if err != nil {
 				return err
 			}
 
 			var channel channel.Channel
-			if err := cdc.UnmarshalJSON(res, &channel); err != nil {
+			if err := cdc.UnmarshalBinaryLengthPrefixed(res, &channel); err != nil {
 				return err
 			}
 

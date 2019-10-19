@@ -6,9 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -19,6 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
 	ics23 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // GetTxCmd returns the transaction commands for IBC Connections

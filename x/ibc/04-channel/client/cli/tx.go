@@ -170,7 +170,7 @@ func GetMsgChannelOpenConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comma
 	cmd := &cobra.Command{
 		Use:   "open-confirm [port-id] [channel-id] [/path/to/proof-ack.json] [proof-height]",
 		Short: "Creates and sends a ChannelOpenConfirm message",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
