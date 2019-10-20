@@ -52,7 +52,7 @@ func (k Keeper) SendTransfer(ctx sdk.Context, srcPort, srcChan string, denom str
 	}
 
 	if source {
-		// build receiving denomination prefix
+		// build the receiving denomination prefix
 		prefix := fmt.Sprintf("%s/%s", dstPort, dstChan)
 		denom = prefix + denom
 	}

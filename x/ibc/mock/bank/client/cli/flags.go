@@ -20,8 +20,8 @@ var (
 func init() {
 	FsTransfer.String(FlagSrcPort, "", "the source port ID")
 	FsTransfer.String(FlagSrcChannel, "", "the source channel ID")
-	FsTransfer.String(FlagDenom, "", "the denomination to be transferred")
-	FsTransfer.String(FlagAmount, "", "the amount to be transferred")
+	FsTransfer.String(FlagDenom, "", "the denomination of the token to be transferred")
+	FsTransfer.String(FlagAmount, "", "the amount of the token to be transferred")
 	FsTransfer.String(FlagReceiver, "", "the recipient")
-	FsTransfer.Bool(FlagSource, true, "indicate if the sender is the source chain of the token")
+	FsTransfer.Bool(FlagSource, true, "indicate if the sending chain is the source chain of the token")
 }

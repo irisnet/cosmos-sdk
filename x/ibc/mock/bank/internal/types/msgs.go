@@ -87,7 +87,7 @@ func (MsgSendTransferPacket) Type() string {
 }
 
 func (msg MsgSendTransferPacket) ValidateBasic() sdk.Error {
-	if len(msg.Proofs) == 0 {
+	if msg.Proofs == nil {
 		return sdk.NewError(sdk.CodespaceType(DefaultCodespace), CodeProofMissing, "proof missing")
 	}
 

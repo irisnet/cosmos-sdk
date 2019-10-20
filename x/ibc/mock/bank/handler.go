@@ -29,7 +29,6 @@ func handleMsgTransfer(ctx sdk.Context, k Keeper, msg MsgTransfer) (res sdk.Resu
 			ics04.EventTypeSendPacket,
 			sdk.NewAttribute(ics04.AttributeKeySenderPort, msg.SrcPort),
 			sdk.NewAttribute(ics04.AttributeKeyChannelID, msg.SrcChannel),
-			// TODO: destination port and channel events
 		),
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
