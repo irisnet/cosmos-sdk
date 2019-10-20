@@ -8,6 +8,7 @@ import (
 	ics02 "github.com/cosmos/cosmos-sdk/x/ibc/02-client"
 	ics03 "github.com/cosmos/cosmos-sdk/x/ibc/03-connection"
 	ics04 "github.com/cosmos/cosmos-sdk/x/ibc/04-channel"
+	mockbank "github.com/cosmos/cosmos-sdk/x/ibc/mock/bank"
 	"github.com/cosmos/cosmos-sdk/x/ibc/types"
 )
 
@@ -25,6 +26,7 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		ics02.GetTxCmd(cdc, storeKey),
 		ics03.GetTxCmd(cdc, storeKey),
 		ics04.GetTxCmd(cdc, storeKey),
+		mockbank.GetTxCmd(cdc),
 	)
 	return ibcTxCmd
 }

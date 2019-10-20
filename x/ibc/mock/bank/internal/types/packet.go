@@ -11,13 +11,13 @@ var _ exported.PacketI = Packet{}
 
 // Packet defines a type that carries data across different chains through IBC
 type Packet struct {
-	sequence           uint64 // number corresponds to the order of sends and receives, where a packet with an earlier sequence number must be sent and received before a packet with a later sequence number.
-	timeout            uint64 // indicates a consensus height on the destination chain after which the packet will no longer be processed, and will instead count as having timed-out.
-	sourcePort         string // identifies the port on the sending chain.
-	sourceChannel      string // identifies the channel end on the sending chain.
-	destinationPort    string // identifies the port on the receiving chain.
-	destinationChannel string // identifies the channel end on the receiving chain.
-	data               []byte // opaque value which can be defined by the application logic of the associated modules.
+	Msequence           uint64 // number corresponds to the order of sends and receives, where a packet with an earlier sequence number must be sent and received before a packet with a later sequence number.
+	Mtimeout            uint64 // indicates a consensus height on the destination chain after which the packet will no longer be processed, and will instead count as having timed-out.
+	MsourcePort         string // identifies the port on the sending chain.
+	MsourceChannel      string // identifies the channel end on the sending chain.
+	MdestinationPort    string // identifies the port on the receiving chain.
+	MdestinationChannel string // identifies the channel end on the receiving chain.
+	Mdata               []byte // opaque value which can be defined by the application logic of the associated modules.
 }
 
 // newPacket creates a new Packet instance
@@ -37,32 +37,34 @@ func NewPacket(
 }
 
 // Sequence implements PacketI interface
-func (p Packet) Sequence() uint64 { return p.sequence }
+func (p Packet) Sequence() uint64 { return p.Msequence }
 
 // TimeoutHeight implements PacketI interface
-func (p Packet) TimeoutHeight() uint64 { return p.timeout }
+func (p Packet) TimeoutHeight() uint64 { return p.Mtimeout }
 
 // SourcePort implements PacketI interface
-func (p Packet) SourcePort() string { return p.sourcePort }
+func (p Packet) SourcePort() string { return p.MsourcePort }
 
 // SourceChannel implements PacketI interface
-func (p Packet) SourceChannel() string { return p.sourceChannel }
+func (p Packet) SourceChannel() string { return p.MsourceChannel }
 
 // DestPort implements PacketI interface
-func (p Packet) DestPort() string { return p.destinationPort }
+func (p Packet) DestPort() string { return p.MdestinationPort }
 
 // DestChannel implements PacketI interface
-func (p Packet) DestChannel() string { return p.destinationChannel }
+func (p Packet) DestChannel() string { return p.MdestinationChannel }
 
 // Data implements PacketI interface
-func (p Packet) Data() []byte { return p.data }
+func (p Packet) Data() []byte { return p.Mdata }
+
+type PacketAlias Packet
 
 func (p Packet) MarshalJSON() ([]byte, error) {
-	return MouduleCdc.MarshalJSON(p)
+	return MouduleCdc.MarshalJSON(PacketAlias(p))
 }
 
 func (p *Packet) UnmarshalJSON(bz []byte) (err error) {
-	return MouduleCdc.UnmarshalJSON(bz, p)
+	return MouduleCdc.UnmarshalJSON(bz, (*PacketAlias)(p))
 }
 
 // TransferPacketData defines a struct for the packet payload
@@ -72,26 +74,6 @@ type TransferPacketData struct {
 	Sender       sdk.AccAddress `json:"sender" yaml:"sender"`
 	Receiver     string         `json:"receiver" yaml:"receiver"`
 	Source       bool           `json:"source" yaml:"source"`
-}
-
-func (tpd TransferPacketData) MarshalAmino() ([]byte, error) {
-	return MouduleCdc.MarshalBinaryBare(tpd)
-}
-
-func (tpd *TransferPacketData) UnmarshalAmino(bz []byte) (err error) {
-	return MouduleCdc.UnmarshalBinaryBare(bz, tpd)
-}
-
-func (tpd TransferPacketData) Marshal() []byte {
-	return MouduleCdc.MustMarshalBinaryBare(tpd)
-}
-
-func (tpd TransferPacketData) MarshalJSON() ([]byte, error) {
-	return MouduleCdc.MarshalJSON(tpd)
-}
-
-func (tpd *TransferPacketData) UnmarshalJSON(bz []byte) (err error) {
-	return MouduleCdc.UnmarshalJSON(bz, tpd)
 }
 
 func (tpd TransferPacketData) String() string {
