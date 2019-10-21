@@ -109,6 +109,8 @@ func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proof 
 }
 
 func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcChan, dstPort, dstChan string, denom string, amount sdk.Int, sender string, receiver string, source bool) sdk.Error {
+	senderAddr, _ := sdk.AccAddressFromBech32(sender)
+
 	if source {
 		// escrow tokens
 
@@ -121,7 +123,7 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcCh
 		//	sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
 		//}
 
-		err := k.bk.SendCoins(ctx, sdk.AccAddress([]byte(sender)), escrowAddress, sdk.Coins{sdk.NewCoin(denom, amount)})
+		err := k.bk.SendCoins(ctx, senderAddr, escrowAddress, sdk.Coins{sdk.NewCoin(denom, amount)})
 		if err != nil {
 			return err
 		}
@@ -135,7 +137,7 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcCh
 		//	sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
 		//}
 
-		_, err := k.bk.SubtractCoins(ctx, sdk.AccAddress([]byte(sender)), sdk.Coins{sdk.NewCoin(denom, amount)})
+		_, err := k.bk.SubtractCoins(ctx, senderAddr, sdk.Coins{sdk.NewCoin(denom, amount)})
 		if err != nil {
 			return err
 		}

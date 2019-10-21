@@ -70,7 +70,12 @@ func (msg MsgTransfer) GetSignBytes() []byte {
 }
 
 func (msg MsgTransfer) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{sdk.AccAddress([]byte(msg.Sender))}
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return []sdk.AccAddress{senderAddr}
 }
 
 func NewMsgRecvTransferPacket(packet ics04.PacketI, proofs []ics23.Proof, height uint64, signer sdk.AccAddress) MsgRecvTransferPacket {
