@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/ibc/04-channel/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/ibc/04-channel/client/rest"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 )
@@ -17,8 +18,7 @@ func Name() string {
 
 // RegisterRESTRoutes registers the REST routes for the ibc-channel module.
 func RegisterRESTRoutes(ctx context.CLIContext, rtr *mux.Router) {
-	// TODO:
-	// rest.RegisterRoutes(ctx, rtr)
+	rest.RegisterRoutes(ctx, rtr)
 }
 
 // GetTxCmd returns the root tx command for the ibc-channel module.
