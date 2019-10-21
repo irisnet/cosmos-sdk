@@ -53,7 +53,7 @@ func GetTransferTxCmd(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("invalid amount")
 			}
 
-			msg := types.NewMsgTransfer(srcPort, srcChan, denom, amount, sender, receiver, source)
+			msg := types.NewMsgTransfer(srcPort, srcChan, denom, amount, sender.String(), receiver, source)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
