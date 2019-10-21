@@ -10,6 +10,7 @@ type (
 	MsgTransfer           = types.MsgTransfer
 	MsgRecvTransferPacket = types.MsgRecvTransferPacket
 	Keeper                = keeper.Keeper
+	Packet                = types.Packet
 )
 
 const (
