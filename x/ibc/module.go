@@ -13,6 +13,7 @@ import (
 	commitment "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 	"github.com/cosmos/cosmos-sdk/x/ibc/23-commitment/merkle"
 	"github.com/cosmos/cosmos-sdk/x/ibc/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/ibc/client/rest"
 	"github.com/cosmos/cosmos-sdk/x/ibc/types"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
@@ -60,7 +61,7 @@ func (AppModuleBasic) ValidateGenesis(bz json.RawMessage) error {
 
 // RegisterRESTRoutes registers the REST routes for the ibc module.
 func (AppModuleBasic) RegisterRESTRoutes(ctx context.CLIContext, rtr *mux.Router) {
-	//noop
+	rest.RegisterRestRoutes(ctx, rtr)
 }
 
 // GetTxCmd returns the root tx command for the ibc module.
