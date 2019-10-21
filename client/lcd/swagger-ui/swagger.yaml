@@ -26,6 +26,8 @@ tags:
   - name: version
   - name: Mint
     description: Minting module APIs
+  - name: IBC
+    description: IBC module APIs
   - name: Misc
     description: Query app version
 schemes:
@@ -1913,6 +1915,59 @@ paths:
           description: Invalid coin denomination
         500:
           description: Internal Server Error
+  /ibc/ports/{port-id}/channels:
+    get:
+      summary: Query all channels bound to a port
+      description: Query all channels bound to the specified port ID
+      produces:
+        - application/json
+      tags:
+        - IBC
+      parameters:
+        - type: string
+          name: port-id
+          required: true
+          in: path
+          x-example: "123456"
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Channel"
+        400:
+          description: Invalid port ID
+        500:
+          description: Internal Server Error
+  /ibc/ports/{port-id}/channels/{channel-id}:
+    get:
+      summary: Query a specified channel
+      description: Query a channel by the specified channel ID
+      produces:
+        - application/json
+      tags:
+        - IBC
+      parameters:
+        - type: string
+          name: port-id
+          required: true
+          in: path
+          x-example: "12345"
+        - type: string
+          name: channel-id
+          required: true
+          in: path
+          x-example: "abcxyz"
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Channel"
+        400:
+          description: Invalid port or channel ID
+        500:
+          description: Internal Server Error
 definitions:
   CheckTxResult:
     type: object
@@ -2530,3 +2585,32 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/Coin"
+  Channel:
+    type: object
+    properties:
+      State:
+        type: string
+        example: "OPEN"
+      Ordering:
+        type: string
+        example: "ORDERED"
+      Counterparty:
+        type: object
+        $ref: "#/definitions/Counterparty"
+      ConnectionHops:
+        type: array
+        items:
+          type: string
+          example: "abcxyz"
+      Version:
+        type: string
+        example: "0"
+  Counterparty:
+    type: object
+    properties:
+      PortID:
+        type: string
+        example: "12345"
+      ChannelID:
+        type: string
+        example: "45678"
