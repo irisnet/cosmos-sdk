@@ -27,11 +27,6 @@ func queryConnectionHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
-		if !ok {
-			return
-		}
-
 		res, _, err := cliCtx.QueryStore(append([]byte(types.SubModuleName), types.KeyConnection(connectionID)...), "ibc")
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
