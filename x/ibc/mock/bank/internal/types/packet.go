@@ -11,16 +11,16 @@ var _ exported.PacketI = Packet{}
 
 // Packet defines a type that carries data across different chains through IBC
 type Packet struct {
-	Msequence           uint64 // number corresponds to the order of sends and receives, where a packet with an earlier sequence number must be sent and received before a packet with a later sequence number.
-	Mtimeout            uint64 // indicates a consensus height on the destination chain after which the packet will no longer be processed, and will instead count as having timed-out.
-	MsourcePort         string // identifies the port on the sending chain.
-	MsourceChannel      string // identifies the channel end on the sending chain.
-	MdestinationPort    string // identifies the port on the receiving chain.
-	MdestinationChannel string // identifies the channel end on the receiving chain.
-	Mdata               []byte // opaque value which can be defined by the application logic of the associated modules.
+	Msequence           uint64 `json:"m_sequence" yaml:"m_sequence"`                       // number corresponds to the order of sends and receives, where a packet with an earlier sequence number must be sent and received before a packet with a later sequence number.
+	Mtimeout            uint64 `json:"m_timeout" yaml:"m_timeout"`                         // indicates a consensus height on the destination chain after which the packet will no longer be processed, and will instead count as having timed-out.
+	MsourcePort         string `json:"m_source_port" yaml:"m_source_port"`                 // identifies the port on the sending chain.
+	MsourceChannel      string `json:"m_source_channel" yaml:"m_source_channel"`           // identifies the channel end on the sending chain.
+	MdestinationPort    string `json:"m_destination_port" yaml:"m_destination_port"`       // identifies the port on the receiving chain.
+	MdestinationChannel string `json:"m_destination_channel" yaml:"m_destination_channel"` // identifies the channel end on the receiving chain.
+	Mdata               []byte `json:"m_data" yaml:"m_data"`                               // opaque value which can be defined by the application logic of the associated modules.
 }
 
-// newPacket creates a new Packet instance
+// NewPacket creates a new Packet instance
 func NewPacket(
 	sequence, timeout uint64, sourcePort, sourceChannel,
 	destinationPort, destinationChannel string, data []byte,
@@ -69,11 +69,11 @@ func (p *Packet) UnmarshalJSON(bz []byte) (err error) {
 
 // TransferPacketData defines a struct for the packet payload
 type TransferPacketData struct {
-	Denomination string         `json:"denomination" yaml:"denomination"`
-	Amount       sdk.Int        `json:"amount" yaml:"amount"`
-	Sender       sdk.AccAddress `json:"sender" yaml:"sender"`
-	Receiver     string         `json:"receiver" yaml:"receiver"`
-	Source       bool           `json:"source" yaml:"source"`
+	Denomination string  `json:"denomination" yaml:"denomination"`
+	Amount       sdk.Int `json:"amount" yaml:"amount"`
+	Sender       string  `json:"sender" yaml:"sender"`
+	Receiver     string  `json:"receiver" yaml:"receiver"`
+	Source       bool    `json:"source" yaml:"source"`
 }
 
 func (tpd TransferPacketData) String() string {
@@ -85,7 +85,7 @@ func (tpd TransferPacketData) String() string {
 	Source:               %v`,
 		tpd.Denomination,
 		tpd.Amount.String(),
-		tpd.Sender.String(),
+		tpd.Sender,
 		tpd.Receiver,
 		tpd.Source,
 	)
@@ -96,7 +96,7 @@ func (tpd TransferPacketData) Validate() error {
 		return sdk.NewError(sdk.CodespaceType(DefaultCodespace), CodeInvalidAmount, "invalid amount")
 	}
 
-	if tpd.Sender.Empty() || len(tpd.Receiver) == 0 {
+	if len(tpd.Sender) == 0 || len(tpd.Receiver) == 0 {
 		return sdk.NewError(sdk.CodespaceType(DefaultCodespace), CodeInvalidAddress, "invalid address")
 	}
 

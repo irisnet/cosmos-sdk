@@ -28,7 +28,7 @@ func handleMsgTransfer(ctx sdk.Context, k Keeper, msg MsgTransfer) (res sdk.Resu
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, ics04.AttributeValueCategory),
-			sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender.String()),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 		))
 
 	return sdk.Result{Events: ctx.EventManager().Events()}

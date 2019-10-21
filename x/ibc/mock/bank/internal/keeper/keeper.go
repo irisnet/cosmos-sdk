@@ -31,7 +31,7 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, channelKeeper types.ChannelKe
 }
 
 // SendTransfer handles transfer sending logic
-func (k Keeper) SendTransfer(ctx sdk.Context, srcPort, srcChan string, denom string, amount sdk.Int, sender sdk.AccAddress, receiver string, source bool) sdk.Error {
+func (k Keeper) SendTransfer(ctx sdk.Context, srcPort, srcChan string, denom string, amount sdk.Int, sender string, receiver string, source bool) sdk.Error {
 	// get the port and channel of the counterparty
 	channel, ok := k.channelKeeper.GetChannel(ctx, srcPort, srcChan)
 	if !ok {
@@ -108,7 +108,7 @@ func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proof 
 	return nil
 }
 
-func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcChan, dstPort, dstChan string, denom string, amount sdk.Int, sender sdk.AccAddress, receiver string, source bool) sdk.Error {
+func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcChan, dstPort, dstChan string, denom string, amount sdk.Int, sender string, receiver string, source bool) sdk.Error {
 	if source {
 		// escrow tokens
 
@@ -121,7 +121,7 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcCh
 		//	sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
 		//}
 
-		err := k.bk.SendCoins(ctx, sender, escrowAddress, sdk.Coins{sdk.NewCoin(denom, amount)})
+		err := k.bk.SendCoins(ctx, sdk.AccAddress([]byte(sender)), escrowAddress, sdk.Coins{sdk.NewCoin(denom, amount)})
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcCh
 		//	sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeIncorrectDenom, "incorrect denomination")
 		//}
 
-		_, err := k.bk.SubtractCoins(ctx, sender, sdk.Coins{sdk.NewCoin(denom, amount)})
+		_, err := k.bk.SubtractCoins(ctx, sdk.AccAddress([]byte(sender)), sdk.Coins{sdk.NewCoin(denom, amount)})
 		if err != nil {
 			return err
 		}

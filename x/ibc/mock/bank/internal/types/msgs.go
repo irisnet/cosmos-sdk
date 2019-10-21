@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ics04 "github.com/cosmos/cosmos-sdk/x/ibc/04-channel/exported"
 	ics23 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
+	"github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 const (
@@ -12,13 +13,13 @@ const (
 )
 
 type MsgTransfer struct {
-	SrcPort      string         `json:"src_port" yaml:"src_port"`
-	SrcChannel   string         `json:"src_channel" yaml:"src_channel"`
-	Denomination string         `json:"denomination" yaml:"denomination"`
-	Amount       sdk.Int        `json:"amount" yaml:"amount"`
-	Sender       sdk.AccAddress `json:"sender" yaml:"sender"`
-	Receiver     string         `json:"receiver" yaml:"receiver"`
-	Source       bool           `json:"source" yaml:"source"`
+	SrcPort      string  `json:"src_port" yaml:"src_port"`
+	SrcChannel   string  `json:"src_channel" yaml:"src_channel"`
+	Denomination string  `json:"denomination" yaml:"denomination"`
+	Amount       sdk.Int `json:"amount" yaml:"amount"`
+	Sender       string  `json:"sender" yaml:"sender"`
+	Receiver     string  `json:"receiver" yaml:"receiver"`
+	Source       bool    `json:"source" yaml:"source"`
 }
 type MsgRecvTransferPacket struct {
 	Packet ics04.PacketI  `json:"packet" yaml:"packet"`
@@ -27,7 +28,7 @@ type MsgRecvTransferPacket struct {
 	Signer sdk.AccAddress `json:"signer" yaml:"signer"`
 }
 
-func NewMsgTransfer(srcPort, srcChannel string, denom string, amount sdk.Int, sender sdk.AccAddress, receiver string, source bool) MsgTransfer {
+func NewMsgTransfer(srcPort, srcChannel string, denom string, amount sdk.Int, sender string, receiver string, source bool) MsgTransfer {
 	return MsgTransfer{
 		SrcPort:      srcPort,
 		SrcChannel:   srcChannel,
@@ -52,8 +53,13 @@ func (msg MsgTransfer) ValidateBasic() sdk.Error {
 		return sdk.NewError(sdk.CodespaceType(DefaultCodespace), CodeInvalidAmount, "invalid amount")
 	}
 
-	if msg.Sender.Empty() || len(msg.Receiver) == 0 {
-		return sdk.NewError(sdk.CodespaceType(DefaultCodespace), CodeInvalidAddress, "invalid address")
+	if len(msg.Receiver) == 0 {
+		return sdk.NewError(sdk.CodespaceType(DefaultCodespace), CodeInvalidReceiver, "invalid receiver address")
+	}
+
+	_, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), CodeInvalidAddress, "invalid sender address")
 	}
 
 	return nil
@@ -64,7 +70,7 @@ func (msg MsgTransfer) GetSignBytes() []byte {
 }
 
 func (msg MsgTransfer) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.Sender}
+	return []sdk.AccAddress{sdk.AccAddress([]byte(msg.Sender))}
 }
 
 func NewMsgRecvTransferPacket(packet ics04.PacketI, proofs []ics23.Proof, height uint64, signer sdk.AccAddress) MsgRecvTransferPacket {
