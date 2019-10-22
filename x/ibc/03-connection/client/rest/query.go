@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
+	"github.com/gorilla/mux"
 )
 
 func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
@@ -27,12 +26,18 @@ func queryConnectionHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		res, _, err := cliCtx.QueryStore(append([]byte(types.SubModuleName), types.KeyConnection(connectionID)...), "ibc")
+		res, _, err := cliCtx.QueryStore(append([]byte(types.SubModuleName+"/"), types.KeyConnection(connectionID)...), "ibc")
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		rest.PostProcessResponse(w, cliCtx, res)
+		var connection types.ConnectionEnd
+		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &connection); err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		rest.PostProcessResponse(w, cliCtx, connection)
 	}
 }

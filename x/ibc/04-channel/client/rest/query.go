@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
-
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
+	"github.com/gorilla/mux"
 )
 
 func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
@@ -70,12 +69,18 @@ func queryChannelHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		res, _, err := cliCtx.QueryStore(append([]byte(types.SubModuleName), types.KeyChannel(portID, channelID)...), "ibc")
+		res, _, err := cliCtx.QueryStore(append([]byte(types.SubModuleName+"/"), types.KeyChannel(portID, channelID)...), "ibc")
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		rest.PostProcessResponse(w, cliCtx, res)
+		var channel types.Channel
+		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &channel); err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		rest.PostProcessResponse(w, cliCtx, channel)
 	}
 }
