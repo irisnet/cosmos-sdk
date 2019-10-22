@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 
 	ics04ChannelQueryCmd.AddCommand(cli.GetCommands(
 		GetCmdQueryChannel(storeKey, cdc),
+		GetCmdQueryChannels(storeKey, cdc),
 		GetCmdQueryChannelProof(storeKey, cdc),
 	)...)
 
@@ -38,8 +40,8 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 func GetCmdQueryChannel(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "end [port-id] [channel-id]",
-		Short: "Query stored connection",
-		Long: strings.TrimSpace(fmt.Sprintf(`Query stored connection end
+		Short: "Query stored channel",
+		Long: strings.TrimSpace(fmt.Sprintf(`Query stored channel
 		
 Example:
 $ %s query ibc channel end [port-id] [channel-id]
@@ -62,6 +64,47 @@ $ %s query ibc channel end [port-id] [channel-id]
 			}
 
 			return cliCtx.PrintOutput(channel)
+		},
+	}
+
+	// cmd.Flags().Bool(FlagProve, false, "(optional) show proofs for the query results")
+
+	return cmd
+}
+
+// GetCmdQueryChannel defines the command to query channel ends
+func GetCmdQueryChannels(storeKey string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "ends [port-id]",
+		Short: "Query stored channels",
+		Long: strings.TrimSpace(fmt.Sprintf(`Query stored channels
+		
+Example:
+$ %s query ibc channel ends [port-id]
+		`, version.ClientName),
+		),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			portID := args[0]
+
+			subspace := []byte(fmt.Sprintf("channels/ports/%s/channels/", portID))
+			resKVs, _, err := cliCtx.QuerySubspace(subspace, "ibc")
+			if err != nil {
+				return err
+			}
+
+			var channels []channel.Channel
+			for _, kv := range resKVs {
+				key := kv.Key[len(subspace):]
+				if !bytes.Contains(key, []byte("/")) {
+					var channel channel.Channel
+					cliCtx.Codec.MustUnmarshalBinaryLengthPrefixed(kv.Value, &channel)
+					channels = append(channels, channel)
+				}
+			}
+
+			return cliCtx.PrintOutput(channels)
 		},
 	}
 
