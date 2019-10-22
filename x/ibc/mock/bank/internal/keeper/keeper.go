@@ -59,13 +59,13 @@ func (k Keeper) SendTransfer(ctx sdk.Context, srcPort, srcChan string, denom str
 
 // ReceiveTransfer handles transfer receiving logic
 func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proof ics23.Proof, height uint64) sdk.Error {
-	//_, err := k.channelKeeper.RecvPacket(ctx, packet, proof, height, nil)
-	//if err != nil {
-	//	return sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeErrReceivePacket, "failed to receive packet")
-	//}
+	_, err := k.channelKeeper.RecvPacket(ctx, packet, proof, height, nil)
+	if err != nil {
+		return sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeErrReceivePacket, "failed to receive packet: %s", err.Error())
+	}
 
 	var data types.TransferPacketData
-	err := types.MouduleCdc.UnmarshalJSON(packet.Data(), &data)
+	err = types.MouduleCdc.UnmarshalJSON(packet.Data(), &data)
 	if err != nil {
 		return sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeInvalidPacketData, "invalid packet data")
 	}
