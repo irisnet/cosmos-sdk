@@ -45,7 +45,7 @@ func queryChannelsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		for _, kv := range resKVs {
 			key := kv.Key[len(subspace):]
-			if bytes.Index(key, []byte("/")) == -1 {
+			if !bytes.Contains(key, []byte("/")) {
 				var channel types.Channel
 				cliCtx.Codec.MustUnmarshalBinaryLengthPrefixed(kv.Value, &channel)
 
