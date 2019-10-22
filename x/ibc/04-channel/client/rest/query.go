@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +10,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
 	"github.com/gorilla/mux"
+)
+
+var (
+	ChannelKeys = []string{"keys", "nextSequenceSend", "nextSequenceRecv", "packets", "acknowledgements"}
 )
 
 func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
@@ -32,7 +37,9 @@ func queryChannelsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		resKVs, _, err := cliCtx.QuerySubspace([]byte(fmt.Sprintf("ports/%s/channels/", portID)), "ibc")
+		subspace := []byte(fmt.Sprintf("channels/ports/%s/channels/", portID))
+
+		resKVs, _, err := cliCtx.QuerySubspace(subspace, "ibc")
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -41,10 +48,13 @@ func queryChannelsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		var channels []types.Channel
 
 		for _, kv := range resKVs {
-			var channel types.Channel
-			cliCtx.Codec.MustUnmarshalBinaryLengthPrefixed(kv.Value, &channel)
+			key := kv.Key[len(subspace):]
+			if bytes.Index(key, []byte("/")) == 0 {
+				var channel types.Channel
+				cliCtx.Codec.MustUnmarshalBinaryLengthPrefixed(kv.Value, &channel)
 
-			channels = append(channels, channel)
+				channels = append(channels, channel)
+			}
 		}
 
 		rest.PostProcessResponse(w, cliCtx, channels)
