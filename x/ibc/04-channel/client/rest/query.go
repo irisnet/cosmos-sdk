@@ -12,10 +12,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var (
-	ChannelKeys = []string{"keys", "nextSequenceSend", "nextSequenceRecv", "packets", "acknowledgements"}
-)
-
 func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router) {
 	r.HandleFunc(fmt.Sprintf("/ibc/ports/{%s}/channels", RestPortID), queryChannelsHandlerFn(cliCtx)).Methods("GET")
 	r.HandleFunc(fmt.Sprintf("/ibc/ports/{%s}/channels/{%s}", RestPortID, RestChannelID), queryChannelHandlerFn(cliCtx)).Methods("GET")
@@ -49,7 +45,7 @@ func queryChannelsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 
 		for _, kv := range resKVs {
 			key := kv.Key[len(subspace):]
-			if bytes.Index(key, []byte("/")) == 0 {
+			if bytes.Index(key, []byte("/")) == -1 {
 				var channel types.Channel
 				cliCtx.Codec.MustUnmarshalBinaryLengthPrefixed(kv.Value, &channel)
 
