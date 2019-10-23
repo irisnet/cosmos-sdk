@@ -2,7 +2,6 @@ package merkle
 
 import (
 	"errors"
-
 	"github.com/tendermint/tendermint/crypto/merkle"
 
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
@@ -98,9 +97,10 @@ func (proof Proof) Verify(croot ics23.Root, cpath ics23.Prefix, value []byte) er
 
 	keypath := merkle.KeyPath{}
 	for _, key := range path.KeyPath {
-		keypath = keypath.AppendKey(key, merkle.KeyEncodingHex)
+		keypath = keypath.AppendKey(key, merkle.KeyEncodingURL)
 	}
-	keypath = keypath.AppendKey(append(path.KeyPrefix, proof.Key...), merkle.KeyEncodingHex)
+	//keypath = keypath.AppendKey(append(path.KeyPrefix,[]byte("ibc")...), merkle.KeyEncodingURL)
+	keypath = keypath.AppendKey(append(path.KeyPrefix, proof.Key...), merkle.KeyEncodingURL)
 
 	// TODO: hard coded for now, should be extensible
 	runtime := rootmulti.DefaultProofRuntime()

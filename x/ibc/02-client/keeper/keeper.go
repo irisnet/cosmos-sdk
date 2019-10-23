@@ -42,7 +42,7 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 
 // GetCommitmentPath returns the commitment path of the client
 func (k Keeper) GetCommitmentPath() ics23.Prefix {
-	return merkle.NewPrefix([][]byte{[]byte(k.storeKey.Name())}, k.prefix)
+	return merkle.NewPrefix([][]byte{[]byte(k.storeKey.Name())}, nil)
 }
 
 // GetClientState gets a particular client from the store
@@ -101,6 +101,8 @@ func (k Keeper) GetConsensusState(ctx sdk.Context, clientID string) (exported.Co
 func (k Keeper) SetConsensusState(ctx sdk.Context, clientID string, consensusState exported.ConsensusState) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.prefix)
 	bz := k.cdc.MustMarshalBinaryLengthPrefixed(consensusState)
+	println(string(types.KeyConsensusState(clientID)))
+	println(string(k.cdc.MustMarshalJSON(consensusState)))
 	store.Set(types.KeyConsensusState(clientID), bz)
 }
 
@@ -170,16 +172,16 @@ func (k Keeper) VerifyMembership(
 		return false
 	}
 
-	_, found := k.GetCommitmentRoot(ctx, clientState.ID(), height)
+	root, found := k.GetCommitmentRoot(ctx, clientState.ID(), height)
 	if !found {
 		return false
 	}
 
-	// don't check now
-	//prefix := merkle.NewPrefix([][]byte{[]byte(path)}, nil) // TODO: keyprefix?
-	//if err := proof.Verify(root, prefix, value); err != nil {
-	//	return false
-	//}
+	//don't check now
+	prefix := merkle.NewPrefix([][]byte{[]byte(path)}, nil) // TODO: keyprefix?
+	if err := proof.Verify(root, prefix, value); err != nil {
+		return false
+	}
 
 	return true
 }

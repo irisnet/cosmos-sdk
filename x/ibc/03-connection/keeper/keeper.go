@@ -150,7 +150,7 @@ func (k Keeper) VerifyNonMembership(
 
 func (k Keeper) applyPrefix(prefix ics23.Prefix, path string) string {
 	// TODO:
-	return path
+	return k.storeKey.Name()
 }
 
 // removePath is an util function to remove a path from a set.

@@ -60,6 +60,7 @@ func HandleMsgConnectionOpenAck(ctx sdk.Context, k keeper.Keeper, msg types.MsgC
 		ctx, msg.ConnectionID, msg.Version, msg.ProofTry,
 		msg.ProofHeight, msg.ConsensusHeight,
 	)
+
 	if err != nil {
 		return sdk.ResultFromError(err)
 	}

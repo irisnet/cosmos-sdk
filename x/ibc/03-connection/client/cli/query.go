@@ -128,7 +128,7 @@ $ %s query ibc connection proof [connection-id] [proof-height]
 			connectionID := args[0]
 			proofHeight, _ := strconv.ParseInt(args[1], 10, 64)
 
-			connProof, err := cliCtx.QueryStoreProof(append([]byte("connection/"), connection.KeyConnection(connectionID)...), "ibc", proofHeight)
+			connProof, err := cliCtx.QueryStoreProof(append([]byte("connection/"), connection.KeyConnection(connectionID)...), "ibc", proofHeight-1)
 			if err != nil {
 				return err
 			}
