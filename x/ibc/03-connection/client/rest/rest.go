@@ -9,6 +9,7 @@ import (
 // nolint
 const (
 	RestConnectionID = "connection-id"
+	RestClientID     = "client-id"
 )
 
 // RegisterRoutes - Central function to define routes that get registered by the main application

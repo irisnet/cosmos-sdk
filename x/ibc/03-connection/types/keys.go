@@ -35,7 +35,7 @@ func KeyConnection(connectionID string) []byte {
 	return []byte(ConnectionPath(connectionID))
 }
 
-// KeyClientConnections returns the store key for the connectios of a given client
+// KeyClientConnections returns the store key for the connections of a given client
 func KeyClientConnections(clientID string) []byte {
 	return []byte(ClientConnectionsPath(clientID))
 }

@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -27,12 +28,9 @@ func queryChannelsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
-		if !ok {
-			return
-		}
+		subspace := []byte(fmt.Sprintf("channels/ports/%s/channels/", portID))
 
-		resKVs, _, err := cliCtx.QuerySubspace([]byte(fmt.Sprintf("ports/%s/channels/", portID)), "ibc")
+		resKVs, _, err := cliCtx.QuerySubspace(subspace, "ibc")
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -41,10 +39,13 @@ func queryChannelsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		var channels []types.Channel
 
 		for _, kv := range resKVs {
-			var channel types.Channel
-			cliCtx.Codec.MustUnmarshalBinaryLengthPrefixed(kv.Value, &channel)
+			key := kv.Key[len(subspace):]
+			if !bytes.Contains(key, []byte("/")) {
+				var channel types.Channel
+				cliCtx.Codec.MustUnmarshalBinaryLengthPrefixed(kv.Value, &channel)
 
-			channels = append(channels, channel)
+				channels = append(channels, channel)
+			}
 		}
 
 		rest.PostProcessResponse(w, cliCtx, channels)
@@ -76,9 +77,12 @@ func queryChannelHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		var channel types.Channel
-		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &channel); err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
+
+		if res != nil {
+			if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &channel); err != nil {
+				rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 		}
 
 		rest.PostProcessResponse(w, cliCtx, channel)

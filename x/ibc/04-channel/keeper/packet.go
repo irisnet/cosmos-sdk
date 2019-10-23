@@ -169,7 +169,7 @@ func (k Keeper) RecvPacket(
 	acknowledgement []byte,
 ) (exported.PacketI, error) {
 
-	channel, found := k.GetChannel(ctx, packet.SourcePort(), packet.SourceChannel())
+	channel, found := k.GetChannel(ctx, packet.DestPort(), packet.DestChannel())
 	if !found {
 		return nil, types.ErrChannelNotFound(k.codespace, packet.SourceChannel())
 	}
@@ -178,10 +178,11 @@ func (k Keeper) RecvPacket(
 		return nil, errors.New("channel not open") // TODO: sdk.Error
 	}
 
-	_, found = k.GetChannelCapability(ctx, packet.SourcePort(), packet.SourceChannel())
-	if !found {
-		return nil, types.ErrChannelCapabilityNotFound(k.codespace)
-	}
+	// Don't SetChannelCapability on init/open-try
+	//_, found = k.GetChannelCapability(ctx, packet.DestPort(), packet.DestPort())
+	//if !found {
+	//	return nil, types.ErrChannelCapabilityNotFound(k.codespace)
+	//}
 
 	// if !AuthenticateCapabilityKey(capabilityKey) {
 	//  return errors.New("invalid capability key") // TODO: sdk.Error
@@ -205,19 +206,26 @@ func (k Keeper) RecvPacket(
 		return nil, errors.New("connection is not open") // TODO: ics03 sdk.Error
 	}
 
-	if uint64(ctx.BlockHeight()) >= packet.TimeoutHeight() {
-		return nil, types.ErrPacketTimeout(k.codespace)
-	}
+	// TODO: CHeck BlockHeight
+	//if uint64(ctx.BlockHeight()) >= packet.TimeoutHeight() {
+	//	return nil, types.ErrPacketTimeout(k.codespace)
+	//}
 
-	if !k.connectionKeeper.VerifyMembership(
-		ctx, connection, proofHeight, proof,
-		types.PacketCommitmentPath(packet.SourcePort(), packet.SourceChannel(), packet.Sequence()),
-		packet.Data(), // TODO: hash data
-	) {
-		return nil, errors.New("couldn't verify counterparty packet commitment")
-	}
+	//if !k.connectionKeeper.VerifyMembership(
+	//	ctx, connection, proofHeight, proof,
+	//	types.PacketCommitmentPath(packet.SourcePort(), packet.SourceChannel(), packet.Sequence()),
+	//	packet.Data(), // TODO: hash data
+	//) {
+	//	return nil, errors.New("couldn't verify counterparty packet commitment")
+	//}
 
 	if len(acknowledgement) > 0 || channel.Ordering == types.UNORDERED {
+		if k.GetPacketAcknowledgement(ctx, packet.DestPort(), packet.DestChannel(), packet.Sequence()) != nil {
+			return nil, errors.New("ack already exists") // TODO: ics03 sdk.Error
+		}
+		if acknowledgement == nil {
+			acknowledgement = []byte("")
+		}
 		k.SetPacketAcknowledgement(
 			ctx, packet.DestPort(), packet.DestChannel(), packet.Sequence(),
 			acknowledgement, // TODO: hash ACK
