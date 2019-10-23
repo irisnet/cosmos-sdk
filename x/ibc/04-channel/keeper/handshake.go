@@ -103,16 +103,17 @@ func (k Keeper) ChanOpenTry(
 		return "", errors.New("connection is not open")
 	}
 
-	// NOTE: this step has been switched with the one below to reverse the connection
-	// hops
+	// NOTE: this step has been switched with the one below to reverse the connection hops
 	channel := types.NewChannel(types.OPENTRY, order, counterparty, connectionHops, version)
 
-	// expectedCounterpaty is the counterparty of the counterparty's channel end
-	// (i.e self)
+	counterPartyHops := make([]string, len(connectionHops))
+	counterPartyHops[0] = connection.Counterparty.ConnectionID
+
+	// expectedCounterpaty is the counterparty of the counterparty's channel end (i.e self)
 	expectedCounterparty := types.NewCounterparty(portID, channelID)
 	expectedChannel := types.NewChannel(
 		types.INIT, channel.Ordering, expectedCounterparty,
-		channel.CounterpartyHops(), channel.Version,
+		counterPartyHops, channel.Version,
 	)
 
 	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
@@ -122,8 +123,7 @@ func (k Keeper) ChanOpenTry(
 
 	if !k.connectionKeeper.VerifyMembership(
 		ctx, connection, proofHeight, proofInit,
-		types.ChannelPath(counterparty.PortID, counterparty.ChannelID),
-		bz,
+		types.ChannelPath(counterparty.PortID, counterparty.ChannelID), bz,
 	) {
 		return "", types.ErrInvalidCounterpartyChannel(k.codespace)
 	}
@@ -176,11 +176,14 @@ func (k Keeper) ChanOpenAck(
 		return errors.New("connection is not open")
 	}
 
+	counterPartyHops := make([]string, len(channel.ConnectionHops))
+	counterPartyHops[0] = connection.Counterparty.ConnectionID
+
 	// counterparty of the counterparty channel end (i.e self)
 	counterparty := types.NewCounterparty(portID, channelID)
 	expectedChannel := types.NewChannel(
-		types.INIT, channel.Ordering, counterparty,
-		channel.CounterpartyHops(), channel.Version,
+		types.OPENTRY, channel.Ordering, counterparty,
+		counterPartyHops, channel.Version,
 	)
 
 	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
@@ -239,10 +242,13 @@ func (k Keeper) ChanOpenConfirm(
 		return errors.New("connection is not open")
 	}
 
+	counterPartyHops := make([]string, len(channel.ConnectionHops))
+	counterPartyHops[0] = connection.Counterparty.ConnectionID
+
 	counterparty := types.NewCounterparty(portID, channelID)
 	expectedChannel := types.NewChannel(
 		types.OPEN, channel.Ordering, counterparty,
-		channel.CounterpartyHops(), channel.Version,
+		counterPartyHops, channel.Version,
 	)
 
 	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)

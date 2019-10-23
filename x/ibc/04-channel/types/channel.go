@@ -86,10 +86,10 @@ type ChannelState byte
 
 // channel state types
 const (
-	CLOSED  ChannelState = iota + 1 // A channel end has been closed and can no longer be used to send or receive packets.
-	INIT                            // A channel end has just started the opening handshake.
-	OPENTRY                         // A channel end has acknowledged the handshake step on the counterparty chain.
-	OPEN                            // A channel end has completed the handshake and is ready to send and receive packets.
+	CLOSED  ChannelState = iota // A channel end has been closed and can no longer be used to send or receive packets.
+	INIT                        // A channel end has just started the opening handshake.
+	OPENTRY                     // A channel end has acknowledged the handshake step on the counterparty chain.
+	OPEN                        // A channel end has completed the handshake and is ready to send and receive packets.
 )
 
 // ChannelStateToString returns the string representation of a channel state

@@ -175,7 +175,6 @@ func (k Keeper) VerifyMembership(
 		return false
 	}
 
-	//don't check now
 	prefix := merkle.NewPrefix([][]byte{[]byte(path)}, nil) // TODO: keyprefix?
 	if err := proof.Verify(root, prefix, value); err != nil {
 		return false

@@ -129,9 +129,9 @@ $ %s query ibc channel proof [channel-id] [proof-height]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			portID := args[0]
 			channelID := args[1]
-			proofHeight, _ := strconv.ParseInt(args[1], 10, 64)
+			proofHeight, _ := strconv.ParseInt(args[2], 10, 64)
 
-			channProof, err := cliCtx.QueryStoreProof(append([]byte("channels/"), channel.KeyChannel(portID, channelID)...), "ibc", proofHeight)
+			channProof, err := cliCtx.QueryStoreProof(append([]byte("channels/"), channel.KeyChannel(portID, channelID)...), "ibc", proofHeight-1)
 			if err != nil {
 				return err
 			}
