@@ -28,11 +28,6 @@ func queryChannelsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
-		if !ok {
-			return
-		}
-
 		subspace := []byte(fmt.Sprintf("channels/ports/%s/channels/", portID))
 
 		resKVs, _, err := cliCtx.QuerySubspace(subspace, "ibc")
@@ -82,9 +77,12 @@ func queryChannelHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		var channel types.Channel
-		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &channel); err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
+
+		if res != nil {
+			if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &channel); err != nil {
+				rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 		}
 
 		rest.PostProcessResponse(w, cliCtx, channel)

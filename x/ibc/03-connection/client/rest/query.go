@@ -34,9 +34,12 @@ func queryConnectionHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 		}
 
 		var connection types.ConnectionEnd
-		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &connection); err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
+
+		if res != nil {
+			if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &connection); err != nil {
+				rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 		}
 
 		rest.PostProcessResponse(w, cliCtx, connection)
@@ -60,29 +63,31 @@ func queryConnectionsHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		var connectionPaths []string
-		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &connectionPaths); err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
 		var connections []types.ConnectionEnd
 
-		if len(connectionPaths) > 0 {
-			for _, p := range connectionPaths {
-				res, _, err := cliCtx.QueryStore(append([]byte(types.SubModuleName+"/"), types.KeyConnection(p)...), "ibc")
-				if err != nil {
-					rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-					return
-				}
+		if res != nil {
+			var connectionPaths []string
+			if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &connectionPaths); err != nil {
+				rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 
-				var connection types.ConnectionEnd
-				if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &connection); err != nil {
-					rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-					return
-				}
+			if len(connectionPaths) > 0 {
+				for _, p := range connectionPaths {
+					res, _, err := cliCtx.QueryStore(append([]byte(types.SubModuleName+"/"), types.KeyConnection(p)...), "ibc")
+					if err != nil {
+						rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+						return
+					}
 
-				connections = append(connections, connection)
+					var connection types.ConnectionEnd
+					if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res, &connection); err != nil {
+						rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+						return
+					}
+
+					connections = append(connections, connection)
+				}
 			}
 		}
 
