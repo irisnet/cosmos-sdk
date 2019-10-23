@@ -8,6 +8,7 @@ import (
 	ics23 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 	"github.com/cosmos/cosmos-sdk/x/ibc/mock/bank/internal/types"
 	"github.com/tendermint/tendermint/crypto"
+	"strconv"
 )
 
 const (
@@ -63,6 +64,13 @@ func (k Keeper) ReceiveTransfer(ctx sdk.Context, packet exported.PacketI, proof 
 	if err != nil {
 		return sdk.NewError(sdk.CodespaceType(types.DefaultCodespace), types.CodeErrReceivePacket, "failed to receive packet: %s", err.Error())
 	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeRecvTransferPacket,
+		sdk.NewAttribute(types.AttributeKeyDestPort, packet.DestPort()),
+		sdk.NewAttribute(types.AttributeKeyDestChannelID, packet.DestChannel()),
+		sdk.NewAttribute(ics04.AttributeKeySequence, strconv.FormatUint(packet.Sequence(), 10))),
+	)
 
 	var data types.TransferPacketData
 	err = types.MouduleCdc.UnmarshalJSON(packet.Data(), &data)
@@ -169,6 +177,9 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context, seq uint64, srcPort, srcCh
 		ics04.EventTypeSendPacket,
 		sdk.NewAttribute(ics04.AttributeKeySenderPort, srcPort),
 		sdk.NewAttribute(ics04.AttributeKeyChannelID, srcChan),
+		sdk.NewAttribute(types.AttributeKeyDestPort, dstPort),
+		sdk.NewAttribute(types.AttributeKeyDestChannelID, dstChan),
+		sdk.NewAttribute(ics04.AttributeKeySequence, strconv.FormatUint(seq, 10)),
 		sdk.NewAttribute(ics04.AttributeKeyPacket, string(packetJson)),
 	))
 
