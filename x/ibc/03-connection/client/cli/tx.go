@@ -42,17 +42,17 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 func GetCmdConnectionOpenInit(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: strings.TrimSpace(`open-init [connection-id] [client-id] [counterparty-connection-id] 
-		[counterparty-client-id] [path/to/counterparty_prefix.json]`),
+		[counterparty-client-id]`),
 		Short: "initialize connection on chain A",
 		Long: strings.TrimSpace(
 			fmt.Sprintf(`initialize a connection on chain A with a given counterparty chain B:
 
 Example:
 $ %s tx ibc connection open-init [connection-id] [client-id] [counterparty-connection-id] 
-[counterparty-client-id] [path/to/counterparty_prefix.json]
+[counterparty-client-id]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(5),
+		Args: cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -62,19 +62,9 @@ $ %s tx ibc connection open-init [connection-id] [client-id] [counterparty-conne
 			counterpartyConnectionID := args[2]
 			counterpartyClientID := args[3]
 
-			bz, err := ioutil.ReadFile(args[4])
-			if err != nil {
-				return err
-			}
-
-			var counterpartyPrefix ics23.Prefix
-			if err := cdc.UnmarshalJSON(bz, &counterpartyPrefix); err != nil {
-				return err
-			}
-
 			msg := types.NewMsgConnectionOpenInit(
 				connectionID, clientID, counterpartyConnectionID, counterpartyClientID,
-				counterpartyPrefix, cliCtx.GetFromAddress(),
+				nil, cliCtx.GetFromAddress(),
 			)
 
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
@@ -88,19 +78,19 @@ $ %s tx ibc connection open-init [connection-id] [client-id] [counterparty-conne
 func GetCmdConnectionOpenTry(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: strings.TrimSpace(`open-try [connection-id] [client-id] 
-[counterparty-connection-id] [counterparty-client-id] [path/to/counterparty_prefix.json] 
-[counterparty-versions] [path/to/proof_init.json] [proof-height]`),
+[counterparty-connection-id] [counterparty-client-id] [counterparty-versions] 
+[path/to/proof_init.json] [proof-height]`),
 		Short: "initiate connection handshake between two chains",
 		Long: strings.TrimSpace(
 			fmt.Sprintf(`initialize a connection on chain A with a given counterparty chain B:
 
 Example:
 $ %s tx ibc connection open-try [connection-id] [client-id] 
-[counterparty-connection-id] [counterparty-client-id] [path/to/counterparty_prefix.json] 
-[counterparty-versions] [path/to/proof_init.json] [proof-height]
+[counterparty-connection-id] [counterparty-client-id] [counterparty-versions] 
+[path/to/proof_init.json] [proof-height]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(8),
+		Args: cobra.ExactArgs(7),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().
@@ -112,20 +102,10 @@ $ %s tx ibc connection open-try [connection-id] [client-id]
 			counterpartyConnectionID := args[2]
 			counterpartyClientID := args[3]
 
-			prefixBz, err := ioutil.ReadFile(args[4])
-			if err != nil {
-				return err
-			}
-
-			var counterpartyPrefix ics23.Prefix
-			if err := cdc.UnmarshalJSON(prefixBz, &counterpartyPrefix); err != nil {
-				return err
-			}
-
 			// TODO: parse strings?
-			counterpartyVersions := args[5]
+			counterpartyVersions := args[4]
 
-			proofBz, err := ioutil.ReadFile(args[6])
+			proofBz, err := ioutil.ReadFile(args[5])
 			if err != nil {
 				return err
 			}
@@ -135,7 +115,7 @@ $ %s tx ibc connection open-try [connection-id] [client-id]
 				return err
 			}
 
-			proofHeight, err := validateProofHeight(args[7])
+			proofHeight, err := validateProofHeight(args[6])
 			if err != nil {
 				return err
 			}
@@ -147,7 +127,7 @@ $ %s tx ibc connection open-try [connection-id] [client-id]
 
 			msg := types.NewMsgConnectionOpenTry(
 				connectionID, clientID, counterpartyConnectionID, counterpartyClientID,
-				counterpartyPrefix, []string{counterpartyVersions}, proofInit, proofHeight,
+				nil, []string{counterpartyVersions}, proofInit, proofHeight,
 				consensusHeight, cliCtx.GetFromAddress(),
 			)
 
