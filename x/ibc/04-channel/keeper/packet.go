@@ -206,18 +206,18 @@ func (k Keeper) RecvPacket(
 		return nil, errors.New("connection is not open") // TODO: ics03 sdk.Error
 	}
 
-	// TODO: CHeck BlockHeight
+	// TODO: Check BlockHeight
 	//if uint64(ctx.BlockHeight()) >= packet.TimeoutHeight() {
 	//	return nil, types.ErrPacketTimeout(k.codespace)
 	//}
 
-	//if !k.connectionKeeper.VerifyMembership(
-	//	ctx, connection, proofHeight, proof,
-	//	types.PacketCommitmentPath(packet.SourcePort(), packet.SourceChannel(), packet.Sequence()),
-	//	packet.Data(), // TODO: hash data
-	//) {
-	//	return nil, errors.New("couldn't verify counterparty packet commitment")
-	//}
+	if !k.connectionKeeper.VerifyMembership(
+		ctx, connection, proofHeight, proof,
+		types.PacketCommitmentPath(packet.SourcePort(), packet.SourceChannel(), packet.Sequence()),
+		packet.Data(), // TODO: hash data
+	) {
+		return nil, errors.New("couldn't verify counterparty packet commitment")
+	}
 
 	if len(acknowledgement) > 0 || channel.Ordering == types.UNORDERED {
 		if k.GetPacketAcknowledgement(ctx, packet.DestPort(), packet.DestChannel(), packet.Sequence()) != nil {

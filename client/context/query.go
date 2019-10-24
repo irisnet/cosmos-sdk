@@ -6,7 +6,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	merkle1 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment/merkle"
 	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/merkle"
@@ -48,10 +47,9 @@ func (ctx CLIContext) QueryStore(key cmn.HexBytes, storeName string) ([]byte, in
 	return ctx.queryStore(key, storeName, "key")
 }
 
-func (ctx CLIContext) QueryStoreProof(key cmn.HexBytes, storeName string, height int64) (merkle1.Proof, error) {
+func (ctx CLIContext) QueryStoreProof(key cmn.HexBytes, storeName string, height int64) (*merkle.Proof, error) {
 	path := fmt.Sprintf("/store/%s/%s", storeName, "key")
-	proof, err := ctx.queryProof(path, key, height)
-	return merkle1.Proof{Proof: proof, Key: key}, err
+	return ctx.queryProof(path, key, height)
 }
 
 // QueryABCI performs a query to a Tendermint node with the provide RequestQuery.
@@ -179,6 +177,9 @@ func (ctx CLIContext) queryProof(path string, key cmn.HexBytes, height int64) (p
 		err = errors.New(resp.Log)
 		return
 	}
+
+	verifer := ctx.verifyProof(path, resp)
+	_ = verifer
 
 	return resp.Proof, nil
 
