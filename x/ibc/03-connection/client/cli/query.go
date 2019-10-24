@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/version"
 	connection "github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
+	"github.com/cosmos/cosmos-sdk/x/ibc/23-commitment/merkle"
 	"github.com/spf13/cobra"
 )
 
@@ -128,12 +129,13 @@ $ %s query ibc connection proof [connection-id] [proof-height]
 			connectionID := args[0]
 			proofHeight, _ := strconv.ParseInt(args[1], 10, 64)
 
-			connProof, err := cliCtx.QueryStoreProof(append([]byte("connection/"), connection.KeyConnection(connectionID)...), "ibc", proofHeight-1)
+			key := append([]byte(connection.SubModuleName+"/"), connection.KeyConnection(connectionID)...)
+			connProof, err := cliCtx.QueryStoreProof(key, "ibc", proofHeight-1)
 			if err != nil {
 				return err
 			}
 
-			return cliCtx.PrintOutput(connProof)
+			return cliCtx.PrintOutput(merkle.Proof{Proof: connProof, Key: key})
 		},
 	}
 

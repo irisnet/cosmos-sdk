@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/version"
 	channel "github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
+	"github.com/cosmos/cosmos-sdk/x/ibc/23-commitment/merkle"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +32,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryChannel(storeKey, cdc),
 		GetCmdQueryChannels(storeKey, cdc),
 		GetCmdQueryChannelProof(storeKey, cdc),
+		GetCmdQueryPacketProof(storeKey, cdc),
 	)...)
 
 	return ics04ChannelQueryCmd
@@ -131,12 +133,45 @@ $ %s query ibc channel proof [channel-id] [proof-height]
 			channelID := args[1]
 			proofHeight, _ := strconv.ParseInt(args[2], 10, 64)
 
-			channProof, err := cliCtx.QueryStoreProof(append([]byte("channels/"), channel.KeyChannel(portID, channelID)...), "ibc", proofHeight-1)
+			key := append([]byte(channel.SubModuleName+"/"), channel.KeyChannel(portID, channelID)...)
+			channProof, err := cliCtx.QueryStoreProof(key, "ibc", proofHeight-1)
 			if err != nil {
 				return err
 			}
 
-			return cliCtx.PrintOutput(channProof)
+			return cliCtx.PrintOutput(merkle.Proof{Proof: channProof, Key: key})
+		},
+	}
+
+	return cmd
+}
+
+// GetCmdQueryPakcerProof defines the command to query a packet proof
+func GetCmdQueryPacketProof(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "packet-proof [port-id] [channel-id] [sequence] [proof-height]",
+		Short: "Query packet proof",
+		Long: strings.TrimSpace(fmt.Sprintf(`Query packet proof
+		
+Example:
+$ %s query ibc channel proof [channel-id] [sequence] [proof-height]
+		`, version.ClientName),
+		),
+		Args: cobra.ExactArgs(4),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			portID := args[0]
+			channelID := args[1]
+			Sequence, _ := strconv.ParseUint(args[2], 10, 64)
+			proofHeight, _ := strconv.ParseInt(args[3], 10, 64)
+
+			key := append([]byte(channel.SubModuleName+"/"), channel.KeyPacketCommitment(portID, channelID, Sequence)...)
+			packetProof, err := cliCtx.QueryStoreProof(key, "ibc", proofHeight-1)
+			if err != nil {
+				return err
+			}
+
+			return cliCtx.PrintOutput(merkle.Proof{Proof: packetProof, Key: key})
 		},
 	}
 

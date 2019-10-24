@@ -34,6 +34,7 @@ func GetQueryCmd(queryRouter string, cdc *codec.Codec) *cobra.Command {
 		GetCmdQueryClientState(queryRouter, cdc),
 		GetCmdQueryRoot(queryRouter, cdc),
 		GetCmdQuerySelfConsensusState(cdc),
+		GetCmdQueryProof(queryRouter, cdc),
 	)...)
 	return ics02ClientQueryCmd
 }
@@ -261,6 +262,30 @@ func GetCmdQuerySelfConsensusState(cdc *codec.Codec) *cobra.Command {
 			}
 
 			return ctx.PrintOutput(state)
+		},
+	}
+}
+
+func GetCmdQueryProof(storeKey string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "proof [path] [height]",
+		Short: "Query the commitment path proof of the running chain",
+		Long: strings.TrimSpace(fmt.Sprintf(`Query the commitment path
+		
+Example:
+$ %s query ibc client proof [path] [height]
+		`, version.ClientName),
+		),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			proofHeight, _ := strconv.ParseInt(args[1], 10, 64)
+
+			proof, err := cliCtx.QueryStoreProof([]byte(args[0]), storeKey, proofHeight-1)
+			if err != nil {
+				return err
+			}
+			return cliCtx.PrintOutput(merkle.Proof{Proof: proof, Key: []byte(args[0])})
 		},
 	}
 }

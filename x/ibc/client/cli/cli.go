@@ -8,7 +8,6 @@ import (
 	ics02 "github.com/cosmos/cosmos-sdk/x/ibc/02-client"
 	ics03 "github.com/cosmos/cosmos-sdk/x/ibc/03-connection"
 	ics04 "github.com/cosmos/cosmos-sdk/x/ibc/04-channel"
-	ics23 "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment/client/cli"
 	mockbank "github.com/cosmos/cosmos-sdk/x/ibc/mock/bank"
 	"github.com/cosmos/cosmos-sdk/x/ibc/types"
 )
@@ -47,7 +46,6 @@ func GetQueryCmd(queryRoute string, cdc *codec.Codec) *cobra.Command {
 		ics02.GetQueryCmd(cdc, queryRoute),
 		ics03.GetQueryCmd(cdc, queryRoute),
 		ics04.GetQueryCmd(cdc, queryRoute),
-		ics23.GetQueryCmd(queryRoute, cdc),
 	)
 	return ibcQueryCmd
 }
