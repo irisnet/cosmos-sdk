@@ -69,7 +69,7 @@ func (msg MsgTransfer) ValidateBasic() sdk.Error {
 
 // GetSignBytes implements sdk.Msg
 func (msg MsgTransfer) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(SubModuleCdc.MustMarshalJSON(msg))
 }
 
 // GetSigners implements sdk.Msg
@@ -129,7 +129,7 @@ func (msg MsgRecvPacket) ValidateBasic() sdk.Error {
 
 // GetSignBytes implements sdk.Msg
 func (msg MsgRecvPacket) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+	return sdk.MustSortJSON(SubModuleCdc.MustMarshalJSON(msg))
 }
 
 // GetSigners implements sdk.Msg

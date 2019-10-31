@@ -31,6 +31,7 @@ func GetQueryCmd(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 	ics02ClientQueryCmd.AddCommand(client.GetCommands(
 		GetCmdQueryConsensusState(queryRoute, cdc),
+		GetCmdQuerySelfConsensusState(cdc),
 		GetCmdQueryHeader(cdc),
 		GetCmdQueryClientState(queryRoute, cdc),
 		GetCmdQueryRoot(queryRoute, cdc),
@@ -163,6 +164,49 @@ $ %s query ibc client consensus-state [client-id]
 			}
 
 			return cliCtx.PrintOutput(consensusState)
+		},
+	}
+}
+
+// GetCmdQueryConsensusState defines the command to query the self ConsensusState
+func GetCmdQuerySelfConsensusState(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "self-consensus-state",
+		Short: "Query the self consensus state of the running chain",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.NewCLIContext().WithCodec(cdc)
+
+			node, err := ctx.GetNode()
+			if err != nil {
+				return err
+			}
+
+			info, err := node.ABCIInfo()
+			if err != nil {
+				return err
+			}
+
+			height := info.Response.LastBlockHeight
+			prevheight := height - 1
+
+			commit, err := node.Commit(&height)
+			if err != nil {
+				return err
+			}
+
+			validators, err := node.Validators(&prevheight)
+			if err != nil {
+				return err
+			}
+
+			state := tendermint.ConsensusState{
+				ChainID:          commit.ChainID,
+				Height:           uint64(commit.Height),
+				Root:             commitment.NewRoot(commit.AppHash),
+				NextValidatorSet: tmtypes.NewValidatorSet(validators.Validators),
+			}
+
+			return ctx.PrintOutput(state)
 		},
 	}
 }

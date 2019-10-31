@@ -29,8 +29,8 @@ var (
 // GetTxCmd returns the transaction commands for IBC Connections
 func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	ics04ChannelTxCmd := &cobra.Command{
-		Use:   "connection",
-		Short: "IBC connection transaction subcommands",
+		Use:   "channel",
+		Short: "IBC channel transaction subcommands",
 	}
 
 	ics04ChannelTxCmd.AddCommand(client.PostCommands(
@@ -113,7 +113,7 @@ func GetMsgChannelOpenTryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 				}
 			}
 
-			proofHeight, err := strconv.ParseInt(args[6], 10, 64)
+			proofHeight, err := strconv.ParseUint(args[6], 10, 64)
 			if err != nil {
 				return err
 			}
@@ -121,7 +121,7 @@ func GetMsgChannelOpenTryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 			msg := types.NewMsgChannelOpenTry(
 				portID, channelID, version, order, hops,
 				counterpartyPortID, counterpartyChannelID, version,
-				proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -162,13 +162,13 @@ func GetMsgChannelOpenAckCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 				}
 			}
 
-			proofHeight, err := strconv.ParseInt(args[3], 10, 64)
+			proofHeight, err := strconv.ParseUint(args[3], 10, 64)
 			if err != nil {
 				return err
 			}
 
 			msg := types.NewMsgChannelOpenAck(
-				portID, channelID, version, proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				portID, channelID, version, proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -186,7 +186,7 @@ func GetMsgChannelOpenConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comma
 	return &cobra.Command{
 		Use:   "open-confirm [port-id] [channel-id] [/path/to/proof-ack.json] [proof-height]",
 		Short: "Creates and sends a ChannelOpenConfirm message",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -206,13 +206,13 @@ func GetMsgChannelOpenConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comma
 				}
 			}
 
-			proofHeight, err := strconv.ParseInt(args[3], 10, 64)
+			proofHeight, err := strconv.ParseUint(args[3], 10, 64)
 			if err != nil {
 				return err
 			}
 
 			msg := types.NewMsgChannelOpenConfirm(
-				portID, channelID, proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				portID, channelID, proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -228,7 +228,7 @@ func GetMsgChannelCloseInitCmd(storeKey string, cdc *codec.Codec) *cobra.Command
 	return &cobra.Command{
 		Use:   "close-init [port-id] [channel-id]",
 		Short: "Creates and sends a ChannelCloseInit message",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -251,7 +251,7 @@ func GetMsgChannelCloseConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comm
 	return &cobra.Command{
 		Use:   "close-confirm [port-id] [channel-id] [/path/to/proof-init.json] [proof-height]",
 		Short: "Creates and sends a ChannelCloseConfirm message",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -271,13 +271,13 @@ func GetMsgChannelCloseConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comm
 				}
 			}
 
-			proofHeight, err := strconv.ParseInt(args[3], 10, 64)
+			proofHeight, err := strconv.ParseUint(args[3], 10, 64)
 			if err != nil {
 				return err
 			}
 
 			msg := types.NewMsgChannelCloseConfirm(
-				portID, channelID, proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				portID, channelID, proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err

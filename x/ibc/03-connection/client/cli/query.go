@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -15,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
+	commitment "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 )
 
 // GetQueryCmd returns the query commands for IBC connections
@@ -28,6 +30,7 @@ func GetQueryCmd(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 	ics03ConnectionQueryCmd.AddCommand(client.GetCommands(
 		GetCmdQueryConnection(queryRoute, cdc),
+		GetCmdQueryConnectionProof(queryRoute, cdc),
 	)...)
 	return ics03ConnectionQueryCmd
 }
@@ -127,4 +130,34 @@ $ %s query ibc connection client [client-id]
 			return cliCtx.PrintOutput(connPathsRes)
 		},
 	}
+}
+
+// GetCmdQueryConnectionProof defines the command to query a connection end proof
+func GetCmdQueryConnectionProof(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "proof [connection-id] [proof-height]",
+		Short: "Query connection end proof",
+		Long: strings.TrimSpace(fmt.Sprintf(`Query connection end proof
+		
+Example:
+$ %s query ibc connection proof [connection-id] [proof-height]
+		`, version.ClientName),
+		),
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			connectionID := args[0]
+			proofHeight, _ := strconv.ParseInt(args[1], 10, 64)
+
+			key := append([]byte(types.SubModuleName+"/"), types.KeyConnection(connectionID)...)
+			connProof, err := cliCtx.QueryStoreProof(key, "ibc", proofHeight-1)
+			if err != nil {
+				return err
+			}
+
+			return cliCtx.PrintOutput(commitment.Proof{Proof: connProof})
+		},
+	}
+
+	return cmd
 }

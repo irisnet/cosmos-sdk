@@ -39,10 +39,10 @@ func NewKeeper(
 	supplyKeeper types.SupplyKeeper,
 ) Keeper {
 
-	// ensure ibc transfer module account is set
-	if addr := supplyKeeper.GetModuleAddress(types.GetModuleAccountName()); addr == nil {
-		panic("the IBC transfer module account has not been set")
-	}
+	// // ensure ibc transfer module account is set
+	// if addr := supplyKeeper.GetModuleAddress(types.GetModuleAccountName()); addr == nil {
+	// 	panic("the IBC transfer module account has not been set")
+	// }
 
 	return Keeper{
 		storeKey:         key,

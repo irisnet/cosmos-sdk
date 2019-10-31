@@ -44,7 +44,7 @@ var (
 	NewMsgTransfer         = types.NewMsgTransfer
 
 	// variable aliases
-	ModuleCdc              = types.ModuleCdc
+	SubModuleCdc           = types.SubModuleCdc
 	AttributeValueCategory = types.AttributeValueCategory
 )
 

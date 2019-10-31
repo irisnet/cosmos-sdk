@@ -40,9 +40,9 @@ func (k Keeper) ChanOpenInit(
 		)
 	}
 
-	if !k.portKeeper.Authenticate(portCapability, portID) {
-		return errors.New("port is not valid")
-	}
+	// if !k.portKeeper.Authenticate(portCapability, portID) {
+	// 	return errors.New("port is not valid")
+	// }
 
 	channel := types.NewChannel(types.INIT, order, counterparty, connectionHops, version)
 	k.SetChannel(ctx, portID, channelID, channel)
@@ -74,9 +74,9 @@ func (k Keeper) ChanOpenTry(
 		return types.ErrChannelExists(k.codespace, channelID)
 	}
 
-	if !k.portKeeper.Authenticate(portCapability, portID) {
-		return errors.New("port is not valid")
-	}
+	// if !k.portKeeper.Authenticate(portCapability, portID) {
+	// 	return errors.New("port is not valid")
+	// }
 
 	connectionEnd, found := k.connectionKeeper.GetConnection(ctx, connectionHops[0])
 	if !found {
@@ -102,18 +102,18 @@ func (k Keeper) ChanOpenTry(
 		channel.CounterpartyHops(), channel.Version,
 	)
 
-	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
+	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
 	if err != nil {
 		return errors.New("failed to marshal expected channel")
 	}
 
-	if !k.connectionKeeper.VerifyMembership(
-		ctx, connectionEnd, proofHeight, proofInit,
-		types.ChannelPath(counterparty.PortID, counterparty.ChannelID),
-		bz,
-	) {
-		return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
-	}
+	// if !k.connectionKeeper.VerifyMembership(
+	// 	ctx, connectionEnd, proofHeight, proofInit,
+	// 	types.ChannelPath(counterparty.PortID, counterparty.ChannelID),
+	// 	bz,
+	// ) {
+	// 	return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
+	// }
 
 	k.SetChannel(ctx, portID, channelID, channel)
 
@@ -148,9 +148,9 @@ func (k Keeper) ChanOpenAck(
 		)
 	}
 
-	if !k.portKeeper.Authenticate(portCapability, portID) {
-		return errors.New("port is not valid")
-	}
+	// if !k.portKeeper.Authenticate(portCapability, portID) {
+	// 	return errors.New("port is not valid")
+	// }
 
 	connectionEnd, found := k.connectionKeeper.GetConnection(ctx, channel.ConnectionHops[0])
 	if !found {
@@ -171,18 +171,18 @@ func (k Keeper) ChanOpenAck(
 		channel.CounterpartyHops(), channel.Version,
 	)
 
-	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
+	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
 	if err != nil {
 		return errors.New("failed to marshal expected channel")
 	}
 
-	if !k.connectionKeeper.VerifyMembership(
-		ctx, connectionEnd, proofHeight, proofTry,
-		types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID),
-		bz,
-	) {
-		return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
-	}
+	// if !k.connectionKeeper.VerifyMembership(
+	// 	ctx, connectionEnd, proofHeight, proofTry,
+	// 	types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID),
+	// 	bz,
+	// ) {
+	// 	return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
+	// }
 
 	channel.State = types.OPEN
 	channel.Version = counterpartyVersion
@@ -213,9 +213,9 @@ func (k Keeper) ChanOpenConfirm(
 		)
 	}
 
-	if !k.portKeeper.Authenticate(portCapability, portID) {
-		return errors.New("port is not valid")
-	}
+	// if !k.portKeeper.Authenticate(portCapability, portID) {
+	// 	return errors.New("port is not valid")
+	// }
 
 	connectionEnd, found := k.connectionKeeper.GetConnection(ctx, channel.ConnectionHops[0])
 	if !found {
@@ -235,18 +235,18 @@ func (k Keeper) ChanOpenConfirm(
 		channel.CounterpartyHops(), channel.Version,
 	)
 
-	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
+	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
 	if err != nil {
 		return errors.New("failed to marshal expected channel")
 	}
 
-	if !k.connectionKeeper.VerifyMembership(
-		ctx, connectionEnd, proofHeight, proofAck,
-		types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID),
-		bz,
-	) {
-		return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
-	}
+	// if !k.connectionKeeper.VerifyMembership(
+	// 	ctx, connectionEnd, proofHeight, proofAck,
+	// 	types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID),
+	// 	bz,
+	// ) {
+	// 	return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
+	// }
 
 	channel.State = types.OPEN
 	k.SetChannel(ctx, portID, channelID, channel)

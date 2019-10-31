@@ -100,6 +100,11 @@ func (ctx CLIContext) QueryStore(key cmn.HexBytes, storeName string) ([]byte, in
 	return ctx.queryStore(key, storeName, "key")
 }
 
+func (ctx CLIContext) QueryStoreProof(key cmn.HexBytes, storeName string, height int64) (*merkle.Proof, error) {
+	path := fmt.Sprintf("/store/%s/%s", storeName, "key")
+	return ctx.queryProof(path, key, height)
+}
+
 // QueryABCI performs a query to a Tendermint node with the provide RequestQuery.
 // It returns the ResultQuery obtained from the query.
 func (ctx CLIContext) QueryABCI(req abci.RequestQuery) (abci.ResponseQuery, error) {
@@ -190,6 +195,47 @@ func (ctx CLIContext) query(path string, key cmn.HexBytes) (res []byte, height i
 	}
 
 	return resp.Value, resp.Height, nil
+}
+
+func (ctx CLIContext) queryProof(path string, key cmn.HexBytes, height int64) (proof *merkle.Proof, err error) {
+	req := abci.RequestQuery{
+		Path: path,
+		Data: key,
+	}
+
+	node, _ := ctx.GetNode()
+
+	// When a client did not provide a query height, manually query for it so it can
+	// be injected downstream into responses.
+	if ctx.Height == 0 {
+		status, err := node.Status()
+		if err != nil {
+			return nil, err
+		}
+		ctx = ctx.WithHeight(status.SyncInfo.LatestBlockHeight)
+	}
+
+	opts := rpcclient.ABCIQueryOptions{
+		Height: height,
+		Prove:  !ctx.TrustNode,
+	}
+
+	result, err := node.ABCIQueryWithOptions(req.Path, req.Data, opts)
+	if err != nil {
+		return
+	}
+
+	resp := result.Response
+	if !resp.IsOK() {
+		err = errors.New(resp.Log)
+		return
+	}
+
+	verifer := ctx.verifyProof(path, resp)
+	_ = verifer
+
+	return resp.Proof, nil
+
 }
 
 // Verify verifies the consensus proof at given height.

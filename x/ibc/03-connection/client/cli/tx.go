@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -68,7 +69,7 @@ $ %s tx ibc connection open-init [connection-id] [client-id] [counterparty-conne
 [counterparty-client-id] [path/to/counterparty_prefix.json]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(6),
+		Args: cobra.ExactArgs(5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -83,7 +84,7 @@ $ %s tx ibc connection open-init [connection-id] [client-id] [counterparty-conne
 				return err
 			}
 
-			var counterpartyPrefix commitment.Prefix
+			var counterpartyPrefix commitment.PrefixI
 			if err := cdc.UnmarshalJSON(bz, &counterpartyPrefix); err != nil {
 				return err
 			}
@@ -105,18 +106,18 @@ func GetCmdConnectionOpenTry(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: strings.TrimSpace(`open-try [connection-id] [client-id] 
 [counterparty-connection-id] [counterparty-client-id] [path/to/counterparty_prefix.json] 
-[counterparty-versions] [path/to/proof_init.json]`),
+[counterparty-versions] [path/to/proof_init.json] [proof-height]`),
 		Short: "initiate connection handshake between two chains",
 		Long: strings.TrimSpace(
 			fmt.Sprintf(`initialize a connection on chain A with a given counterparty chain B:
 
 Example:
-$ %s tx ibc connection open-try connection-id] [client-id] 
+$ %s tx ibc connection open-try [connection-id] [client-id] 
 [counterparty-connection-id] [counterparty-client-id] [path/to/counterparty_prefix.json] 
-[counterparty-versions] [path/to/proof_init.json]
+[counterparty-versions] [path/to/proof_init.json] [proof-height]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(6),
+		Args: cobra.ExactArgs(8),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().
@@ -133,7 +134,7 @@ $ %s tx ibc connection open-try connection-id] [client-id]
 				return err
 			}
 
-			var counterpartyPrefix commitment.Prefix
+			var counterpartyPrefix commitment.PrefixI
 			if err := cdc.UnmarshalJSON(prefixBz, &counterpartyPrefix); err != nil {
 				return err
 			}
@@ -146,12 +147,16 @@ $ %s tx ibc connection open-try connection-id] [client-id]
 				return err
 			}
 
-			var proofInit commitment.Proof
+			var proofInit commitment.ProofI
 			if err := cdc.UnmarshalJSON(proofBz, &proofInit); err != nil {
 				return err
 			}
 
-			proofHeight := uint64(cliCtx.Height)
+			proofHeight, err := strconv.ParseUint(args[7], 10, 64)
+			if err != nil {
+				return err
+			}
+
 			consensusHeight, err := lastHeight(cliCtx)
 			if err != nil {
 				return err
@@ -173,16 +178,16 @@ $ %s tx ibc connection open-try connection-id] [client-id]
 // connection open attempt from chain B to chain A
 func GetCmdConnectionOpenAck(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "open-ack [connection-id] [path/to/proof_try.json] [version]",
+		Use:   "open-ack [connection-id] [path/to/proof_try.json] [proof-height] [version]",
 		Short: "relay the acceptance of a connection open attempt from chain B to chain A",
 		Long: strings.TrimSpace(
 			fmt.Sprintf(`relay the acceptance of a connection open attempt from chain B to chain A:
 
 Example:
-$ %s tx ibc connection open-ack [connection-id] [path/to/proof_try.json] [version]
+$ %s tx ibc connection open-ack [connection-id] [path/to/proof_try.json] [proof-height] [version]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(3),
+		Args: cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -193,18 +198,22 @@ $ %s tx ibc connection open-ack [connection-id] [path/to/proof_try.json] [versio
 				return err
 			}
 
-			var proofTry commitment.Proof
+			var proofTry commitment.ProofI
 			if err := cdc.UnmarshalJSON(proofBz, &proofTry); err != nil {
 				return err
 			}
 
-			proofHeight := uint64(cliCtx.Height)
+			proofHeight, err := strconv.ParseUint(args[2], 10, 64)
+			if err != nil {
+				return err
+			}
+
 			consensusHeight, err := lastHeight(cliCtx)
 			if err != nil {
 				return err
 			}
 
-			version := args[4]
+			version := args[3]
 
 			msg := types.NewMsgConnectionOpenAck(
 				connectionID, proofTry, proofHeight,
@@ -221,13 +230,13 @@ $ %s tx ibc connection open-ack [connection-id] [path/to/proof_try.json] [versio
 // chain A with a given counterparty chain B
 func GetCmdConnectionOpenConfirm(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "open-confirm [connection-id] [path/to/proof_ack.json]",
+		Use:   "open-confirm [connection-id] [path/to/proof_ack.json] [proof-height]",
 		Short: "confirm to chain B that connection is open on chain A",
 		Long: strings.TrimSpace(
 			fmt.Sprintf(`confirm to chain B that connection is open on chain A:
 
 Example:
-$ %s tx ibc connection open-confirm [connection-id] [path/to/proof_ack.json]
+$ %s tx ibc connection open-confirm [connection-id] [path/to/proof_ack.json] [proof-height]
 		`, version.ClientName),
 		),
 		Args: cobra.ExactArgs(3),
@@ -244,12 +253,15 @@ $ %s tx ibc connection open-confirm [connection-id] [path/to/proof_ack.json]
 				return err
 			}
 
-			var proofAck commitment.Proof
+			var proofAck commitment.ProofI
 			if err := cdc.UnmarshalJSON(proofBz, &proofAck); err != nil {
 				return err
 			}
 
-			proofHeight := uint64(cliCtx.Height)
+			proofHeight, err := strconv.ParseUint(args[2], 10, 64)
+			if err != nil {
+				return err
+			}
 
 			msg := types.NewMsgConnectionOpenConfirm(
 				connectionID, proofAck, proofHeight, cliCtx.GetFromAddress(),

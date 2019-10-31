@@ -63,8 +63,6 @@ func (k Keeper) GetConnection(ctx sdk.Context, connectionID string) (types.Conne
 func (k Keeper) SetConnection(ctx sdk.Context, connectionID string, connection types.ConnectionEnd) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.prefix)
 	bz := k.cdc.MustMarshalBinaryLengthPrefixed(connection)
-	fmt.Printf("%+v\n", connection)
-	fmt.Printf("bs: %X\n", bz)
 	store.Set(types.KeyConnection(connectionID), bz)
 }
 
@@ -134,14 +132,10 @@ func (k Keeper) VerifyMembership(
 ) bool {
 	clientState, found := k.clientKeeper.GetClientState(ctx, connection.ClientID)
 	if !found {
-		fmt.Println("false1")
 		return false
 	}
-	fmt.Printf("ddd\n%+v\n", clientState)
-	fmt.Printf("%+v\n", connection)
 	path, err := commitment.ApplyPrefix(connection.Counterparty.Prefix, pathStr)
 	if err != nil {
-		fmt.Println("false2")
 		return false
 	}
 
