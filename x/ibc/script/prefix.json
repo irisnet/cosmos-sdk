@@ -1,6 +1,6 @@
 {
     "type": "ibc/commitment/merkle/Prefix",
     "value": {
-        "key_prefix": "Y29ubmVjdGlvbi8="
+        "key_prefix": "aWJj"
     }
 }

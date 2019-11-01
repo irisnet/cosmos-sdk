@@ -28,6 +28,9 @@ echo 12345678 | gaiacli --home ibc-gaia/n0/gaiacli tx ibc connection open-confir
 echo "" && echo "### query-connection ..." && echo ""
 iriscli --home ibc-iris/n0/iriscli q ibc connection end connectionid | jq
 gaiacli --home ibc-gaia/n0/gaiacli q ibc connection end connectionid | jq
+echo "" && echo "### query-connections ..." && echo ""
+iriscli --home ibc-iris/n0/iriscli q ibc connection client clientiris | jq
+gaiacli --home ibc-gaia/n0/gaiacli q ibc connection client clientgaia | jq
 
 echo "" && echo "### open-init ..." && echo ""
 echo 12345678 | iriscli --home ibc-iris/n0/iriscli tx ibc channel open-init ppppppport channeliris ppppppport channelgaia connectionid --ordered=false --from n0 -y --broadcast-mode=block
@@ -49,3 +52,5 @@ echo 12345678 | gaiacli --home ibc-gaia/n0/gaiacli tx ibc channel open-confirm p
 echo "" && echo "### query-channel ..." && echo ""
 iriscli --home ibc-iris/n0/iriscli query ibc channel end ppppppport channeliris | jq
 gaiacli --home ibc-gaia/n0/gaiacli query ibc channel end ppppppport channelgaia | jq
+
+echo ""
