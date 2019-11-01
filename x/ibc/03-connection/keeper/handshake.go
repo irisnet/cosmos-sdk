@@ -89,7 +89,7 @@ func (k Keeper) ConnOpenTry(
 		return err
 	}
 
-	pathStr := fmt.Sprintf("%s/connections/%s", types.SubModuleName, connectionID)
+	pathStr := fmt.Sprintf("%s/connections/%s", types.SubModuleName, counterparty.ConnectionID)
 	ok := k.VerifyMembership(ctx, connection, proofHeight, proofInit, pathStr, expConnBz)
 	if !ok {
 		return errors.New("couldn't verify connection membership on counterparty's client") // TODO: sdk.Error
