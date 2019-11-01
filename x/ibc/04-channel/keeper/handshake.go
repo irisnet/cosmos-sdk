@@ -102,18 +102,15 @@ func (k Keeper) ChanOpenTry(
 		channel.CounterpartyHops(), channel.Version,
 	)
 
-	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
+	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
 	if err != nil {
 		return errors.New("failed to marshal expected channel")
 	}
 
-	// if !k.connectionKeeper.VerifyMembership(
-	// 	ctx, connectionEnd, proofHeight, proofInit,
-	// 	types.ChannelPath(counterparty.PortID, counterparty.ChannelID),
-	// 	bz,
-	// ) {
-	// 	return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
-	// }
+	pathStr := fmt.Sprintf("%s/%s", types.SubModuleName, types.ChannelPath(counterparty.PortID, counterparty.ChannelID))
+	if !k.connectionKeeper.VerifyMembership(ctx, connectionEnd, proofHeight, proofInit, pathStr, bz) {
+		return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
+	}
 
 	k.SetChannel(ctx, portID, channelID, channel)
 
@@ -171,18 +168,15 @@ func (k Keeper) ChanOpenAck(
 		channel.CounterpartyHops(), channel.Version,
 	)
 
-	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
+	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
 	if err != nil {
 		return errors.New("failed to marshal expected channel")
 	}
 
-	// if !k.connectionKeeper.VerifyMembership(
-	// 	ctx, connectionEnd, proofHeight, proofTry,
-	// 	types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID),
-	// 	bz,
-	// ) {
-	// 	return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
-	// }
+	pathStr := fmt.Sprintf("%s/%s", types.SubModuleName, types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID))
+	if !k.connectionKeeper.VerifyMembership(ctx, connectionEnd, proofHeight, proofTry, pathStr, bz) {
+		return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
+	}
 
 	channel.State = types.OPEN
 	channel.Version = counterpartyVersion
@@ -235,18 +229,15 @@ func (k Keeper) ChanOpenConfirm(
 		channel.CounterpartyHops(), channel.Version,
 	)
 
-	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
+	bz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedChannel)
 	if err != nil {
 		return errors.New("failed to marshal expected channel")
 	}
 
-	// if !k.connectionKeeper.VerifyMembership(
-	// 	ctx, connectionEnd, proofHeight, proofAck,
-	// 	types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID),
-	// 	bz,
-	// ) {
-	// 	return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
-	// }
+	pathStr := fmt.Sprintf("%s/%s", types.SubModuleName, types.ChannelPath(channel.Counterparty.PortID, channel.Counterparty.ChannelID))
+	if !k.connectionKeeper.VerifyMembership(ctx, connectionEnd, proofHeight, proofAck, pathStr, bz) {
+		return types.ErrInvalidCounterpartyChannel(k.codespace, "channel membership verification failed")
+	}
 
 	channel.State = types.OPEN
 	k.SetChannel(ctx, portID, channelID, channel)
