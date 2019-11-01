@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	client "github.com/cosmos/cosmos-sdk/x/ibc/02-client"
 	"github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
 	commitment "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 )
@@ -19,7 +20,13 @@ func (k Keeper) ConnOpenInit(
 	clientID string,
 	counterparty types.Counterparty, // desiredCounterpartyConnectionIdentifier, counterpartyPrefix, counterpartyClientIdentifier
 ) error {
-	_, found := k.GetConnection(ctx, connectionID)
+
+	_, found := k.clientKeeper.GetClientState(ctx, clientID)
+	if !found {
+		return client.ErrClientNotFound(client.DefaultCodespace, clientID)
+	}
+
+	_, found = k.GetConnection(ctx, connectionID)
 	if found {
 		return sdkerrors.Wrap(types.ErrConnectionExists(k.codespace, connectionID), "cannot initialize connection")
 	}
@@ -30,7 +37,7 @@ func (k Keeper) ConnOpenInit(
 
 	err := k.addConnectionToClient(ctx, clientID, connectionID)
 	if err != nil {
-		sdkerrors.Wrap(err, "cannot initialize connection")
+		return sdkerrors.Wrap(err, "cannot initialize connection")
 	}
 
 	k.Logger(ctx).Info(fmt.Sprintf("connection %s state updated: NONE -> INIT", connectionID))
@@ -62,7 +69,7 @@ func (k Keeper) ConnOpenTry(
 
 	_, found := k.clientKeeper.GetConsensusState(ctx, clientID)
 	if !found {
-		return errors.New("client consensus state not found") // TODO: use ICS02 error
+		return client.ErrClientNotFound(client.DefaultCodespace, clientID)
 	}
 
 	// expectedConn defines Chain A's ConnectionEnd
@@ -77,18 +84,16 @@ func (k Keeper) ConnOpenTry(
 
 	// connection defines chain B's ConnectionEnd
 	connection := types.NewConnectionEnd(types.NONE, clientID, counterparty, []string{version})
-	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConn)
+	expConnBz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConn)
 	if err != nil {
 		return err
 	}
 
-	// ok := k.VerifyMembership(
-	// 	ctx, connection, proofHeight, proofInit,
-	// 	types.ConnectionPath(connectionID), expConnBz,
-	// )
-	// if !ok {
-	// 	return errors.New("couldn't verify connection membership on counterparty's client") // TODO: sdk.Error
-	// }
+	pathStr := fmt.Sprintf("%s/connections/%s", types.SubModuleName, connectionID)
+	ok := k.VerifyMembership(ctx, connection, proofHeight, proofInit, pathStr, expConnBz)
+	if !ok {
+		return errors.New("couldn't verify connection membership on counterparty's client") // TODO: sdk.Error
+	}
 
 	// expConsStateBz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConsensusState)
 	// if err != nil {
@@ -109,12 +114,13 @@ func (k Keeper) ConnOpenTry(
 	}
 
 	connection.State = types.TRYOPEN
-	// err = k.addConnectionToClient(ctx, clientID, connectionID)
-	// if err != nil {
-	// 	return sdkerrors.Wrap(err, "cannot relay connection attempt")
-	// }
-
 	k.SetConnection(ctx, connectionID, connection)
+
+	err = k.addConnectionToClient(ctx, clientID, connectionID)
+	if err != nil {
+		return sdkerrors.Wrap(err, "cannot relay connection attempt")
+	}
+
 	k.Logger(ctx).Info(fmt.Sprintf("connection %s state updated: NONE -> TRYOPEN ", connectionID))
 	return nil
 }
@@ -159,25 +165,23 @@ func (k Keeper) ConnOpenAck(
 
 	_, found = k.clientKeeper.GetConsensusState(ctx, connection.ClientID)
 	if !found {
-		return errors.New("client consensus state not found") // TODO: use ICS02 error
+		return client.ErrClientNotFound(client.DefaultCodespace, connection.ClientID)
 	}
 
 	prefix := k.GetCommitmentPrefix()
 	expectedCounterparty := types.NewCounterparty(connection.ClientID, connectionID, prefix)
 	expectedConn := types.NewConnectionEnd(types.TRYOPEN, connection.Counterparty.ClientID, expectedCounterparty, []string{version})
 
-	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConn)
+	expConnBz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConn)
 	if err != nil {
 		return err
 	}
 
-	// ok := k.VerifyMembership(
-	// 	ctx, connection, proofHeight, proofTry,
-	// 	types.ConnectionPath(connection.Counterparty.ConnectionID), expConnBz,
-	// )
-	// if !ok {
-	// 	return errors.New("couldn't verify connection membership on counterparty's client") // TODO: sdk.Error
-	// }
+	pathStr := fmt.Sprintf("%s/connections/%s", types.SubModuleName, connection.Counterparty.ConnectionID)
+	ok := k.VerifyMembership(ctx, connection, proofHeight, proofTry, pathStr, expConnBz)
+	if !ok {
+		return errors.New("couldn't verify connection membership on counterparty's client") // TODO: sdk.Error
+	}
 
 	// expConsStateBz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConsensusState)
 	// if err != nil {
@@ -225,18 +229,16 @@ func (k Keeper) ConnOpenConfirm(
 	expectedCounterparty := types.NewCounterparty(connection.ClientID, connectionID, prefix)
 	expectedConn := types.NewConnectionEnd(types.OPEN, connection.Counterparty.ClientID, expectedCounterparty, connection.Versions)
 
-	_, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConn)
+	expConnBz, err := k.cdc.MarshalBinaryLengthPrefixed(expectedConn)
 	if err != nil {
 		return err
 	}
 
-	// ok := k.VerifyMembership(
-	// 	ctx, connection, proofHeight, proofAck,
-	// 	types.ConnectionPath(connection.Counterparty.ConnectionID), expConnBz,
-	// )
-	// if !ok {
-	// 	return types.ErrInvalidCounterpartyConnection(k.codespace)
-	// }
+	pathStr := fmt.Sprintf("%s/connections/%s", types.SubModuleName, connection.Counterparty.ConnectionID)
+	ok := k.VerifyMembership(ctx, connection, proofHeight, proofAck, pathStr, expConnBz)
+	if !ok {
+		return types.ErrInvalidCounterpartyConnection(k.codespace)
+	}
 
 	connection.State = types.OPEN
 	k.SetConnection(ctx, connectionID, connection)
