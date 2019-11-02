@@ -10,7 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	client "github.com/cosmos/cosmos-sdk/x/ibc/02-client"
 	"github.com/cosmos/cosmos-sdk/x/ibc/02-client/exported"
-	ics02 "github.com/cosmos/cosmos-sdk/x/ibc/02-client/types/tendermint"
+	tendermint "github.com/cosmos/cosmos-sdk/x/ibc/02-client/types/tendermint"
 	"github.com/cosmos/cosmos-sdk/x/ibc/03-connection/types"
 	commitment "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 	"github.com/stretchr/testify/suite"
@@ -23,14 +23,13 @@ const (
 	clientType = exported.Tendermint
 	storeKey   = "ibc"
 
-	CosmosChainID = "cosmos"
-	IrisChainID   = "irishub"
+	FirstChain            = "firstchain"
+	FirstChainClient      = "firstchainclient"
+	FiristChainConnection = "firistchainconnection"
 
-	ClientToGaia = "clienttogaia"
-	ClientToIris = "clienttoiris"
-
-	ConnectionToGaia = "connectiontogaia"
-	ConnectionToIris = "connectiontoiris"
+	SecondChain           = "secondchain"
+	SecondChainClient     = "secondchainclient"
+	SecondChainConnection = "secondchainconnection"
 )
 
 type KeeperTestSuite struct {
@@ -86,15 +85,15 @@ func NewApp(chainID string) App {
 
 func (suite *KeeperTestSuite) SetupTest() {
 	suite.apps = map[string]App{
-		CosmosChainID: NewApp(CosmosChainID),
-		IrisChainID:   NewApp(IrisChainID),
+		FirstChain:  NewApp(FirstChain),
+		SecondChain: NewApp(SecondChain),
 	}
 }
 
-func (suite *KeeperTestSuite) getConsensusState(chainID string) ics02.ConsensusState {
+func (suite *KeeperTestSuite) getConsensusState(chainID string) tendermint.ConsensusState {
 	app := suite.apps[chainID]
 	commitID := app.store.Commit()
-	state := ics02.ConsensusState{
+	state := tendermint.ConsensusState{
 		ChainID: app.chainID,
 		Height:  uint64(commitID.Version),
 		Root:    commitment.NewRoot(commitID.Hash),
@@ -120,7 +119,7 @@ func (suite *KeeperTestSuite) queryProof(chainID string, key string) (proof comm
 }
 
 func (suite *KeeperTestSuite) createClient(chainID string, clientID string,
-	clientType exported.ClientType, state ics02.ConsensusState) {
+	clientType exported.ClientType, state tendermint.ConsensusState) {
 	app := suite.apps[chainID]
 	_, err := app.clientKeeper.CreateClient(app.ctx, clientID, clientType, state)
 	if err != nil {
@@ -131,9 +130,9 @@ func (suite *KeeperTestSuite) createClient(chainID string, clientID string,
 }
 
 func (suite *KeeperTestSuite) updateClient(chainID string, clientID string) {
-	otherChainID := CosmosChainID
-	if chainID == CosmosChainID {
-		otherChainID = IrisChainID
+	otherChainID := FirstChain
+	if chainID == FirstChain {
+		otherChainID = SecondChain
 	}
 	consensusState := suite.getConsensusState(otherChainID)
 
@@ -148,7 +147,6 @@ func (suite *KeeperTestSuite) updateClient(chainID string, clientID string) {
 func (suite *KeeperTestSuite) connOpenInit(chainID string, connectionID, clientID, counterpartyClientID, counterpartyConnID string) {
 	app := suite.apps[chainID]
 	counterparty := types.NewCounterparty(counterpartyClientID, counterpartyConnID, app.connKeeper.GetCommitmentPrefix())
-
 	err := app.connKeeper.ConnOpenInit(app.ctx, connectionID, clientID, counterparty)
 	suite.Nil(err)
 
@@ -169,12 +167,10 @@ func (suite *KeeperTestSuite) connOpenInit(chainID string, connectionID, clientI
 func (suite *KeeperTestSuite) connOpenTry(chainID string, connectionID, clientID, counterpartyClientID, counterpartyConnID string) {
 	app := suite.apps[chainID]
 	counterparty := types.NewCounterparty(counterpartyClientID, counterpartyConnID, app.connKeeper.GetCommitmentPrefix())
-
-	// connKey := fmt.Sprintf("%s/%s/%s", app.connKeeper.storeKey.Name(), types.SubModuleName, types.ConnectionPath(counterpartyConnID))
 	connKey := fmt.Sprintf("%s/%s", types.SubModuleName, types.ConnectionPath(counterpartyConnID))
-	otherChainID := CosmosChainID
-	if chainID == CosmosChainID {
-		otherChainID = IrisChainID
+	otherChainID := FirstChain
+	if chainID == FirstChain {
+		otherChainID = SecondChain
 	}
 	proof, h := suite.queryProof(otherChainID, connKey)
 
@@ -193,9 +189,9 @@ func (suite *KeeperTestSuite) connOpenTry(chainID string, connectionID, clientID
 func (suite *KeeperTestSuite) connOpenAck(chainID string, connectionID, counterpartyConnID string) {
 	app := suite.apps[chainID]
 	connKey := fmt.Sprintf("%s/%s", types.SubModuleName, types.ConnectionPath(counterpartyConnID))
-	otherChainID := CosmosChainID
-	if chainID == CosmosChainID {
-		otherChainID = IrisChainID
+	otherChainID := FirstChain
+	if chainID == FirstChain {
+		otherChainID = SecondChain
 	}
 	proof, h := suite.queryProof(otherChainID, connKey)
 
@@ -214,9 +210,9 @@ func (suite *KeeperTestSuite) connOpenAck(chainID string, connectionID, counterp
 func (suite *KeeperTestSuite) connOpenConfirm(chainID string, connectionID, counterpartyConnID string) {
 	app := suite.apps[chainID]
 	connKey := fmt.Sprintf("%s/%s", types.SubModuleName, types.ConnectionPath(counterpartyConnID))
-	otherChainID := CosmosChainID
-	if chainID == CosmosChainID {
-		otherChainID = IrisChainID
+	otherChainID := FirstChain
+	if chainID == FirstChain {
+		otherChainID = SecondChain
 	}
 	proof, h := suite.queryProof(otherChainID, connKey)
 
@@ -233,35 +229,23 @@ func (suite *KeeperTestSuite) connOpenConfirm(chainID string, connectionID, coun
 }
 
 func (suite *KeeperTestSuite) TestHandshake() {
-	//get gaia consensusState
-	state := suite.getConsensusState(CosmosChainID)
-	//create client on iris
-	suite.createClient(IrisChainID, ClientToGaia, clientType, state)
-
-	//get iris consensusState
-	state1 := suite.getConsensusState(IrisChainID)
-	// create client on gaia
-	suite.createClient(CosmosChainID, ClientToIris, clientType, state1)
-
-	//===========OpenInit on iris===========
-	suite.connOpenInit(IrisChainID, ConnectionToGaia, ClientToGaia, ClientToIris, ConnectionToIris)
-
-	//===========OpenTry on gaia===========
-	// update gaia consensusState(should be UpdateClient)
-	suite.updateClient(CosmosChainID, ClientToIris)
-	// open-try on gaia
-	suite.connOpenTry(CosmosChainID, ConnectionToIris, ClientToIris, ClientToGaia, ConnectionToGaia)
-
-	//===========ConnOpenAck on iris===========
-	// update iris consensusState(should be UpdateClient)
-	suite.updateClient(IrisChainID, ClientToGaia)
-	suite.connOpenAck(IrisChainID, ConnectionToGaia, ConnectionToIris)
-
-	//===========ConnOpenConfirm on gaia===========
-	// update gaia consensusState(should be UpdateClient)
-	suite.updateClient(CosmosChainID, ClientToIris)
-	suite.connOpenConfirm(CosmosChainID, ConnectionToIris, ConnectionToGaia)
-
+	// create client
+	state := suite.getConsensusState(FirstChain)
+	suite.createClient(SecondChain, FirstChainClient, clientType, state)
+	// create client
+	state1 := suite.getConsensusState(SecondChain)
+	suite.createClient(FirstChain, SecondChainClient, clientType, state1)
+	// open init
+	suite.connOpenInit(SecondChain, FiristChainConnection, FirstChainClient, SecondChainClient, SecondChainConnection)
+	// open try
+	suite.updateClient(FirstChain, SecondChainClient)
+	suite.connOpenTry(FirstChain, SecondChainConnection, SecondChainClient, FirstChainClient, FiristChainConnection)
+	// open ack
+	suite.updateClient(SecondChain, FirstChainClient)
+	suite.connOpenAck(SecondChain, FiristChainConnection, SecondChainConnection)
+	// open confirm
+	suite.updateClient(FirstChain, SecondChainClient)
+	suite.connOpenConfirm(FirstChain, SecondChainConnection, FiristChainConnection)
 }
 
 func TestKeeperTestSuite(t *testing.T) {
