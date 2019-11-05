@@ -19,5 +19,11 @@ func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgChannelCloseInit{}, "ibc/channel/MsgChannelCloseInit", nil)
 	cdc.RegisterConcrete(MsgChannelCloseConfirm{}, "ibc/channel/MsgChannelCloseConfirm", nil)
 
+	cdc.RegisterConcrete(MsgPacketRecv{}, "ibc/channel/MsgPacketRecv", nil)
+	// cdc.RegisterConcrete(MsgPacketAcknowledgement{}, "ibc/channel/MsgPacketAcknowledgement", nil)
+	// cdc.RegisterConcrete(MsgPacketTimeout{}, "ibc/channel/MsgPacketTimeout", nil)
+	// cdc.RegisterConcrete(MsgPacketTimeoutOnClose{}, "ibc/channel/MsgPacketTimeoutOnClose", nil)
+	// cdc.RegisterConcrete(MsgPacketCleanup{}, "ibc/channel/MsgPacketCleanup", nil)
+
 	SubModuleCdc = cdc
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // nolint: unused
-func (k Keeper) onChanOpenInit(
+func (k Keeper) OnChanOpenInit(
 	ctx sdk.Context,
 	order channeltypes.Order,
 	connectionHops []string,
@@ -37,7 +37,7 @@ func (k Keeper) onChanOpenInit(
 }
 
 // nolint: unused
-func (k Keeper) onChanOpenTry(
+func (k Keeper) OnChanOpenTry(
 	ctx sdk.Context,
 	order channeltypes.Order,
 	connectionHops []string,
@@ -69,7 +69,7 @@ func (k Keeper) onChanOpenTry(
 }
 
 // nolint: unused
-func (k Keeper) onChanOpenAck(
+func (k Keeper) OnChanOpenAck(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -83,7 +83,7 @@ func (k Keeper) onChanOpenAck(
 }
 
 // nolint: unused
-func (k Keeper) onChanOpenConfirm(
+func (k Keeper) OnChanOpenConfirm(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -93,7 +93,7 @@ func (k Keeper) onChanOpenConfirm(
 }
 
 // nolint: unused
-func (k Keeper) onChanCloseInit(
+func (k Keeper) OnChanCloseInit(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -103,7 +103,7 @@ func (k Keeper) onChanCloseInit(
 }
 
 // nolint: unused
-func (k Keeper) onChanCloseConfirm(
+func (k Keeper) OnChanCloseConfirm(
 	ctx sdk.Context,
 	portID,
 	channelID string,
@@ -114,25 +114,26 @@ func (k Keeper) onChanCloseConfirm(
 
 // onRecvPacket is called when an FTTransfer packet is received
 // nolint: unused
-func (k Keeper) onRecvPacket(
+func (k Keeper) OnRecvPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
-) error {
+) ([]byte, error) {
 	var data types.PacketData
 
-	err := data.UnmarshalJSON(packet.Data())
+	err := data.UnmarshalJSON(packet.GetData())
 	if err != nil {
-		return types.ErrInvalidPacketData(k.codespace)
+		return nil, types.ErrInvalidPacketData(k.codespace)
 	}
 
-	return k.ReceiveTransfer(
-		ctx, packet.SourcePort(), packet.SourceChannel(),
-		packet.DestPort(), packet.DestChannel(), data,
+	// TODO: should return acknowledgement
+	return nil, k.ReceiveTransfer(
+		ctx, packet.GetSourcePort(), packet.GetSourceChannel(),
+		packet.GetDestPort(), packet.GetDestChannel(), data,
 	)
 }
 
 // nolint: unused
-func (k Keeper) onAcknowledgePacket(
+func (k Keeper) OnAcknowledgePacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 	acknowledgement []byte,
@@ -142,19 +143,19 @@ func (k Keeper) onAcknowledgePacket(
 }
 
 // nolint: unused
-func (k Keeper) onTimeoutPacket(
+func (k Keeper) OnTimeoutPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
 ) error {
 	var data types.PacketData
 
-	err := data.UnmarshalJSON(packet.Data())
+	err := data.UnmarshalJSON(packet.GetData())
 	if err != nil {
 		return types.ErrInvalidPacketData(k.codespace)
 	}
 
 	// check the denom prefix
-	prefix := types.GetDenomPrefix(packet.SourcePort(), packet.SourcePort())
+	prefix := types.GetDenomPrefix(packet.GetSourcePort(), packet.GetSourcePort())
 	coins := make(sdk.Coins, len(data.Amount))
 	for i, coin := range data.Amount {
 		coin := coin
@@ -165,7 +166,7 @@ func (k Keeper) onTimeoutPacket(
 	}
 
 	if data.Source {
-		escrowAddress := types.GetEscrowAddress(packet.DestPort(), packet.DestChannel())
+		escrowAddress := types.GetEscrowAddress(packet.GetDestPort(), packet.GetDestChannel())
 		return k.bankKeeper.SendCoins(ctx, escrowAddress, data.Sender, coins)
 	}
 
@@ -179,6 +180,6 @@ func (k Keeper) onTimeoutPacket(
 }
 
 // nolint: unused
-func (k Keeper) onTimeoutPacketClose(_ sdk.Context, _ channeltypes.Packet) {
+func (k Keeper) OnTimeoutPacketClose(_ sdk.Context, _ channeltypes.Packet) {
 	panic("can't happen, only unordered channels allowed")
 }
