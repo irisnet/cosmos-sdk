@@ -23,13 +23,13 @@ const (
 	clientType = exported.Tendermint
 	storeKey   = "ibc"
 
-	FirstChain            = "firstchain"
-	FirstChainClient      = "firstchainclient"
-	FiristChainConnection = "firistchainconnection"
+	FirstChain      = "firstchain"
+	FirstClient     = "firstclient"
+	FirstConnection = "firstconnection"
 
-	SecondChain           = "secondchain"
-	SecondChainClient     = "secondchainclient"
-	SecondChainConnection = "secondchainconnection"
+	SecondChain      = "secondchain"
+	SecondClient     = "secondclient"
+	SecondConnection = "secondconnection"
 )
 
 type KeeperTestSuite struct {
@@ -129,13 +129,8 @@ func (suite *KeeperTestSuite) createClient(chainID string, clientID string,
 	app.ctx.WithBlockHeight(commitID.Version)
 }
 
-func (suite *KeeperTestSuite) updateClient(chainID string, clientID string) {
-	otherChainID := FirstChain
-	if chainID == FirstChain {
-		otherChainID = SecondChain
-	}
+func (suite *KeeperTestSuite) updateClient(chainID, otherChainID string, clientID string) {
 	consensusState := suite.getConsensusState(otherChainID)
-
 	//update client consensus state
 	app := suite.apps[chainID]
 	app.clientKeeper.SetConsensusState(app.ctx, clientID, consensusState)
@@ -164,16 +159,11 @@ func (suite *KeeperTestSuite) connOpenInit(chainID string, connectionID, clientI
 	app.ctx.WithBlockHeight(commitID.Version)
 }
 
-func (suite *KeeperTestSuite) connOpenTry(chainID string, connectionID, clientID, counterpartyClientID, counterpartyConnID string) {
+func (suite *KeeperTestSuite) connOpenTry(chainID, otherChainID string, connectionID, clientID, counterpartyClientID, counterpartyConnID string) {
 	app := suite.apps[chainID]
 	counterparty := types.NewCounterparty(counterpartyClientID, counterpartyConnID, app.connKeeper.GetCommitmentPrefix())
 	connKey := fmt.Sprintf("%s/%s", types.SubModuleName, types.ConnectionPath(counterpartyConnID))
-	otherChainID := FirstChain
-	if chainID == FirstChain {
-		otherChainID = SecondChain
-	}
 	proof, h := suite.queryProof(otherChainID, connKey)
-
 	err := app.connKeeper.ConnOpenTry(app.ctx, connectionID, counterparty, clientID, types.GetCompatibleVersions(), proof, uint64(h), 0)
 	suite.Nil(err)
 
@@ -186,15 +176,10 @@ func (suite *KeeperTestSuite) connOpenTry(chainID string, connectionID, clientID
 	suite.Equal(types.TRYOPEN, conn.State)
 }
 
-func (suite *KeeperTestSuite) connOpenAck(chainID string, connectionID, counterpartyConnID string) {
+func (suite *KeeperTestSuite) connOpenAck(chainID, otherChainID string, connectionID, counterpartyConnID string) {
 	app := suite.apps[chainID]
 	connKey := fmt.Sprintf("%s/%s", types.SubModuleName, types.ConnectionPath(counterpartyConnID))
-	otherChainID := FirstChain
-	if chainID == FirstChain {
-		otherChainID = SecondChain
-	}
 	proof, h := suite.queryProof(otherChainID, connKey)
-
 	err := app.connKeeper.ConnOpenAck(app.ctx, connectionID, types.GetCompatibleVersions()[0], proof, uint64(h), 0)
 	suite.Nil(err)
 
@@ -207,13 +192,9 @@ func (suite *KeeperTestSuite) connOpenAck(chainID string, connectionID, counterp
 	suite.Equal(types.OPEN, conn.State)
 }
 
-func (suite *KeeperTestSuite) connOpenConfirm(chainID string, connectionID, counterpartyConnID string) {
+func (suite *KeeperTestSuite) connOpenConfirm(chainID, otherChainID string, connectionID, counterpartyConnID string) {
 	app := suite.apps[chainID]
 	connKey := fmt.Sprintf("%s/%s", types.SubModuleName, types.ConnectionPath(counterpartyConnID))
-	otherChainID := FirstChain
-	if chainID == FirstChain {
-		otherChainID = SecondChain
-	}
 	proof, h := suite.queryProof(otherChainID, connKey)
 
 	err := app.connKeeper.ConnOpenConfirm(app.ctx, connectionID, proof, uint64(h))
@@ -229,23 +210,24 @@ func (suite *KeeperTestSuite) connOpenConfirm(chainID string, connectionID, coun
 }
 
 func (suite *KeeperTestSuite) TestHandshake() {
-	// create client
-	state := suite.getConsensusState(FirstChain)
-	suite.createClient(SecondChain, FirstChainClient, clientType, state)
-	// create client
-	state1 := suite.getConsensusState(SecondChain)
-	suite.createClient(FirstChain, SecondChainClient, clientType, state1)
+	// init chains and get consensusState
+	firstState := suite.getConsensusState(FirstChain)
+	secondState := suite.getConsensusState(SecondChain)
+	// create client on first chain
+	suite.createClient(FirstChain, SecondClient, clientType, secondState)
+	// create client on second chain
+	suite.createClient(SecondChain, FirstClient, clientType, firstState)
 	// open init
-	suite.connOpenInit(SecondChain, FiristChainConnection, FirstChainClient, SecondChainClient, SecondChainConnection)
+	suite.connOpenInit(SecondChain, FirstConnection, FirstClient, SecondClient, SecondConnection)
 	// open try
-	suite.updateClient(FirstChain, SecondChainClient)
-	suite.connOpenTry(FirstChain, SecondChainConnection, SecondChainClient, FirstChainClient, FiristChainConnection)
+	suite.updateClient(FirstChain, SecondChain, SecondClient)
+	suite.connOpenTry(FirstChain, SecondChain, SecondConnection, SecondClient, FirstClient, FirstConnection)
 	// open ack
-	suite.updateClient(SecondChain, FirstChainClient)
-	suite.connOpenAck(SecondChain, FiristChainConnection, SecondChainConnection)
+	suite.updateClient(SecondChain, FirstChain, FirstClient)
+	suite.connOpenAck(SecondChain, FirstChain, FirstConnection, SecondConnection)
 	// open confirm
-	suite.updateClient(FirstChain, SecondChainClient)
-	suite.connOpenConfirm(FirstChain, SecondChainConnection, FiristChainConnection)
+	suite.updateClient(FirstChain, SecondChain, SecondClient)
+	suite.connOpenConfirm(FirstChain, SecondChain, SecondConnection, FirstConnection)
 }
 
 func TestKeeperTestSuite(t *testing.T) {

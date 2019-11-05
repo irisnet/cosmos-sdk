@@ -178,7 +178,6 @@ func (suite *KeeperTestSuite) setupConnection() {
 
 func (suite *KeeperTestSuite) updateClient(chainID, otherChainID string, clientID string) {
 	consensusState := suite.getConsensusState(otherChainID)
-
 	//update client consensus state
 	app := suite.apps[chainID]
 	app.clientKeeper.SetConsensusState(app.ctx, clientID, consensusState)
