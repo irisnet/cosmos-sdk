@@ -63,6 +63,10 @@ func (k Keeper) BindPort(portID string) sdk.CapabilityKey {
 	return key
 }
 
+func (k Keeper) ReleasePort(portID string) {
+	// TODO:
+}
+
 // Authenticate authenticates a capability key against a port ID
 // by checking if the memory address of the capability was previously
 // generated and bound to the port (provided as a parameter) which the capability
