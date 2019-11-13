@@ -30,7 +30,7 @@ func QueryConsensusStateProof(
 	}
 
 	req := abci.RequestQuery{
-		Path:  fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryClientState),
+		Path:  fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryConsensusState),
 		Data:  bz,
 		Prove: viper.GetBool(flags.FlagProve),
 	}

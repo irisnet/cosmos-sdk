@@ -71,7 +71,7 @@ $ %s tx ibc connection open-init [connection-id] [client-id] [counterparty-conne
 [counterparty-client-id] [path/to/counterparty_prefix.json]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(6),
+		Args: cobra.ExactArgs(5),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -118,12 +118,12 @@ func GetCmdConnectionOpenTry(storeKey string, cdc *codec.Codec) *cobra.Command {
 			fmt.Sprintf(`initialize a connection on chain A with a given counterparty chain B:
 
 Example:
-$ %s tx ibc connection open-try connection-id] [client-id] 
+$ %s tx ibc connection open-try [connection-id] [client-id] 
 [counterparty-connection-id] [counterparty-client-id] [path/to/counterparty_prefix.json] 
 [counterparty-versions] [path/to/proof_init.json]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(6),
+		Args: cobra.ExactArgs(7),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().
@@ -148,25 +148,24 @@ $ %s tx ibc connection open-try connection-id] [client-id]
 			// TODO: parse strings?
 			counterpartyVersions := args[5]
 
-			proofBz, err := ioutil.ReadFile(args[6])
+			connectionProofBz, err := ioutil.ReadFile(args[6])
 			if err != nil {
 				return err
 			}
 
-			var proofInit commitment.Proof
-			if err := cdc.UnmarshalJSON(proofBz, &proofInit); err != nil {
+			var connection types.ConnectionResponse
+			if err := cdc.UnmarshalJSON(connectionProofBz, &connection); err != nil {
 				return err
 			}
 
-			proofHeight := uint64(cliCtx.Height)
-			consensusHeight, err := lastHeight(cliCtx)
-			if err != nil {
-				return err
-			}
+			proofHeight := connection.ProofHeight
+
+			// TODO: Add consensus proof
+			consensusHeight := proofHeight
 
 			msg := types.NewMsgConnectionOpenTry(
 				connectionID, clientID, counterpartyConnectionID, counterpartyClientID,
-				counterpartyPrefix, []string{counterpartyVersions}, proofInit, proofInit, proofHeight,
+				counterpartyPrefix, []string{counterpartyVersions}, connection.Proof, connection.Proof, proofHeight,
 				consensusHeight, cliCtx.GetFromAddress(),
 			)
 
@@ -204,21 +203,20 @@ $ %s tx ibc connection open-ack [connection-id] [path/to/proof_try.json] [versio
 				return err
 			}
 
-			var proofTry commitment.Proof
-			if err := cdc.UnmarshalJSON(proofBz, &proofTry); err != nil {
+			var connection types.ConnectionResponse
+			if err := cdc.UnmarshalJSON(proofBz, &connection); err != nil {
 				return err
 			}
 
-			proofHeight := uint64(cliCtx.Height)
-			consensusHeight, err := lastHeight(cliCtx)
-			if err != nil {
-				return err
-			}
+			proofHeight := connection.ProofHeight
 
-			version := args[4]
+			// TODO: Add consensus proof
+			consensusHeight := proofHeight
+
+			version := args[2]
 
 			msg := types.NewMsgConnectionOpenAck(
-				connectionID, proofTry, proofTry, proofHeight,
+				connectionID, connection.Proof, connection.Proof, proofHeight,
 				consensusHeight, version, cliCtx.GetFromAddress(),
 			)
 
@@ -245,7 +243,7 @@ Example:
 $ %s tx ibc connection open-confirm [connection-id] [path/to/proof_ack.json]
 		`, version.ClientName),
 		),
-		Args: cobra.ExactArgs(3),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().
@@ -259,15 +257,15 @@ $ %s tx ibc connection open-confirm [connection-id] [path/to/proof_ack.json]
 				return err
 			}
 
-			var proofAck commitment.Proof
-			if err := cdc.UnmarshalJSON(proofBz, &proofAck); err != nil {
+			var connection types.ConnectionResponse
+			if err := cdc.UnmarshalJSON(proofBz, &connection); err != nil {
 				return err
 			}
 
-			proofHeight := uint64(cliCtx.Height)
+			proofHeight := connection.ProofHeight
 
 			msg := types.NewMsgConnectionOpenConfirm(
-				connectionID, proofAck, proofHeight, cliCtx.GetFromAddress(),
+				connectionID, connection.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 
 			if err := msg.ValidateBasic(); err != nil {

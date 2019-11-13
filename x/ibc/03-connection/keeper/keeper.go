@@ -135,12 +135,12 @@ func (k Keeper) VerifyMembership(
 			return false
 		}
 	*/
-	path, err := commitment.ApplyPrefix(connection.Counterparty.Prefix, pathStr)
+	path, err := commitment.ApplyPrefix(connection.Counterparty.Prefix, string(types.KeyPrefixConnection)+pathStr)
 	if err != nil {
 		return false
 	}
 
-	return k.clientKeeper.VerifyMembership(ctx, connection.ClientID, height, proof, path, value)
+	return k.clientKeeper.VerifyMembership(ctx, connection.ClientID, height+1, proof, path, value)
 }
 
 // VerifyNonMembership helper function for state non-membership verification

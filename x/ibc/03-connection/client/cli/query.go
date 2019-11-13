@@ -48,15 +48,10 @@ $ %s query ibc connection end [connection-id]
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			connectionID := args[0]
 
-			bz, err := cdc.MarshalJSON(types.NewQueryConnectionParams(connectionID))
-			if err != nil {
-				return err
-			}
-
 			req := abci.RequestQuery{
-				Path:  fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryConnection),
-				Data:  bz,
-				Prove: viper.GetBool(flags.FlagProve),
+				Path:  "store/ibc/key",
+				Data:  append(types.KeyPrefixConnection, types.KeyConnection(connectionID)...),
+				Prove: true,
 			}
 
 			res, err := cliCtx.QueryABCI(req)
@@ -65,7 +60,7 @@ $ %s query ibc connection end [connection-id]
 			}
 
 			var connection types.ConnectionEnd
-			if err := cdc.UnmarshalJSON(res.Value, &connection); err != nil {
+			if err := cdc.UnmarshalBinaryLengthPrefixed(res.Value, &connection); err != nil {
 				return err
 			}
 
