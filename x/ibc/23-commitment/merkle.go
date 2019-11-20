@@ -1,7 +1,9 @@
 package commitment
 
 import (
+	"encoding/json"
 	"errors"
+
 	"github.com/tendermint/tendermint/crypto/merkle"
 
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
@@ -96,6 +98,32 @@ func (p Path) String() string {
 	//}
 	//return path
 	return p.KeyPath.String()
+}
+
+// MarshalJSON marshal to JSON using string.
+func (p Path) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.String())
+}
+
+// UnmarshalJSON decodes from JSON assuming Bech32 encoding.
+func (p *Path) UnmarshalJSON(data []byte) error {
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+
+	bz, err := merkle.KeyPathToKeys(s)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range bz {
+		p.KeyPath = p.KeyPath.AppendKey(v, merkle.KeyEncodingURL)
+
+	}
+
+	return nil
 }
 
 // ApplyPrefix constructs a new commitment path from the arguments. It interprets

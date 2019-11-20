@@ -53,7 +53,7 @@ func QueryChannel(ctx client.CLIContext, portID string, channelID string, queryR
 
 	req := abci.RequestQuery{
 		Path:  "store/ibc/key",
-		Data:  types.KeyChannel(portID, channelID),
+		Data:  append(types.KeyPrefixChannel, types.KeyChannel(portID, channelID)...),
 		Prove: true,
 	}
 
