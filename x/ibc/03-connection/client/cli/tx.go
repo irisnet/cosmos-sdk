@@ -158,7 +158,7 @@ $ %s tx ibc connection open-try [connection-id] [client-id]
 				return err
 			}
 
-			proofHeight := connection.ProofHeight
+			proofHeight := connection.ProofHeight + 1
 
 			// TODO: Add consensus proof
 			consensusHeight := proofHeight
@@ -208,7 +208,7 @@ $ %s tx ibc connection open-ack [connection-id] [path/to/proof_try.json] [versio
 				return err
 			}
 
-			proofHeight := connection.ProofHeight
+			proofHeight := connection.ProofHeight + 1
 
 			// TODO: Add consensus proof
 			consensusHeight := proofHeight
@@ -262,7 +262,7 @@ $ %s tx ibc connection open-confirm [connection-id] [path/to/proof_ack.json]
 				return err
 			}
 
-			proofHeight := connection.ProofHeight
+			proofHeight := connection.ProofHeight + 1
 
 			msg := types.NewMsgConnectionOpenConfirm(
 				connectionID, connection.Proof, proofHeight, cliCtx.GetFromAddress(),

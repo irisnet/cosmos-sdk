@@ -121,10 +121,12 @@ func GetMsgChannelOpenTryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelOpenTry(
 				portID, channelID, version, order, hops,
 				counterpartyPortID, counterpartyChannelID, version,
-				channel.Proof, channel.ProofHeight, cliCtx.GetFromAddress(),
+				channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -163,8 +165,10 @@ func GetMsgChannelOpenAckCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelOpenAck(
-				portID, channelID, version, channel.Proof, channel.ProofHeight, cliCtx.GetFromAddress(),
+				portID, channelID, version, channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -200,8 +204,10 @@ func GetMsgChannelOpenConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comma
 				return err
 			}
 
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelOpenConfirm(
-				portID, channelID, channel.Proof, channel.ProofHeight, cliCtx.GetFromAddress(),
+				portID, channelID, channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -258,8 +264,10 @@ func GetMsgChannelCloseConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comm
 				return err
 			}
 
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelCloseConfirm(
-				portID, channelID, channel.Proof, channel.ProofHeight, cliCtx.GetFromAddress(),
+				portID, channelID, channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
