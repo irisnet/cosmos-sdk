@@ -24,12 +24,12 @@ const (
 )
 
 func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router, queryRoute string) {
-	r.HandleFunc(fmt.Sprintf("/ibc/client/consensus-state/clients/{%s}", RestClientID), queryConsensusStateHandlerFn(cliCtx, queryRoute)).Methods("GET")
-	r.HandleFunc(fmt.Sprintf("/ibc/client/state/clients/{%s}", RestClientID), queryClientStateHandlerFn(cliCtx, queryRoute)).Methods("GET")
-	r.HandleFunc(fmt.Sprintf("/ibc/client/root/clients/{%s}/heights/{%s}", RestClientID, RestRootHeight), queryRootHandlerFn(cliCtx, queryRoute)).Methods("GET")
-	r.HandleFunc("/ibc/client/header", queryHeaderHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/ibc/client/node-state", queryNodeConsensusStateHandlerFn(cliCtx)).Methods("GET")
-	r.HandleFunc("/ibc/client/path", queryPathHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc(fmt.Sprintf("/ibc/clients/{%s}/consensus-state", RestClientID), queryConsensusStateHandlerFn(cliCtx, queryRoute)).Methods("GET")
+	r.HandleFunc(fmt.Sprintf("/ibc/clients/{%s}/client-state", RestClientID), queryClientStateHandlerFn(cliCtx, queryRoute)).Methods("GET")
+	r.HandleFunc(fmt.Sprintf("/ibc/clients/{%s}/roots/{%s}", RestClientID, RestRootHeight), queryRootHandlerFn(cliCtx, queryRoute)).Methods("GET")
+	r.HandleFunc("/ibc/header", queryHeaderHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/ibc/node-state", queryNodeConsensusStateHandlerFn(cliCtx)).Methods("GET")
+	r.HandleFunc("/ibc/path", queryPathHandlerFn(cliCtx)).Methods("GET")
 }
 
 func queryConsensusStateHandlerFn(cliCtx context.CLIContext, queryRoute string) http.HandlerFunc {
@@ -42,33 +42,19 @@ func queryConsensusStateHandlerFn(cliCtx context.CLIContext, queryRoute string) 
 			return
 		}
 
-		// return proof if the prove query param is set to true
-		proveStr := r.FormValue("prove")
-		prove := false
-		if strings.ToLower(strings.TrimSpace(proveStr)) == Prove {
-			prove = true
-		}
-
-		bz, err := cliCtx.Codec.MarshalJSON(types.NewQueryClientStateParams(clientID))
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		req := abci.RequestQuery{
-			Path:  fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryConsensusState),
-			Data:  bz,
-			Prove: prove,
-		}
-
-		res, err := cliCtx.QueryABCI(req)
+		res, err := cliCtx.QueryABCIWithProof(r, "ibc", types.PrefixKeyConsensusState(clientID))
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
+		var cs tendermint.ConsensusState
+		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res.Value, &cs); err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+
 		cliCtx = cliCtx.WithHeight(res.Height)
-		rest.PostProcessResponse(w, cliCtx, res)
+		rest.PostProcessResponse(w, cliCtx, types.NewConsensusStateResponse(clientID, cs, res.Proof, res.Height))
 	}
 }
 
@@ -76,7 +62,7 @@ func queryHeaderHandlerFn(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		header, err := utils.GetTendermintHeader(cliCtx)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
@@ -94,33 +80,19 @@ func queryClientStateHandlerFn(cliCtx context.CLIContext, queryRoute string) htt
 			return
 		}
 
-		// return proof if the prove query param is set to true
-		proveStr := r.FormValue("prove")
-		prove := false
-		if strings.ToLower(strings.TrimSpace(proveStr)) == Prove {
-			prove = true
-		}
-
-		bz, err := cliCtx.Codec.MarshalJSON(types.NewQueryClientStateParams(clientID))
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		req := abci.RequestQuery{
-			Path:  fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryClientState),
-			Data:  bz,
-			Prove: prove,
-		}
-
-		res, err := cliCtx.QueryABCI(req)
+		res, err := cliCtx.QueryABCIWithProof(r, "ibc", types.PrefixKeyClientState(clientID))
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
+		var state types.State
+		if err := cliCtx.Codec.UnmarshalBinaryLengthPrefixed(res.Value, &state); err != nil {
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+
 		cliCtx = cliCtx.WithHeight(res.Height)
-		rest.PostProcessResponse(w, cliCtx, res)
+		rest.PostProcessResponse(w, cliCtx, types.NewClientStateResponse(clientID, state, res.Proof, res.Height))
 	}
 }
 
