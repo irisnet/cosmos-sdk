@@ -54,11 +54,6 @@ $ %s query ibc connection end [connection-id]
 				Prove: true,
 			}
 
-			_, _, err := cliCtx.QueryStore(append(types.KeyPrefixConnection, types.KeyConnection(connectionID)...), "ibc")
-			if err != nil {
-				return err
-			}
-
 			res, err := cliCtx.QueryABCI(req)
 			if err != nil {
 				return err

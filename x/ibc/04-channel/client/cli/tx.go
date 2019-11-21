@@ -3,8 +3,6 @@ package cli
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,7 +23,6 @@ import (
 	clientutils "github.com/cosmos/cosmos-sdk/x/ibc/02-client/client/utils"
 	clienttypes "github.com/cosmos/cosmos-sdk/x/ibc/02-client/types"
 	"github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
-	commitment "github.com/cosmos/cosmos-sdk/x/ibc/23-commitment"
 )
 
 const (
@@ -99,9 +96,9 @@ func GetMsgChannelOpenInitCmd(storeKey string, cdc *codec.Codec) *cobra.Command 
 // GetMsgChannelOpenTryCmd returns the command to create a MsgChannelOpenTry transaction
 func GetMsgChannelOpenTryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "open-try [port-id] [channel-id] [counterparty-port-id] [counterparty-channel-id] [connection-hops] [/path/to/proof-init.json] [proof-height]",
+		Use:   "open-try [port-id] [channel-id] [counterparty-port-id] [counterparty-channel-id] [connection-hops] [/path/to/proof-init.json]",
 		Short: "Creates and sends a ChannelOpenTry message",
-		Args:  cobra.ExactArgs(7),
+		Args:  cobra.ExactArgs(6),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -114,27 +111,22 @@ func GetMsgChannelOpenTryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 			order := channelOrder()
 			version := viper.GetString(FlagIBCVersion) // TODO: diferenciate between channel and counterparty versions
 
-			var proof commitment.ProofI
-			if err := cdc.UnmarshalJSON([]byte(args[5]), &proof); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to unmarshall input into struct, checking for file...")
-				contents, err := ioutil.ReadFile(args[5])
-				if err != nil {
-					return fmt.Errorf("error opening proof file: %v", err)
-				}
-				if err := cdc.UnmarshalJSON(contents, &proof); err != nil {
-					return fmt.Errorf("error unmarshalling proof file: %v", err)
-				}
-			}
-
-			proofHeight, err := strconv.ParseInt(args[6], 10, 64)
+			channelProofBz, err := ioutil.ReadFile(args[5])
 			if err != nil {
 				return err
 			}
 
+			var channel types.ChannelResponse
+			if err := cdc.UnmarshalJSON(channelProofBz, &channel); err != nil {
+				return err
+			}
+
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelOpenTry(
 				portID, channelID, version, order, hops,
 				counterpartyPortID, counterpartyChannelID, version,
-				proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -152,9 +144,9 @@ func GetMsgChannelOpenTryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetMsgChannelOpenAckCmd returns the command to create a MsgChannelOpenAck transaction
 func GetMsgChannelOpenAckCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "open-ack [port-id] [channel-id] [/path/to/proof-try.json] [proof-height]",
+		Use:   "open-ack [port-id] [channel-id] [/path/to/proof-try.json]",
 		Short: "Creates and sends a ChannelOpenAck message",
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -163,25 +155,20 @@ func GetMsgChannelOpenAckCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 			channelID := args[1]
 			version := viper.GetString(FlagIBCVersion) // TODO: diferenciate between channel and counterparty versions
 
-			var proof commitment.ProofI
-			if err := cdc.UnmarshalJSON([]byte(args[2]), &proof); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to unmarshall input into struct, checking for file...")
-				contents, err := ioutil.ReadFile(args[2])
-				if err != nil {
-					return fmt.Errorf("error opening proof file: %v", err)
-				}
-				if err := cdc.UnmarshalJSON(contents, &proof); err != nil {
-					return fmt.Errorf("error unmarshalling proof file: %v", err)
-				}
-			}
-
-			proofHeight, err := strconv.ParseInt(args[3], 10, 64)
+			channelProofBz, err := ioutil.ReadFile(args[2])
 			if err != nil {
 				return err
 			}
 
+			var channel types.ChannelResponse
+			if err := cdc.UnmarshalJSON(channelProofBz, &channel); err != nil {
+				return err
+			}
+
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelOpenAck(
-				portID, channelID, version, proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				portID, channelID, version, channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -197,9 +184,9 @@ func GetMsgChannelOpenAckCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetMsgChannelOpenConfirmCmd returns the command to create a MsgChannelOpenConfirm transaction
 func GetMsgChannelOpenConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "open-confirm [port-id] [channel-id] [/path/to/proof-ack.json] [proof-height]",
+		Use:   "open-confirm [port-id] [channel-id] [/path/to/proof-ack.json]",
 		Short: "Creates and sends a ChannelOpenConfirm message",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -207,25 +194,20 @@ func GetMsgChannelOpenConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comma
 			portID := args[0]
 			channelID := args[1]
 
-			var proof commitment.ProofI
-			if err := cdc.UnmarshalJSON([]byte(args[2]), &proof); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to unmarshall input into struct, checking for file...")
-				contents, err := ioutil.ReadFile(args[2])
-				if err != nil {
-					return fmt.Errorf("error opening proof file: %v", err)
-				}
-				if err := cdc.UnmarshalJSON(contents, &proof); err != nil {
-					return fmt.Errorf("error unmarshalling proof file: %v", err)
-				}
-			}
-
-			proofHeight, err := strconv.ParseInt(args[3], 10, 64)
+			channelProofBz, err := ioutil.ReadFile(args[2])
 			if err != nil {
 				return err
 			}
 
+			var channel types.ChannelResponse
+			if err := cdc.UnmarshalJSON(channelProofBz, &channel); err != nil {
+				return err
+			}
+
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelOpenConfirm(
-				portID, channelID, proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				portID, channelID, channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
@@ -262,9 +244,9 @@ func GetMsgChannelCloseInitCmd(storeKey string, cdc *codec.Codec) *cobra.Command
 // GetMsgChannelCloseConfirmCmd returns the command to create a MsgChannelCloseConfirm transaction
 func GetMsgChannelCloseConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "close-confirm [port-id] [channel-id] [/path/to/proof-init.json] [proof-height]",
+		Use:   "close-confirm [port-id] [channel-id] [/path/to/proof-init.json]",
 		Short: "Creates and sends a ChannelCloseConfirm message",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -272,25 +254,20 @@ func GetMsgChannelCloseConfirmCmd(storeKey string, cdc *codec.Codec) *cobra.Comm
 			portID := args[0]
 			channelID := args[1]
 
-			var proof commitment.ProofI
-			if err := cdc.UnmarshalJSON([]byte(args[2]), &proof); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to unmarshall input into struct, checking for file...")
-				contents, err := ioutil.ReadFile(args[2])
-				if err != nil {
-					return fmt.Errorf("error opening proof file: %v", err)
-				}
-				if err := cdc.UnmarshalJSON(contents, &proof); err != nil {
-					return fmt.Errorf("error unmarshalling proof file: %v", err)
-				}
-			}
-
-			proofHeight, err := strconv.ParseInt(args[3], 10, 64)
+			channelProofBz, err := ioutil.ReadFile(args[2])
 			if err != nil {
 				return err
 			}
 
+			var channel types.ChannelResponse
+			if err := cdc.UnmarshalJSON(channelProofBz, &channel); err != nil {
+				return err
+			}
+
+			proofHeight := channel.ProofHeight + 1
+
 			msg := types.NewMsgChannelCloseConfirm(
-				portID, channelID, proof, uint64(proofHeight), cliCtx.GetFromAddress(),
+				portID, channelID, channel.Proof, proofHeight, cliCtx.GetFromAddress(),
 			)
 			if err := msg.ValidateBasic(); err != nil {
 				return err
