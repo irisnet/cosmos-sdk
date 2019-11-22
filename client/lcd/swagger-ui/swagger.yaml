@@ -2053,7 +2053,12 @@ paths:
               client_id:
                 type: string
               consensus_state:
-                $ref: "#/definitions/ConsensusState"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/ConsensusState"
       responses:
         200:
           description: OK
@@ -2253,9 +2258,19 @@ paths:
                 items:
                   type: string
               proof_init:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_consensus:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_height:
                 type: integer
               consensus_height:
@@ -2292,9 +2307,19 @@ paths:
               base_req:
                 $ref: "#/definitions/BaseReq"
               proof_try:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_consensus:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_height:
                 type: integer
               consensus_height:
@@ -2335,7 +2360,12 @@ paths:
               base_req:
                 $ref: "#/definitions/BaseReq"
               proof_ack:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_height:
                 type: integer
       responses:
@@ -2457,7 +2487,12 @@ paths:
               counterparty_channel_id:
                 type: string
               proof_init:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_height:
                 type: integer
       responses:
@@ -2500,7 +2535,12 @@ paths:
               counterparty_version:
                 type: string
               proof_try:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_height:
                 type: integer
       responses:
@@ -2543,7 +2583,12 @@ paths:
               base_req:
                 $ref: "#/definitions/BaseReq"
               proof_ack:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_height:
                 type: integer
       responses:
@@ -2623,7 +2668,12 @@ paths:
               base_req:
                 $ref: "#/definitions/BaseReq"
               proof_init:
-                $ref: "#/definitions/Proof"
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    $ref: "#/definitions/Proof"
               proof_height:
                 type: integer
       responses:
@@ -2732,7 +2782,12 @@ paths:
               proofs:
                 type: array
                 items:
-                  $ref: "#/definitions/Proof"
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    value:
+                      $ref: "#/definitions/Proof"
               height:
                 type: integer
       responses:
@@ -3396,22 +3451,35 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/Coin"
+  IBCValidator:
+    type: object
+    properties:
+      address:
+        $ref: "#/definitions/ValidatorAddress"
+      pub_key:
+        type: object
+        properties:
+          type:
+            type: string
+          value:
+            type: string
+      voting_power:
+        type: string
+        example: "1000"
+      proposer_priority:
+        type: string
+        example: "1000"
   ConsensusState:
     type: object
     properties:
-      type:
+      chain_id:
         type: string
-      value:
-        type: object
-        properties:
-          chain_id:
-            type: string
-          height:
-            type: integer
-          root:
-            $ref: "#/definitions/Root"
-          next_validator_set:
-            $ref: "#/definitions/ValidatorSet"
+      height:
+        type: integer
+      root:
+        $ref: "#/definitions/Root"
+      next_validator_set:
+        $ref: "#/definitions/ValidatorSet"
   Root:
     type: object
     properties:
@@ -3438,9 +3506,9 @@ definitions:
       validators:
         type: array
         items:
-          $ref: "#/definitions/TendermintValidator"
+          $ref: "#/definitions/IBCValidator"
       proposer:
-        $ref: "#/definitions/TendermintValidator"
+        $ref: "#/definitions/IBCValidator"
   ClientState:
     type: object
     properties:
@@ -3451,25 +3519,20 @@ definitions:
   Proof:
     type: object
     properties:
-      type:
-        type: string
-      value:
+      proof:
         type: object
         properties:
-          proof:
-            type: object
-            properties:
-              ops:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-                    key:
-                      type: string
-                    data:
-                      type: string
+          ops:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                key:
+                  type: string
+                data:
+                  type: string
   Commit:
     type: object
     properties:
