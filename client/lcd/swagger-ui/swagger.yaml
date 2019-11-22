@@ -2486,6 +2486,8 @@ paths:
                 type: string
               counterparty_channel_id:
                 type: string
+              counterparty_version:
+                type: string
               proof_init:
                 type: object
                 properties:
