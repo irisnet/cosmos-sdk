@@ -2212,10 +2212,7 @@ paths:
               counterparty_connection_id:
                 type: string
               counterparty_prefix:
-                type: object
-                properties:
-                  key_prefix:
-                    type: string
+                $ref: "#/definitions/Prefix"
       responses:
         200:
           description: OK
@@ -2250,10 +2247,7 @@ paths:
               counterparty_connection_id:
                 type: string
               counterparty_prefix:
-                type: object
-                properties:
-                  key_prefix:
-                    type: string
+                $ref: "#/definitions/Prefix"
               counterparty_versions:
                 type: array
                 items:
@@ -3405,19 +3399,39 @@ definitions:
   ConsensusState:
     type: object
     properties:
-      chain_id:
+      type:
         type: string
-      height:
-        type: integer
-      root:
-        $ref: "#/definitions/Root"
-      next_validator_set:
-        $ref: "#/definitions/ValidatorSet"
+      value:
+        type: object
+        properties:
+          chain_id:
+            type: string
+          height:
+            type: integer
+          root:
+            $ref: "#/definitions/Root"
+          next_validator_set:
+            $ref: "#/definitions/ValidatorSet"
   Root:
     type: object
     properties:
-      hash:
+      type:
         type: string
+      value:
+        type: object
+        properties:
+          hash:
+            type: string
+  Prefix:
+    type: object
+    properties:
+      type:
+        type: string
+      value:
+        type: object
+        properties:
+          key_prefix:
+            type: string
   ValidatorSet:
     type: object
     properties:
@@ -3437,27 +3451,78 @@ definitions:
   Proof:
     type: object
     properties:
-      proof:
+      type:
+        type: string
+      value:
         type: object
         properties:
-          ops:
-            type: array
-            items:
-              type: object
-              properties:
-                type:
-                  type: string
-                key:
-                  type: string
-                data:
-                  type: string
+          proof:
+            type: object
+            properties:
+              ops:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    key:
+                      type: string
+                    data:
+                      type: string
+  Commit:
+    type: object
+    properties:
+      block_id:
+        $ref: "#/definitions/BlockID"
+      precommits:
+        type: array
+        items:
+          type: object
+          properties:
+            validator_address:
+              type: string
+            validator_index:
+              type: string
+              example: "0"
+            height:
+              type: string
+              example: "0"
+            round:
+              type: string
+              example: "0"
+            timestamp:
+              type: string
+              example: "2017-12-30T05:53:09.287+01:00"
+            type:
+              type: number
+              example: 2
+            block_id:
+              $ref: "#/definitions/BlockID"
+            signature:
+              type: string
+              example: "7uTC74QlknqYWEwg7Vn6M8Om7FuZ0EO4bjvuj6rwH1mTUJrRuMMZvAAqT9VjNgP0RA/TDp6u/92AqrZfXJSpBQ=="
+  SignedHeader:
+    type: object
+    properties:
+      header:
+        $ref: "#/definitions/BlockHeader"
+      commit:
+        $ref: "#/definitions/Commit"
   Header:
     type: object
     properties:
-      validator_set:
-        $ref: "#/definitions/ValidatorSet"
-      next_validator_set:
-        $ref: "#/definitions/ValidatorSet"
+      type:
+        type: string
+      value:
+        type: object
+        properties:
+          SignedHeader:
+            $ref: "#/definitions/SignedHeader"
+          validator_set:
+            $ref: "#/definitions/ValidatorSet"
+          next_validator_set:
+            $ref: "#/definitions/ValidatorSet"
   ConnectionResponse:
     type: object
     properties:
@@ -3552,29 +3617,44 @@ definitions:
         type: string
       channel_id:
         type: string
-  Evidence:
-    type: object
-    properties:
-      chain_id:
-        type: string
-      val_power:
-        type: integer
-      total_power:
-        type: integer
   Packet:
     type: object
     properties:
-      sequence:
-        type: integer
-      timeout:
-        type: integer
-      source_port:
+      type:
         type: string
-      source_channel:
+      value:
+        type: object
+        properties:
+          sequence:
+            type: integer
+          timeout:
+            type: integer
+          source_port:
+            type: string
+          source_channel:
+            type: string
+          destination_port:
+            type: string
+          destination_channel:
+            type: string
+          data:
+            type: string
+  # TODO: DuplicateVoteEvidence
+  DuplicateVoteEvidence:
+    type: string
+  Evidence:
+    type: object
+    properties:
+      type:
         type: string
-      destination_port:
-        type: string
-      destination_channel:
-        type: string
-      data:
-        type: string
+      value:
+        type: object
+        properties:
+          DuplicateVoteEvidence:
+            $ref: "#/definitions/DuplicateVoteEvidence"
+          chain_id:
+            type: string
+          val_power:
+            type: integer
+          total_power:
+            type: integer
