@@ -16,15 +16,15 @@ type PacketData struct {
 }
 
 func (pd PacketData) MarshalAmino() ([]byte, error) {
-	return ModuleCdc.MarshalBinaryBare(pd)
+	return SubModuleCdc.MarshalBinaryBare(pd)
 }
 
 func (pd *PacketData) UnmarshalAmino(bz []byte) (err error) {
-	return ModuleCdc.UnmarshalBinaryBare(bz, pd)
+	return SubModuleCdc.UnmarshalBinaryBare(bz, pd)
 }
 
 func (pd PacketData) Marshal() []byte {
-	return ModuleCdc.MustMarshalBinaryBare(pd)
+	return SubModuleCdc.MustMarshalBinaryBare(pd)
 }
 
 type PacketDataAlias PacketData

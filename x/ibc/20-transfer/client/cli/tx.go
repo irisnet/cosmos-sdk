@@ -37,10 +37,10 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 		Use:   "transfer",
 		Short: "IBC fungible token transfer transaction subcommands",
 	}
-	txCmd.AddCommand(
+	txCmd.AddCommand(client.PostCommands(
 		GetTransferTxCmd(cdc),
-		GetMsgRecvPacketCmd(cdc),
-	)
+		// GetMsgRecvPacketCmd(cdc),
+	)...)
 
 	return txCmd
 }
@@ -53,7 +53,7 @@ func GetTransferTxCmd(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
-			ctx := context.NewCLIContext().WithCodec(cdc).WithBroadcastMode(flags.BroadcastBlock)
+			ctx := context.NewCLIContext().WithCodec(cdc)
 
 			sender := ctx.GetFromAddress()
 			srcPort := args[0]
@@ -80,7 +80,7 @@ func GetTransferTxCmd(cdc *codec.Codec) *cobra.Command {
 		},
 	}
 	cmd.Flags().Bool(FlagSource, false, "Pass flag for sending token from the source chain")
-	cmd.Flags().String(flags.FlagFrom, "", "key in local keystore to send from")
+	// cmd.Flags().String(flags.FlagFrom, "", "key in local keystore to send from")
 	return cmd
 }
 
@@ -92,7 +92,7 @@ func GetMsgRecvPacketCmd(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
-			cliCtx := context.NewCLIContext().WithCodec(cdc).WithBroadcastMode(flags.BroadcastBlock)
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
 			node2 := viper.GetString(FlagNode2)
 			cid1 := viper.GetString(flags.FlagChainID)
