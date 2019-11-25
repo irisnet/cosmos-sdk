@@ -2392,11 +2392,11 @@ paths:
           type: string
           x-example: ibcmoduleport
         - in: path
-          name: connection-id
-          description: Connection ID
+          name: channel-id
+          description: Channel ID
           required: true
           type: string
-          x-example: ibcconnectionid
+          x-example: ibcchannelid
         - in: query
           name: prove
           description: Proof of result
@@ -2687,7 +2687,7 @@ paths:
           description: Invalid port id or channel id
         500:
           description: Internal Server Error
-  /ibc/ports/{port-id}/channels/{channel-id}/next-sequence-revc:
+  /ibc/ports/{port-id}/channels/{channel-id}/next-sequence-recv:
     get:
       summary: Query next sequence receive
       tags:
@@ -2716,7 +2716,7 @@ paths:
           description: Invalid port id or channel id
         500:
           description: Internal Server Error
-  /ibc/ibc/ports/{port-id}/channels/{channel-id}/transfer:
+  /ibc/ports/{port-id}/channels/{channel-id}/transfer:
     post:
       summary: Transfer token
       consumes:
@@ -2747,7 +2747,9 @@ paths:
               base_req:
                 $ref: "#/definitions/BaseReq"
               amount:
-                $ref: "#/definitions/Coin"
+                type: array
+                items:
+                  $ref: "#/definitions/Coin"
               receiver:
                 type: string
               source:
@@ -2784,12 +2786,7 @@ paths:
               proofs:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-                    value:
-                      $ref: "#/definitions/Proof"
+                  $ref: "#/definitions/Proof"
               height:
                 type: integer
       responses:
