@@ -136,8 +136,15 @@ func queryRootHandlerFn(cliCtx context.CLIContext, queryRoute string) http.Handl
 			return
 		}
 
+		var root commitment.Root
+		if err := cliCtx.Codec.UnmarshalJSON(res.Value, &root); err != nil {
+			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		rootRes := types.NewRootResponse(clientID, height, root, res.Proof, res.Height)
+
 		cliCtx = cliCtx.WithHeight(res.Height)
-		rest.PostProcessResponse(w, cliCtx, res)
+		rest.PostProcessResponse(w, cliCtx, rootRes)
 	}
 }
 
