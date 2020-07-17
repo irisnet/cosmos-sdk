@@ -2,102 +2,116 @@ package rest
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/crypto/keys"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/types/rest"
+	authclient "github.com/cosmos/cosmos-sdk/x/auth/client"
+	"github.com/cosmos/cosmos-sdk/x/slashing/types"
 )
 
-func registerTxRoutes(ctx context.CoreContext, r *mux.Router, cdc *wire.Codec, kb keys.Keybase) {
+func registerTxHandlers(clientCtx client.Context, r *mux.Router) {
+	r.HandleFunc("/slashing/validators/{validatorAddr}/unjail", NewUnjailRequestHandlerFn(clientCtx)).Methods("POST")
+}
+
+// Unjail TX body
+type UnjailReq struct {
+	BaseReq rest.BaseReq `json:"base_req" yaml:"base_req"`
+}
+
+// NewUnjailRequestHandlerFn returns an HTTP REST handler for creating a MsgUnjail
+// transaction.
+func NewUnjailRequestHandlerFn(clientCtx client.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		bech32Validator := vars["validatorAddr"]
+
+		var req UnjailReq
+		if !rest.ReadRESTReq(w, r, clientCtx.JSONMarshaler, &req) {
+			return
+		}
+
+		req.BaseReq = req.BaseReq.Sanitize()
+		if !req.BaseReq.ValidateBasic(w) {
+			return
+		}
+
+		fromAddr, err := sdk.AccAddressFromBech32(req.BaseReq.From)
+		if rest.CheckBadRequestError(w, err) {
+			return
+		}
+
+		valAddr, err := sdk.ValAddressFromBech32(bech32Validator)
+		if rest.CheckInternalServerError(w, err) {
+			return
+		}
+
+		if !bytes.Equal(fromAddr, valAddr) {
+			rest.WriteErrorResponse(w, http.StatusUnauthorized, "must use own validator address")
+			return
+		}
+
+		msg := types.NewMsgUnjail(valAddr)
+		if rest.CheckBadRequestError(w, msg.ValidateBasic()) {
+			return
+		}
+		tx.WriteGeneratedTxResponse(clientCtx, w, req.BaseReq, msg)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Deprecated
+//
+// TODO: Remove once client-side Protobuf migration has been completed.
+// ---------------------------------------------------------------------------
+// ref: https://github.com/cosmos/cosmos-sdk/issues/5864
+func registerTxRoutes(clientCtx client.Context, r *mux.Router) {
 	r.HandleFunc(
-		"/slashing/unrevoke",
-		unrevokeRequestHandlerFn(cdc, kb, ctx),
+		"/slashing/validators/{validatorAddr}/unjail",
+		unjailRequestHandlerFn(clientCtx),
 	).Methods("POST")
 }
 
-// Unrevoke TX body
-type UnrevokeBody struct {
-	LocalAccountName string `json:"name"`
-	Password         string `json:"password"`
-	ChainID          string `json:"chain_id"`
-	AccountNumber    int64  `json:"account_number"`
-	Sequence         int64  `json:"sequence"`
-	Gas              int64  `json:"gas"`
-	ValidatorAddr    string `json:"validator_addr"`
-}
-
-func unrevokeRequestHandlerFn(cdc *wire.Codec, kb keys.Keybase, ctx context.CoreContext) http.HandlerFunc {
+func unjailRequestHandlerFn(clientCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var m UnrevokeBody
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		err = json.Unmarshal(body, &m)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+		vars := mux.Vars(r)
+
+		bech32validator := vars["validatorAddr"]
+
+		var req UnjailReq
+		if !rest.ReadRESTReq(w, r, clientCtx.Codec, &req) {
 			return
 		}
 
-		info, err := kb.Get(m.LocalAccountName)
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(err.Error()))
+		req.BaseReq = req.BaseReq.Sanitize()
+		if !req.BaseReq.ValidateBasic(w) {
 			return
 		}
 
-		validatorAddr, err := sdk.AccAddressFromBech32(m.ValidatorAddr)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("Couldn't decode validator. Error: %s", err.Error())))
+		valAddr, err := sdk.ValAddressFromBech32(bech32validator)
+		if rest.CheckInternalServerError(w, err) {
 			return
 		}
 
-		if !bytes.Equal(info.GetPubKey().Address(), validatorAddr) {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Must use own validator address"))
+		fromAddr, err := sdk.AccAddressFromBech32(req.BaseReq.From)
+		if rest.CheckBadRequestError(w, err) {
 			return
 		}
 
-		ctx = ctx.WithGas(m.Gas)
-		ctx = ctx.WithChainID(m.ChainID)
-		ctx = ctx.WithAccountNumber(m.AccountNumber)
-		ctx = ctx.WithSequence(m.Sequence)
-
-		msg := slashing.NewMsgUnrevoke(validatorAddr)
-
-		txBytes, err := ctx.SignAndBuild(m.LocalAccountName, m.Password, []sdk.Msg{msg}, cdc)
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(err.Error()))
+		if !bytes.Equal(fromAddr, valAddr) {
+			rest.WriteErrorResponse(w, http.StatusUnauthorized, "must use own validator address")
 			return
 		}
 
-		res, err := ctx.BroadcastTx(txBytes)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+		msg := types.NewMsgUnjail(valAddr)
+		if rest.CheckBadRequestError(w, msg.ValidateBasic()) {
 			return
 		}
 
-		output, err := json.MarshalIndent(res, "", "  ")
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-
-		w.Write(output)
+		authclient.WriteGenerateStdTxResponse(w, clientCtx, req.BaseReq, []sdk.Msg{msg})
 	}
 }

@@ -1,162 +1,130 @@
 package gov
 
 import (
+	"fmt"
+	"strconv"
+
+	"github.com/armon/go-metrics"
+
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	"github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
-// Handle all "gov" type messages.
-func NewHandler(keeper Keeper) sdk.Handler {
-	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
+// NewHandler creates an sdk.Handler for all the gov type messages
+func NewHandler(keeper keeper.Keeper) sdk.Handler {
+	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+		ctx = ctx.WithEventManager(sdk.NewEventManager())
+
 		switch msg := msg.(type) {
-		case MsgDeposit:
+		case *types.MsgDeposit:
 			return handleMsgDeposit(ctx, keeper, msg)
-		case MsgSubmitProposal:
+
+		case types.MsgSubmitProposalI:
 			return handleMsgSubmitProposal(ctx, keeper, msg)
-		case MsgVote:
+
+		case *types.MsgVote:
 			return handleMsgVote(ctx, keeper, msg)
+
 		default:
-			errMsg := "Unrecognized gov msg type"
-			return sdk.ErrUnknownRequest(errMsg).Result()
+			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized %s message type: %T", types.ModuleName, msg)
 		}
 	}
 }
 
-func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg MsgSubmitProposal) sdk.Result {
-
-	proposal := keeper.NewTextProposal(ctx, msg.Title, msg.Description, msg.ProposalType)
-
-	err, votingStarted := keeper.AddDeposit(ctx, proposal.GetProposalID(), msg.Proposer, msg.InitialDeposit)
+func handleMsgSubmitProposal(ctx sdk.Context, keeper keeper.Keeper, msg types.MsgSubmitProposalI) (*sdk.Result, error) {
+	proposal, err := keeper.SubmitProposal(ctx, msg.GetContent())
 	if err != nil {
-		return err.Result()
+		return nil, err
 	}
 
-	proposalIDBytes := keeper.cdc.MustMarshalBinaryBare(proposal.GetProposalID())
+	defer telemetry.IncrCounter(1, types.ModuleName, "proposal")
 
-	tags := sdk.NewTags(
-		"action", []byte("submitProposal"),
-		"proposer", []byte(msg.Proposer.String()),
-		"proposalId", proposalIDBytes,
+	votingStarted, err := keeper.AddDeposit(ctx, proposal.ProposalID, msg.GetProposer(), msg.GetInitialDeposit())
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.GetProposer().String()),
+		),
+	)
+
+	submitEvent := sdk.NewEvent(types.EventTypeSubmitProposal, sdk.NewAttribute(types.AttributeKeyProposalType, msg.GetContent().ProposalType()))
+	if votingStarted {
+		submitEvent = submitEvent.AppendAttributes(
+			sdk.NewAttribute(types.AttributeKeyVotingPeriodStart, fmt.Sprintf("%d", proposal.ProposalID)),
+		)
+	}
+
+	ctx.EventManager().EmitEvent(submitEvent)
+
+	return &sdk.Result{
+		Data:   types.GetProposalIDBytes(proposal.ProposalID),
+		Events: ctx.EventManager().ABCIEvents(),
+	}, nil
+}
+
+func handleMsgDeposit(ctx sdk.Context, keeper keeper.Keeper, msg *types.MsgDeposit) (*sdk.Result, error) {
+	votingStarted, err := keeper.AddDeposit(ctx, msg.ProposalID, msg.Depositor, msg.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	defer telemetry.IncrCounterWithLabels(
+		[]string{types.ModuleName, "deposit"},
+		1,
+		[]metrics.Label{
+			telemetry.NewLabel("proposal_id", strconv.Itoa(int(msg.ProposalID))),
+		},
+	)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Depositor.String()),
+		),
 	)
 
 	if votingStarted {
-		tags.AppendTag("votingPeriodStart", proposalIDBytes)
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				types.EventTypeProposalDeposit,
+				sdk.NewAttribute(types.AttributeKeyVotingPeriodStart, fmt.Sprintf("%d", msg.ProposalID)),
+			),
+		)
 	}
 
-	return sdk.Result{
-		Data: proposalIDBytes,
-		Tags: tags,
-	}
+	return &sdk.Result{Events: ctx.EventManager().ABCIEvents()}, nil
 }
 
-func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg MsgDeposit) sdk.Result {
-
-	err, votingStarted := keeper.AddDeposit(ctx, msg.ProposalID, msg.Depositer, msg.Amount)
-	if err != nil {
-		return err.Result()
-	}
-
-	proposalIDBytes := keeper.cdc.MustMarshalBinaryBare(msg.ProposalID)
-
-	// TODO: Add tag for if voting period started
-	tags := sdk.NewTags(
-		"action", []byte("deposit"),
-		"depositer", []byte(msg.Depositer.String()),
-		"proposalId", proposalIDBytes,
-	)
-
-	if votingStarted {
-		tags.AppendTag("votingPeriodStart", proposalIDBytes)
-	}
-
-	return sdk.Result{
-		Tags: tags,
-	}
-}
-
-func handleMsgVote(ctx sdk.Context, keeper Keeper, msg MsgVote) sdk.Result {
-
+func handleMsgVote(ctx sdk.Context, keeper keeper.Keeper, msg *types.MsgVote) (*sdk.Result, error) {
 	err := keeper.AddVote(ctx, msg.ProposalID, msg.Voter, msg.Option)
 	if err != nil {
-		return err.Result()
+		return nil, err
 	}
 
-	proposalIDBytes := keeper.cdc.MustMarshalBinaryBare(msg.ProposalID)
-
-	tags := sdk.NewTags(
-		"action", []byte("vote"),
-		"voter", []byte(msg.Voter.String()),
-		"proposalId", proposalIDBytes,
+	defer telemetry.IncrCounterWithLabels(
+		[]string{types.ModuleName, "vote"},
+		1,
+		[]metrics.Label{
+			telemetry.NewLabel("proposal_id", strconv.Itoa(int(msg.ProposalID))),
+		},
 	)
-	return sdk.Result{
-		Tags: tags,
-	}
-}
 
-// Called every block, process inflation, update validator set
-func EndBlocker(ctx sdk.Context, keeper Keeper) (tags sdk.Tags, nonVotingVals []sdk.AccAddress) {
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Voter.String()),
+		),
+	)
 
-	tags = sdk.NewTags()
-
-	// Delete proposals that haven't met minDeposit
-	for shouldPopInactiveProposalQueue(ctx, keeper) {
-		inactiveProposal := keeper.InactiveProposalQueuePop(ctx)
-		if inactiveProposal.GetStatus() == StatusDepositPeriod {
-			proposalIDBytes := keeper.cdc.MustMarshalBinaryBare(inactiveProposal.GetProposalID())
-			keeper.DeleteProposal(ctx, inactiveProposal)
-			tags.AppendTag("action", []byte("proposalDropped"))
-			tags.AppendTag("proposalId", proposalIDBytes)
-		}
-	}
-
-	var passes bool
-
-	// Check if earliest Active Proposal ended voting period yet
-	for shouldPopActiveProposalQueue(ctx, keeper) {
-		activeProposal := keeper.ActiveProposalQueuePop(ctx)
-
-		if ctx.BlockHeight() >= activeProposal.GetVotingStartBlock()+keeper.GetVotingProcedure().VotingPeriod {
-			passes, nonVotingVals = tally(ctx, keeper, activeProposal)
-			proposalIDBytes := keeper.cdc.MustMarshalBinaryBare(activeProposal.GetProposalID())
-			if passes {
-				keeper.RefundDeposits(ctx, activeProposal.GetProposalID())
-				activeProposal.SetStatus(StatusPassed)
-				tags.AppendTag("action", []byte("proposalPassed"))
-				tags.AppendTag("proposalId", proposalIDBytes)
-			} else {
-				keeper.DeleteDeposits(ctx, activeProposal.GetProposalID())
-				activeProposal.SetStatus(StatusRejected)
-				tags.AppendTag("action", []byte("proposalRejected"))
-				tags.AppendTag("proposalId", proposalIDBytes)
-			}
-
-			keeper.SetProposal(ctx, activeProposal)
-		}
-	}
-
-	return tags, nonVotingVals
-}
-func shouldPopInactiveProposalQueue(ctx sdk.Context, keeper Keeper) bool {
-	depositProcedure := keeper.GetDepositProcedure()
-	peekProposal := keeper.InactiveProposalQueuePeek(ctx)
-
-	if peekProposal == nil {
-		return false
-	} else if peekProposal.GetStatus() != StatusDepositPeriod {
-		return true
-	} else if ctx.BlockHeight() >= peekProposal.GetSubmitBlock()+depositProcedure.MaxDepositPeriod {
-		return true
-	}
-	return false
-}
-
-func shouldPopActiveProposalQueue(ctx sdk.Context, keeper Keeper) bool {
-	votingProcedure := keeper.GetVotingProcedure()
-	peekProposal := keeper.ActiveProposalQueuePeek(ctx)
-
-	if peekProposal == nil {
-		return false
-	} else if ctx.BlockHeight() >= peekProposal.GetVotingStartBlock()+votingProcedure.VotingPeriod {
-		return true
-	}
-	return false
+	return &sdk.Result{Events: ctx.EventManager().ABCIEvents()}, nil
 }

@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/stretchr/testify/require"
+
+	"github.com/cosmos/cosmos-sdk/codec"
 )
 
 func TestInsertKeyJSON(t *testing.T) {
-	cdc := wire.NewCodec()
+	cdc := codec.New()
 
 	foo := map[string]string{"foo": "foofoo"}
 	bar := map[string]string{"barInner": "barbar"}

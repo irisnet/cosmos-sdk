@@ -1,27 +1,26 @@
-# Cosmos Hub Spec
+---
+parent:
+  order: false
+---
 
-This directory contains specifications for the state transition machine of the
-Cosmos Hub. 
+# Specifications
 
-The Cosmos Hub holds all of its state in a Merkle store. Updates to
+This directory contains specifications for the modules of the Cosmos SDK as well as Interchain Standards (ICS) and other specifications.
+
+SDK applications hold this state in a Merkle store. Updates to
 the store may be made during transactions and at the beginning and end of every
 block.
 
-While the first implementation of the Cosmos Hub is built using the Cosmos-SDK,
-these specifications aim to be independent of any implementation details. That
-said, they provide a detailed resource for understanding the Cosmos-SDK.
+## SDK specifications
 
-- [Store](store) - The core Merkle store that holds the state.
-- [Auth](auth) - The structure and authentication of accounts and transactions.
-- [Bank](bank) - Sending tokens.
-- [Governance](governance) - Proposals and voting.
-- [Staking](staking) - Proof-of-stake bonding, delegation, etc.
-- [Slashing](slashing) - Validator punishment mechanisms.
-- [Provisioning](provisioning) - Fee distribution, and atom provision distribution 
-- [IBC](ibc) - Inter-Blockchain Communication (IBC) protocol.
-- [Other](other) - Other components of the Cosmos Hub, including the reserve 
-  pool, All in Bits vesting, etc.
+- [Store](./store) - The core Merkle store that holds the state.
+- [Bech32](./addresses/bech32.md) - Address format for Cosmos SDK applications.
+
+## Modules specifications
+
+Go the [module directory](../../x/README.md)
+
+## Tendermint
 
 For details on the underlying blockchain and p2p protocols, see
-the [Tendermint specification](https://github.com/tendermint/tendermint/tree/develop/docs/spec).
-
+the [Tendermint specification](https://github.com/tendermint/spec/tree/master/spec).

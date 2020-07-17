@@ -1,11 +1,20 @@
 # Simple usage with a mounted data directory:
-# > docker build -t gaia .
-# > docker run -it -p 46657:46657 -p 46656:46656 -v ~/.gaiad:/root/.gaiad -v ~/.gaiacli:/root/.gaiacli gaia gaiad init
-# > docker run -it -p 46657:46657 -p 46656:46656 -v ~/.gaiad:/root/.gaiad -v ~/.gaiacli:/root/.gaiacli gaia gaiad start
+# > docker build -t simapp .
+#
+# Server:
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.simapp:/root/.simapp simapp simd init test-chain
+# TODO: need to set validator in genesis so start runs
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.simapp:/root/.simapp simapp simd start
+#
+# Client: (Note the simapp binary always looks at ~/.simapp we can bind to different local storage)
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.simappcli:/root/.simapp simapp simd keys add foo
+# > docker run -it -p 26657:26657 -p 26656:26656 -v ~/.simappcli:/root/.simapp simapp simd keys list
+# TODO: demo connecting rest-server (or is this in server now?)
 FROM golang:alpine AS build-env
 
-# Set up dependencies
-ENV PACKAGES make git libc-dev bash gcc linux-headers eudev-dev
+# Install minimum necessary dependencies,
+ENV PACKAGES curl make git libc-dev bash gcc linux-headers eudev-dev python3
+RUN apk add --no-cache $PACKAGES
 
 # Set working directory for the build
 WORKDIR /go/src/github.com/cosmos/cosmos-sdk
@@ -13,12 +22,12 @@ WORKDIR /go/src/github.com/cosmos/cosmos-sdk
 # Add source files
 COPY . .
 
-# Install minimum necessary dependencies, build Cosmos SDK, remove packages
-RUN apk add --no-cache $PACKAGES && \
-    make get_tools && \
-    make get_vendor_deps && \
-    make build && \
-    make install
+# build Cosmos SDK, remove packages
+RUN make tools && \
+    make build-simd && \
+    cp ./build/sim* /go/bin
+# make build-sim-linux ??
+
 
 # Final image
 FROM alpine:edge
@@ -28,8 +37,9 @@ RUN apk add --update ca-certificates
 WORKDIR /root
 
 # Copy over binaries from the build-env
-COPY --from=build-env /go/bin/gaiad /usr/bin/gaiad
-COPY --from=build-env /go/bin/gaiacli /usr/bin/gaiacli
+COPY --from=build-env /go/bin/simd /usr/bin/simd
 
-# Run gaiad by default, omit entrypoint to ease using container with gaiacli
-CMD ["gaiad"]
+EXPOSE 26656 26657 1317
+
+# Run simd by default, omit entrypoint to ease using container with simcli
+CMD ["simd"]

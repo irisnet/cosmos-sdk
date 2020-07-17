@@ -1,69 +1,54 @@
 package keys
 
 import (
-	"encoding/json"
-	"net/http"
-
 	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// CMD
+const flagListNames = "list-names"
 
-// listKeysCmd represents the list command
-var listKeysCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all keys",
-	Long: `Return a list of all public keys stored by this key manager
+// ListKeysCmd lists all keys in the key store.
+func ListKeysCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all keys",
+		Long: `Return a list of all public keys stored by this key manager
 along with their associated name and address.`,
-	RunE: runListCmd,
+		RunE: runListCmd,
+	}
+
+	cmd.Flags().BoolP(flagListNames, "n", false, "List names only")
+	return cmd
 }
 
-func runListCmd(cmd *cobra.Command, args []string) error {
-	kb, err := GetKeyBase()
+func runListCmd(cmd *cobra.Command, _ []string) error {
+	backend, _ := cmd.Flags().GetString(flags.FlagKeyringBackend)
+	homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
+	kb, err := keyring.New(sdk.KeyringServiceName(), backend, homeDir, cmd.InOrStdin())
 	if err != nil {
 		return err
 	}
 
 	infos, err := kb.List()
-	if err == nil {
-		printInfos(infos)
+	if err != nil {
+		return err
 	}
-	return err
-}
 
-/////////////////////////
-// REST
+	cmd.SetOut(cmd.OutOrStdout())
 
-// query key list REST handler
-func QueryKeysRequestHandler(w http.ResponseWriter, r *http.Request) {
-	kb, err := GetKeyBase()
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-		return
+	if ok, _ := cmd.Flags().GetBool(flagListNames); !ok {
+		output, _ := cmd.Flags().GetString(cli.OutputFlag)
+		printInfos(cmd.OutOrStdout(), infos, output)
+		return nil
 	}
-	infos, err := kb.List()
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-		return
+
+	for _, info := range infos {
+		cmd.Println(info.GetName())
 	}
-	// an empty list will be JSONized as null, but we want to keep the empty list
-	if len(infos) == 0 {
-		w.Write([]byte("[]"))
-		return
-	}
-	keysOutput, err := Bech32KeysOutput(infos)
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	output, err := json.MarshalIndent(keysOutput, "", "  ")
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	w.Write(output)
+
+	return nil
 }

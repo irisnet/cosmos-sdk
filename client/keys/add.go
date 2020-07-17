@@ -1,260 +1,334 @@
 package keys
 
 import (
-	"encoding/json"
+	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"sort"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
+	bip39 "github.com/cosmos/go-bip39"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
-	ccrypto "github.com/cosmos/cosmos-sdk/crypto"
-	"github.com/cosmos/cosmos-sdk/crypto/keys"
-
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/input"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
-	flagType     = "type"
-	flagRecover  = "recover"
-	flagNoBackup = "no-backup"
-	flagDryRun   = "dry-run"
-	flagAccount  = "account"
-	flagIndex    = "index"
+	flagInteractive = "interactive"
+	flagRecover     = "recover"
+	flagNoBackup    = "no-backup"
+	flagCoinType    = "coin-type"
+	flagAccount     = "account"
+	flagIndex       = "index"
+	flagMultisig    = "multisig"
+	flagNoSort      = "nosort"
+	flagHDPath      = "hd-path"
+	flagKeyAlgo     = "algo"
+
+	// DefaultKeyPass contains the default key password for genesis transactions
+	DefaultKeyPass = "12345678"
 )
 
-func addKeyCommand() *cobra.Command {
+// AddKeyCommand defines a keys command to add a generated or recovered private key to keybase.
+func AddKeyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add <name>",
-		Short: "Create a new key, or import from seed",
-		Long: `Add a public/private key pair to the key store.
-If you select --seed/-s you can recover a key from the seed
-phrase, otherwise, a new key will be generated.`,
+		Short: "Add an encrypted private key (either newly generated or recovered), encrypt it, and save to disk",
+		Long: `Derive a new private key and encrypt to disk.
+Optionally specify a BIP39 mnemonic, a BIP39 passphrase to further secure the mnemonic,
+and a bip32 HD path to derive a specific account. The key will be stored under the given name
+and encrypted with the given password. The only input that is required is the encryption password.
+
+If run with -i, it will prompt the user for BIP44 path, BIP39 mnemonic, and passphrase.
+The flag --recover allows one to recover a key from a seed passphrase.
+If run with --dry-run, a key would be generated (or recovered) but not stored to the
+local keystore.
+Use the --pubkey flag to add arbitrary public keys to the keystore for constructing
+multisig transactions.
+
+You can add a multisig key by passing the list of key names you want the public
+key to be composed of to the --multisig flag and the minimum number of signatures
+required through --multisig-threshold. The keys are sorted by address, unless
+the flag --nosort is set.
+`,
+		Args: cobra.ExactArgs(1),
 		RunE: runAddCmd,
 	}
-	cmd.Flags().StringP(flagType, "t", "secp256k1", "Type of private key (secp256k1|ed25519)")
-	cmd.Flags().Bool(client.FlagUseLedger, false, "Store a local reference to a private key on a Ledger device")
+
+	cmd.Flags().StringSlice(flagMultisig, nil, "Construct and store a multisig public key (implies --pubkey)")
+	cmd.Flags().Int(flagMultiSigThreshold, 1, "K out of N required signatures. For use in conjunction with --multisig")
+	cmd.Flags().Bool(flagNoSort, false, "Keys passed to --multisig are taken in the order they're supplied")
+	cmd.Flags().String(FlagPublicKey, "", "Parse a public key in bech32 format and save it to disk")
+	cmd.Flags().BoolP(flagInteractive, "i", false, "Interactively prompt user for BIP39 passphrase and mnemonic")
+	cmd.Flags().Bool(flags.FlagUseLedger, false, "Store a local reference to a private key on a Ledger device")
 	cmd.Flags().Bool(flagRecover, false, "Provide seed phrase to recover existing key instead of creating")
 	cmd.Flags().Bool(flagNoBackup, false, "Don't print out seed phrase (if others are watching the terminal)")
-	cmd.Flags().Bool(flagDryRun, false, "Perform action, but don't add key to local keystore")
+	cmd.Flags().Bool(flags.FlagDryRun, false, "Perform action, but don't add key to local keystore")
+	cmd.Flags().String(flagHDPath, "", "Manual HD Path derivation (overrides BIP44 config)")
+	cmd.Flags().Uint32(flagCoinType, sdk.GetConfig().GetCoinType(), "coin type number for HD derivation")
 	cmd.Flags().Uint32(flagAccount, 0, "Account number for HD derivation")
-	cmd.Flags().Uint32(flagIndex, 0, "Index number for HD derivation")
+	cmd.Flags().Uint32(flagIndex, 0, "Address index number for HD derivation")
+	cmd.Flags().String(flagKeyAlgo, string(hd.Secp256k1Type), "Key signing algorithm to generate keys for")
+
+	cmd.SetOut(cmd.OutOrStdout())
+	cmd.SetErr(cmd.ErrOrStderr())
+
 	return cmd
 }
 
-// nolint: gocyclo
-// TODO remove the above when addressing #1446
 func runAddCmd(cmd *cobra.Command, args []string) error {
-	var kb keys.Keybase
-	var err error
-	var name, pass string
+	buf := bufio.NewReader(cmd.InOrStdin())
 
-	buf := client.BufferStdin()
-	if viper.GetBool(flagDryRun) {
-		// we throw this away, so don't enforce args,
-		// we want to get a new random seed phrase quickly
-		kb = client.MockKeyBase()
-		pass = "throwing-this-key-away"
-		name = "inmemorykey"
+	homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
+	dryRun, _ := cmd.Flags().GetBool(flags.FlagHome)
+
+	var (
+		kr  keyring.Keyring
+		err error
+	)
+
+	if dryRun {
+		kr, err = keyring.New(sdk.KeyringServiceName(), keyring.BackendMemory, homeDir, buf)
 	} else {
-		if len(args) != 1 || len(args[0]) == 0 {
-			return errors.New("you must provide a name for the key")
+		backend, _ := cmd.Flags().GetString(flags.FlagKeyringBackend)
+		kr, err = keyring.New(sdk.KeyringServiceName(), backend, homeDir, buf)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return RunAddCmd(cmd, args, kr, buf)
+}
+
+/*
+input
+	- bip39 mnemonic
+	- bip39 passphrase
+	- bip44 path
+	- local encryption password
+output
+	- armor encrypted private key (saved to file)
+*/
+func RunAddCmd(cmd *cobra.Command, args []string, kb keyring.Keyring, inBuf *bufio.Reader) error {
+	var err error
+
+	name := args[0]
+	interactive, _ := cmd.Flags().GetBool(flagInteractive)
+	noBackup, _ := cmd.Flags().GetBool(flagNoBackup)
+	showMnemonic := !noBackup
+
+	keyringAlgos, _ := kb.SupportedAlgorithms()
+	algoStr, _ := cmd.Flags().GetString(flagKeyAlgo)
+	algo, err := keyring.NewSigningAlgoFromString(algoStr, keyringAlgos)
+	if err != nil {
+		return err
+	}
+
+	if dryRun, _ := cmd.Flags().GetBool(flags.FlagDryRun); !dryRun {
+		_, err = kb.Key(name)
+		if err == nil {
+			// account exists, ask for user confirmation
+			response, err2 := input.GetConfirmation(fmt.Sprintf("override the existing name %s", name), inBuf, cmd.ErrOrStderr())
+			if err2 != nil {
+				return err2
+			}
+
+			if !response {
+				return errors.New("aborted")
+			}
+
+			err2 = kb.Delete(name)
+			if err2 != nil {
+				return err2
+			}
 		}
-		name = args[0]
-		kb, err = GetKeyBase()
+
+		multisigKeys, _ := cmd.Flags().GetStringSlice(flagMultisig)
+		if len(multisigKeys) != 0 {
+			var pks []crypto.PubKey
+
+			multisigThreshold, _ := cmd.Flags().GetInt(flagMultiSigThreshold)
+			if err := validateMultisigThreshold(multisigThreshold, len(multisigKeys)); err != nil {
+				return err
+			}
+
+			for _, keyname := range multisigKeys {
+				k, err := kb.Key(keyname)
+				if err != nil {
+					return err
+				}
+
+				pks = append(pks, k.GetPubKey())
+			}
+
+			if noSort, _ := cmd.Flags().GetBool(flagNoSort); !noSort {
+				sort.Slice(pks, func(i, j int) bool {
+					return bytes.Compare(pks[i].Address(), pks[j].Address()) < 0
+				})
+			}
+
+			pk := multisig.NewPubKeyMultisigThreshold(multisigThreshold, pks)
+			if _, err := kb.SaveMultisig(name, pk); err != nil {
+				return err
+			}
+
+			cmd.PrintErrf("Key %q saved to disk.\n", name)
+			return nil
+		}
+	}
+
+	pubKey, _ := cmd.Flags().GetString(FlagPublicKey)
+	if pubKey != "" {
+		pk, err := sdk.GetPubKeyFromBech32(sdk.Bech32PubKeyTypeAccPub, pubKey)
 		if err != nil {
 			return err
 		}
 
-		_, err := kb.Get(name)
-		if err == nil {
-			// account exists, ask for user confirmation
-			if response, err := client.GetConfirmation(
-				fmt.Sprintf("override the existing name %s", name), buf); err != nil || !response {
-				return err
-			}
+		if _, err := kb.SavePubKey(name, pk, algo.Name()); err != nil {
+			return err
 		}
 
-		// ask for a password when generating a local key
-		if !viper.GetBool(client.FlagUseLedger) {
-			pass, err = client.GetCheckPassword(
-				"Enter a passphrase for your key:",
-				"Repeat the passphrase:", buf)
+		return nil
+	}
+
+	coinType, _ := cmd.Flags().GetUint32(flagCoinType)
+	account, _ := cmd.Flags().GetUint32(flagAccount)
+	index, _ := cmd.Flags().GetUint32(flagIndex)
+	hdPath, _ := cmd.Flags().GetString(flagHDPath)
+	useLedger, _ := cmd.Flags().GetBool(flags.FlagUseLedger)
+
+	if len(hdPath) == 0 {
+		hdPath = hd.CreateHDPath(coinType, account, index).String()
+	} else if useLedger {
+		return errors.New("cannot set custom bip32 path with ledger")
+	}
+
+	// If we're using ledger, only thing we need is the path and the bech32 prefix.
+	if useLedger {
+		bech32PrefixAccAddr := sdk.GetConfig().GetBech32AccountAddrPrefix()
+		info, err := kb.SaveLedgerKey(name, hd.Secp256k1, bech32PrefixAccAddr, coinType, account, index)
+
+		if err != nil {
+			return err
+		}
+
+		return printCreate(cmd, info, false, "")
+	}
+
+	// Get bip39 mnemonic
+	var mnemonic, bip39Passphrase string
+
+	recover, _ := cmd.Flags().GetBool(flagRecover)
+	if interactive || recover {
+		bip39Message := "Enter your bip39 mnemonic"
+		if !recover {
+			bip39Message = "Enter your bip39 mnemonic, or hit enter to generate one."
+		}
+
+		mnemonic, err = input.GetString(bip39Message, inBuf)
+		if err != nil {
+			return err
+		}
+
+		if !bip39.IsMnemonicValid(mnemonic) {
+			return errors.New("invalid mnemonic")
+		}
+	}
+
+	if len(mnemonic) == 0 {
+		// read entropy seed straight from crypto.Rand and convert to mnemonic
+		entropySeed, err := bip39.NewEntropy(mnemonicEntropySize)
+		if err != nil {
+			return err
+		}
+
+		mnemonic, err = bip39.NewMnemonic(entropySeed)
+		if err != nil {
+			return err
+		}
+	}
+
+	// override bip39 passphrase
+	if interactive {
+		bip39Passphrase, err = input.GetString(
+			"Enter your bip39 passphrase. This is combined with the mnemonic to derive the seed. "+
+				"Most users should just hit enter to use the default, \"\"", inBuf)
+		if err != nil {
+			return err
+		}
+
+		// if they use one, make them re-enter it
+		if len(bip39Passphrase) != 0 {
+			p2, err := input.GetString("Repeat the passphrase:", inBuf)
 			if err != nil {
 				return err
 			}
+
+			if bip39Passphrase != p2 {
+				return errors.New("passphrases don't match")
+			}
 		}
 	}
 
-	if viper.GetBool(client.FlagUseLedger) {
-		account := uint32(viper.GetInt(flagAccount))
-		index := uint32(viper.GetInt(flagIndex))
-		path := ccrypto.DerivationPath{44, 118, account, 0, index}
-		algo := keys.SigningAlgo(viper.GetString(flagType))
-		info, err := kb.CreateLedger(name, path, algo)
-		if err != nil {
-			return err
-		}
-		printCreate(info, "")
-	} else if viper.GetBool(flagRecover) {
-		seed, err := client.GetSeed(
-			"Enter your recovery seed phrase:", buf)
-		if err != nil {
-			return err
-		}
-		info, err := kb.CreateKey(name, seed, pass)
-		if err != nil {
-			return err
-		}
-		// print out results without the seed phrase
-		viper.Set(flagNoBackup, true)
-		printCreate(info, "")
-	} else {
-		algo := keys.SigningAlgo(viper.GetString(flagType))
-		info, seed, err := kb.CreateMnemonic(name, keys.English, pass, algo)
-		if err != nil {
-			return err
-		}
-		printCreate(info, seed)
+	info, err := kb.NewAccount(name, mnemonic, bip39Passphrase, hdPath, algo)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	// Recover key from seed passphrase
+	if recover {
+		// Hide mnemonic from output
+		showMnemonic = false
+		mnemonic = ""
+	}
+
+	return printCreate(cmd, info, showMnemonic, mnemonic)
 }
 
-func printCreate(info keys.Info, seed string) {
-	output := viper.Get(cli.OutputFlag)
+func printCreate(cmd *cobra.Command, info keyring.Info, showMnemonic bool, mnemonic string) error {
+	output, _ := cmd.Flags().GetString(cli.OutputFlag)
+
 	switch output {
-	case "text":
-		printInfo(info)
-		// print seed unless requested not to.
-		if !viper.GetBool(client.FlagUseLedger) && !viper.GetBool(flagNoBackup) {
-			fmt.Println("**Important** write this seed phrase in a safe place.")
-			fmt.Println("It is the only way to recover your account if you ever forget your password.")
-			fmt.Println()
-			fmt.Println(seed)
+	case OutputFormatText:
+		cmd.PrintErrln()
+		printKeyInfo(cmd.OutOrStdout(), info, keyring.Bech32KeyOutput, output)
+
+		// print mnemonic unless requested not to.
+		if showMnemonic {
+			fmt.Fprintln(cmd.ErrOrStderr(), "\n**Important** write this mnemonic phrase in a safe place.")
+			fmt.Fprintln(cmd.ErrOrStderr(), "\n**Important** write this mnemonic phrase in a safe place.")
+			fmt.Fprintln(cmd.ErrOrStderr(), "It is the only way to recover your account if you ever forget your password.")
+			fmt.Fprintln(cmd.ErrOrStderr(), "")
+			fmt.Fprintln(cmd.ErrOrStderr(), mnemonic)
 		}
-	case "json":
-		out, err := Bech32KeyOutput(info)
+	case OutputFormatJSON:
+		out, err := keyring.Bech32KeyOutput(info)
 		if err != nil {
-			panic(err)
+			return err
 		}
-		if !viper.GetBool(flagNoBackup) {
-			out.Seed = seed
+
+		if showMnemonic {
+			out.Mnemonic = mnemonic
 		}
-		json, err := MarshalJSON(out)
+
+		jsonString, err := KeysCdc.MarshalJSON(out)
 		if err != nil {
-			panic(err) // really shouldn't happen...
+			return err
 		}
-		fmt.Println(string(json))
+
+		cmd.Println(string(jsonString))
+
 	default:
-		panic(fmt.Sprintf("I can't speak: %s", output))
-	}
-}
-
-/////////////////////////////
-// REST
-
-// new key request REST body
-type NewKeyBody struct {
-	Name     string `json:"name"`
-	Password string `json:"password"`
-	Seed     string `json:"seed"`
-}
-
-// add new key REST handler
-func AddNewKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
-	var kb keys.Keybase
-	var m NewKeyBody
-
-	kb, err := GetKeyBase()
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-		return
+		return fmt.Errorf("invalid output format %s", output)
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	err = json.Unmarshal(body, &m)
-
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	if m.Name == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("You have to specify a name for the locally stored account."))
-		return
-	}
-	if m.Password == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("You have to specify a password for the locally stored account."))
-		return
-	}
-
-	// check if already exists
-	infos, err := kb.List()
-	for _, i := range infos {
-		if i.GetName() == m.Name {
-			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(fmt.Sprintf("Account with name %s already exists.", m.Name)))
-			return
-		}
-	}
-
-	// create account
-	seed := m.Seed
-	if seed == "" {
-		seed = getSeed(keys.Secp256k1)
-	}
-	info, err := kb.CreateKey(m.Name, seed, m.Password)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	keyOutput, err := Bech32KeyOutput(info)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	keyOutput.Seed = seed
-
-	bz, err := json.Marshal(keyOutput)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	w.Write(bz)
-}
-
-// function to just a new seed to display in the UI before actually persisting it in the keybase
-func getSeed(algo keys.SigningAlgo) string {
-	kb := client.MockKeyBase()
-	pass := "throwing-this-key-away"
-	name := "inmemorykey"
-	_, seed, _ := kb.CreateMnemonic(name, keys.English, pass, algo)
-	return seed
-}
-
-// Seed REST request handler
-func SeedRequestHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	algoType := vars["type"]
-	// algo type defaults to secp256k1
-	if algoType == "" {
-		algoType = "secp256k1"
-	}
-	algo := keys.SigningAlgo(algoType)
-
-	seed := getSeed(algo)
-	w.Write([]byte(seed))
+	return nil
 }

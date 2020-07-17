@@ -1,7 +1,4 @@
-# Makefile for the "gaiadnode" docker image.
-
 all:
-	docker build --tag tendermint/gaiadnode gaiadnode
+	docker build --tag cosmos-sdk/simappnode simappnode
 
 .PHONY: all
-

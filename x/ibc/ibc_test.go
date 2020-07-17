@@ -1,136 +1,69 @@
-package ibc
+package ibc_test
 
 import (
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/cosmos/cosmos-sdk/store"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
+	channeltypes "github.com/cosmos/cosmos-sdk/x/ibc/04-channel/types"
+	ibctmtypes "github.com/cosmos/cosmos-sdk/x/ibc/07-tendermint/types"
 )
 
-// AccountMapper(/Keeper) and IBCMapper should use different StoreKey later
+const (
+	connectionID  = "connectionidone"
+	clientID      = "clientidone"
+	connectionID2 = "connectionidtwo"
+	clientID2     = "clientidtwo"
 
-func defaultContext(key sdk.StoreKey) sdk.Context {
-	db := dbm.NewMemDB()
-	cms := store.NewCommitMultiStore(db)
-	cms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
-	cms.LoadLatestVersion()
-	ctx := sdk.NewContext(cms, abci.Header{}, false, log.NewNopLogger())
-	return ctx
+	port1 = "firstport"
+	port2 = "secondport"
+
+	channel1 = "firstchannel"
+	channel2 = "secondchannel"
+
+	channelOrder   = channeltypes.ORDERED
+	channelVersion = "1.0"
+
+	trustingPeriod time.Duration = time.Hour * 24 * 7 * 2
+	ubdPeriod      time.Duration = time.Hour * 24 * 7 * 3
+	maxClockDrift  time.Duration = time.Second * 10
+)
+
+type IBCTestSuite struct {
+	suite.Suite
+
+	cdc    *codec.Codec
+	ctx    sdk.Context
+	app    *simapp.SimApp
+	header ibctmtypes.Header
 }
 
-func newAddress() sdk.AccAddress {
-	return sdk.AccAddress(ed25519.GenPrivKey().PubKey().Address())
+func (suite *IBCTestSuite) SetupTest() {
+	isCheckTx := false
+	suite.app = simapp.Setup(isCheckTx)
+
+	privVal := tmtypes.NewMockPV()
+	pubKey, err := privVal.GetPubKey()
+	suite.Require().NoError(err)
+
+	now := time.Now().UTC()
+
+	val := tmtypes.NewValidator(pubKey, 10)
+	valSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{val})
+
+	suite.header = ibctmtypes.CreateTestHeader("chainID", 10, now, valSet, []tmtypes.PrivValidator{privVal})
+
+	suite.cdc = suite.app.Codec()
+	suite.ctx = suite.app.BaseApp.NewContext(isCheckTx, abci.Header{})
 }
 
-func getCoins(ck bank.Keeper, ctx sdk.Context, addr sdk.AccAddress) (sdk.Coins, sdk.Error) {
-	zero := sdk.Coins(nil)
-	coins, _, err := ck.AddCoins(ctx, addr, zero)
-	return coins, err
-}
-
-func makeCodec() *wire.Codec {
-	var cdc = wire.NewCodec()
-
-	// Register Msgs
-	cdc.RegisterInterface((*sdk.Msg)(nil), nil)
-	cdc.RegisterConcrete(bank.MsgSend{}, "test/ibc/Send", nil)
-	cdc.RegisterConcrete(bank.MsgIssue{}, "test/ibc/Issue", nil)
-	cdc.RegisterConcrete(IBCTransferMsg{}, "test/ibc/IBCTransferMsg", nil)
-	cdc.RegisterConcrete(IBCReceiveMsg{}, "test/ibc/IBCReceiveMsg", nil)
-
-	// Register AppAccount
-	cdc.RegisterInterface((*auth.Account)(nil), nil)
-	cdc.RegisterConcrete(&auth.BaseAccount{}, "test/ibc/Account", nil)
-	wire.RegisterCrypto(cdc)
-
-	cdc.Seal()
-
-	return cdc
-}
-
-func TestIBC(t *testing.T) {
-	cdc := makeCodec()
-
-	key := sdk.NewKVStoreKey("ibc")
-	ctx := defaultContext(key)
-
-	am := auth.NewAccountMapper(cdc, key, auth.ProtoBaseAccount)
-	ck := bank.NewKeeper(am)
-
-	src := newAddress()
-	dest := newAddress()
-	chainid := "ibcchain"
-	zero := sdk.Coins(nil)
-	mycoins := sdk.Coins{sdk.NewCoin("mycoin", 10)}
-
-	coins, _, err := ck.AddCoins(ctx, src, mycoins)
-	require.Nil(t, err)
-	require.Equal(t, mycoins, coins)
-
-	ibcm := NewMapper(cdc, key, DefaultCodespace)
-	h := NewHandler(ibcm, ck)
-	packet := IBCPacket{
-		SrcAddr:   src,
-		DestAddr:  dest,
-		Coins:     mycoins,
-		SrcChain:  chainid,
-		DestChain: chainid,
-	}
-
-	store := ctx.KVStore(key)
-
-	var msg sdk.Msg
-	var res sdk.Result
-	var egl int64
-	var igs int64
-
-	egl = ibcm.getEgressLength(store, chainid)
-	require.Equal(t, egl, int64(0))
-
-	msg = IBCTransferMsg{
-		IBCPacket: packet,
-	}
-	res = h(ctx, msg)
-	require.True(t, res.IsOK())
-
-	coins, err = getCoins(ck, ctx, src)
-	require.Nil(t, err)
-	require.Equal(t, zero, coins)
-
-	egl = ibcm.getEgressLength(store, chainid)
-	require.Equal(t, egl, int64(1))
-
-	igs = ibcm.GetIngressSequence(ctx, chainid)
-	require.Equal(t, igs, int64(0))
-
-	msg = IBCReceiveMsg{
-		IBCPacket: packet,
-		Relayer:   src,
-		Sequence:  0,
-	}
-	res = h(ctx, msg)
-	require.True(t, res.IsOK())
-
-	coins, err = getCoins(ck, ctx, dest)
-	require.Nil(t, err)
-	require.Equal(t, mycoins, coins)
-
-	igs = ibcm.GetIngressSequence(ctx, chainid)
-	require.Equal(t, igs, int64(1))
-
-	res = h(ctx, msg)
-	require.False(t, res.IsOK())
-
-	igs = ibcm.GetIngressSequence(ctx, chainid)
-	require.Equal(t, igs, int64(1))
+func TestIBCTestSuite(t *testing.T) {
+	suite.Run(t, new(IBCTestSuite))
 }

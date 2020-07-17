@@ -6,57 +6,106 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/wire"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/types/rest"
+	"github.com/cosmos/cosmos-sdk/x/slashing/types"
 )
 
-func registerQueryRoutes(ctx context.CoreContext, r *mux.Router, cdc *wire.Codec) {
+func registerQueryRoutes(clientCtx client.Context, r *mux.Router) {
 	r.HandleFunc(
-		"/slashing/signing_info/{validator}",
-		signingInfoHandlerFn(ctx, "slashing", cdc),
+		"/slashing/validators/{validatorPubKey}/signing_info",
+		signingInfoHandlerFn(clientCtx),
+	).Methods("GET")
+
+	r.HandleFunc(
+		"/slashing/signing_infos",
+		signingInfoHandlerListFn(clientCtx),
+	).Methods("GET")
+
+	r.HandleFunc(
+		"/slashing/parameters",
+		queryParamsHandlerFn(clientCtx),
 	).Methods("GET")
 }
 
 // http request handler to query signing info
-func signingInfoHandlerFn(ctx context.CoreContext, storeName string, cdc *wire.Codec) http.HandlerFunc {
+func signingInfoHandlerFn(clientCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		// read parameters
 		vars := mux.Vars(r)
-		bech32validator := vars["validator"]
-
-		validatorAddr, err := sdk.ValAddressFromBech32(bech32validator)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+		pk, err := sdk.GetPubKeyFromBech32(sdk.Bech32PubKeyTypeConsPub, vars["validatorPubKey"])
+		if rest.CheckBadRequestError(w, err) {
 			return
 		}
 
-		key := slashing.GetValidatorSigningInfoKey(validatorAddr)
-		res, err := ctx.QueryStore(key, storeName)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("couldn't query signing info. Error: %s", err.Error())))
+		clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
+		if !ok {
 			return
 		}
 
-		var signingInfo slashing.ValidatorSigningInfo
-		err = cdc.UnmarshalBinary(res, &signingInfo)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("couldn't decode signing info. Error: %s", err.Error())))
+		params := types.QuerySigningInfoRequest{ConsAddress: sdk.ConsAddress(pk.Address())}
+
+		bz, err := clientCtx.JSONMarshaler.MarshalJSON(params)
+		if rest.CheckBadRequestError(w, err) {
 			return
 		}
 
-		output, err := cdc.MarshalJSON(signingInfo)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QuerySigningInfo)
+		res, height, err := clientCtx.QueryWithData(route, bz)
+		if rest.CheckInternalServerError(w, err) {
 			return
 		}
 
-		w.Write(output)
+		clientCtx = clientCtx.WithHeight(height)
+		rest.PostProcessResponse(w, clientCtx, res)
+	}
+}
+
+// http request handler to query signing info
+func signingInfoHandlerListFn(clientCtx client.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, page, limit, err := rest.ParseHTTPArgsWithLimit(r, 0)
+		if rest.CheckBadRequestError(w, err) {
+			return
+		}
+
+		clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
+		if !ok {
+			return
+		}
+
+		params := types.NewQuerySigningInfosParams(page, limit)
+		bz, err := clientCtx.JSONMarshaler.MarshalJSON(params)
+		if rest.CheckInternalServerError(w, err) {
+			return
+		}
+
+		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QuerySigningInfos)
+		res, height, err := clientCtx.QueryWithData(route, bz)
+		if rest.CheckInternalServerError(w, err) {
+			return
+		}
+
+		clientCtx = clientCtx.WithHeight(height)
+		rest.PostProcessResponse(w, clientCtx, res)
+	}
+}
+
+func queryParamsHandlerFn(clientCtx client.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
+		if !ok {
+			return
+		}
+
+		route := fmt.Sprintf("custom/%s/parameters", types.QuerierRoute)
+
+		res, height, err := clientCtx.QueryWithData(route, nil)
+		if rest.CheckInternalServerError(w, err) {
+			return
+		}
+
+		clientCtx = clientCtx.WithHeight(height)
+		rest.PostProcessResponse(w, clientCtx, res)
 	}
 }
