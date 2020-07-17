@@ -1,6 +1,7 @@
 package baseapp
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -453,6 +454,8 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 		WithTxBytes(txBytes).
 		WithVoteInfos(app.voteInfos)
 
+	ctx = ctx.WithContext(context.WithValue(ctx.Context(), "tx_hash", false))
+
 	ctx = ctx.WithConsensusParams(app.GetConsensusParams(ctx))
 
 	if mode == runTxModeReCheck {
@@ -619,6 +622,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
 	for i, msg := range msgs {
+		ctx = ctx.WithContext(context.WithValue(ctx.Context(), "msg_index", int64(i)))
 		// skip actual execution for (Re)CheckTx mode
 		if mode == runTxModeCheck || mode == runTxModeReCheck {
 			break
