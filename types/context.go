@@ -2,265 +2,262 @@ package types
 
 import (
 	"context"
-	"sync"
+	"time"
 
-	"github.com/golang/protobuf/proto"
-
+	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
+
+	"github.com/cosmos/cosmos-sdk/store/gaskv"
+	stypes "github.com/cosmos/cosmos-sdk/store/types"
 )
 
 /*
-The intent of Context is for it to be an immutable object that can be
-cloned and updated cheaply with WithValue() and passed forward to the
-next decorator or handler. For example,
+Context is an immutable object contains all information needed to
+process a request.
 
- func MsgHandler(ctx Context, tx Tx) Result {
- 	...
- 	ctx = ctx.WithValue(key, value)
- 	...
- }
+It contains a context.Context object inside if you want to use that,
+but please do not over-use it. We try to keep all data structured
+and standard additions here would be better just to add to the Context struct
 */
 type Context struct {
-	context.Context
-	pst *thePast
-	gen int
-	// Don't add any other fields here,
-	// it's probably not what you want to do.
+	ctx           context.Context
+	ms            MultiStore
+	header        abci.Header
+	chainID       string
+	txBytes       []byte
+	logger        log.Logger
+	voteInfo      []abci.VoteInfo
+	gasMeter      GasMeter
+	blockGasMeter GasMeter
+	checkTx       bool
+	recheckTx     bool // if recheckTx == true, then checkTx must also be true
+	minGasPrice   DecCoins
+	consParams    *abci.ConsensusParams
+	eventManager  *EventManager
+}
+
+// Proposed rename, not done to avoid API breakage
+type Request = Context
+
+// Read-only accessors
+func (c Context) Context() context.Context    { return c.ctx }
+func (c Context) MultiStore() MultiStore      { return c.ms }
+func (c Context) BlockHeight() int64          { return c.header.Height }
+func (c Context) BlockTime() time.Time        { return c.header.Time }
+func (c Context) ChainID() string             { return c.chainID }
+func (c Context) TxBytes() []byte             { return c.txBytes }
+func (c Context) Logger() log.Logger          { return c.logger }
+func (c Context) VoteInfos() []abci.VoteInfo  { return c.voteInfo }
+func (c Context) GasMeter() GasMeter          { return c.gasMeter }
+func (c Context) BlockGasMeter() GasMeter     { return c.blockGasMeter }
+func (c Context) IsCheckTx() bool             { return c.checkTx }
+func (c Context) IsReCheckTx() bool           { return c.recheckTx }
+func (c Context) MinGasPrices() DecCoins      { return c.minGasPrice }
+func (c Context) EventManager() *EventManager { return c.eventManager }
+
+// clone the header before returning
+func (c Context) BlockHeader() abci.Header {
+	var msg = proto.Clone(&c.header).(*abci.Header)
+	return *msg
+}
+
+func (c Context) ConsensusParams() *abci.ConsensusParams {
+	return proto.Clone(c.consParams).(*abci.ConsensusParams)
 }
 
 // create a new context
 func NewContext(ms MultiStore, header abci.Header, isCheckTx bool, logger log.Logger) Context {
-
-	c := Context{
-		Context: context.Background(),
-		pst:     newThePast(),
-		gen:     0,
+	// https://github.com/gogo/protobuf/issues/519
+	header.Time = header.Time.UTC()
+	return Context{
+		ctx:          context.Background(),
+		ms:           ms,
+		header:       header,
+		chainID:      header.ChainID,
+		checkTx:      isCheckTx,
+		logger:       logger,
+		gasMeter:     stypes.NewInfiniteGasMeter(),
+		minGasPrice:  DecCoins{},
+		eventManager: NewEventManager(),
 	}
-	c = c.WithMultiStore(ms)
-	c = c.WithBlockHeader(header)
-	c = c.WithBlockHeight(header.Height)
-	c = c.WithChainID(header.ChainID)
-	c = c.WithIsCheckTx(isCheckTx)
-	c = c.WithTxBytes(nil)
-	c = c.WithLogger(logger)
-	c = c.WithSigningValidators(nil)
-	c = c.WithGasMeter(NewInfiniteGasMeter())
+}
+
+// WithContext returns a Context with an updated context.Context.
+func (c Context) WithContext(ctx context.Context) Context {
+	c.ctx = ctx
 	return c
 }
 
-// is context nil
+// WithMultiStore returns a Context with an updated MultiStore.
+func (c Context) WithMultiStore(ms MultiStore) Context {
+	c.ms = ms
+	return c
+}
+
+// WithBlockHeader returns a Context with an updated tendermint block header in UTC time.
+func (c Context) WithBlockHeader(header abci.Header) Context {
+	// https://github.com/gogo/protobuf/issues/519
+	header.Time = header.Time.UTC()
+	c.header = header
+	return c
+}
+
+// WithBlockTime returns a Context with an updated tendermint block header time in UTC time
+func (c Context) WithBlockTime(newTime time.Time) Context {
+	newHeader := c.BlockHeader()
+	// https://github.com/gogo/protobuf/issues/519
+	newHeader.Time = newTime.UTC()
+	return c.WithBlockHeader(newHeader)
+}
+
+// WithProposer returns a Context with an updated proposer consensus address.
+func (c Context) WithProposer(addr ConsAddress) Context {
+	newHeader := c.BlockHeader()
+	newHeader.ProposerAddress = addr.Bytes()
+	return c.WithBlockHeader(newHeader)
+}
+
+// WithBlockHeight returns a Context with an updated block height.
+func (c Context) WithBlockHeight(height int64) Context {
+	newHeader := c.BlockHeader()
+	newHeader.Height = height
+	return c.WithBlockHeader(newHeader)
+}
+
+// WithChainID returns a Context with an updated chain identifier.
+func (c Context) WithChainID(chainID string) Context {
+	c.chainID = chainID
+	return c
+}
+
+// WithTxBytes returns a Context with an updated txBytes.
+func (c Context) WithTxBytes(txBytes []byte) Context {
+	c.txBytes = txBytes
+	return c
+}
+
+// WithLogger returns a Context with an updated logger.
+func (c Context) WithLogger(logger log.Logger) Context {
+	c.logger = logger
+	return c
+}
+
+// WithVoteInfos returns a Context with an updated consensus VoteInfo.
+func (c Context) WithVoteInfos(voteInfo []abci.VoteInfo) Context {
+	c.voteInfo = voteInfo
+	return c
+}
+
+// WithGasMeter returns a Context with an updated transaction GasMeter.
+func (c Context) WithGasMeter(meter GasMeter) Context {
+	c.gasMeter = meter
+	return c
+}
+
+// WithBlockGasMeter returns a Context with an updated block GasMeter
+func (c Context) WithBlockGasMeter(meter GasMeter) Context {
+	c.blockGasMeter = meter
+	return c
+}
+
+// WithIsCheckTx enables or disables CheckTx value for verifying transactions and returns an updated Context
+func (c Context) WithIsCheckTx(isCheckTx bool) Context {
+	c.checkTx = isCheckTx
+	return c
+}
+
+// WithIsRecheckTx called with true will also set true on checkTx in order to
+// enforce the invariant that if recheckTx = true then checkTx = true as well.
+func (c Context) WithIsReCheckTx(isRecheckTx bool) Context {
+	if isRecheckTx {
+		c.checkTx = true
+	}
+	c.recheckTx = isRecheckTx
+	return c
+}
+
+// WithMinGasPrices returns a Context with an updated minimum gas price value
+func (c Context) WithMinGasPrices(gasPrices DecCoins) Context {
+	c.minGasPrice = gasPrices
+	return c
+}
+
+// WithConsensusParams returns a Context with an updated consensus params
+func (c Context) WithConsensusParams(params *abci.ConsensusParams) Context {
+	c.consParams = params
+	return c
+}
+
+// WithEventManager returns a Context with an updated event manager
+func (c Context) WithEventManager(em *EventManager) Context {
+	c.eventManager = em
+	return c
+}
+
+// TODO: remove???
 func (c Context) IsZero() bool {
-	return c.Context == nil
+	return c.ms == nil
 }
 
-//----------------------------------------
-// Getting a value
+// WithValue is deprecated, provided for backwards compatibility
+// Please use
+//     ctx = ctx.WithContext(context.WithValue(ctx.Context(), key, false))
+// instead of
+//     ctx = ctx.WithValue(key, false)
+func (c Context) WithValue(key, value interface{}) Context {
+	c.ctx = context.WithValue(c.ctx, key, value)
+	return c
+}
 
-// context value for the provided key
+// Value is deprecated, provided for backwards compatibility
+// Please use
+//     ctx.Context().Value(key)
+// instead of
+//     ctx.Value(key)
 func (c Context) Value(key interface{}) interface{} {
-	value := c.Context.Value(key)
-	if cloner, ok := value.(cloner); ok {
-		return cloner.Clone()
-	}
-	if message, ok := value.(proto.Message); ok {
-		return proto.Clone(message)
-	}
-	return value
+	return c.ctx.Value(key)
 }
+
+// ----------------------------------------------------------------------------
+// Store / Caching
+// ----------------------------------------------------------------------------
 
 // KVStore fetches a KVStore from the MultiStore.
 func (c Context) KVStore(key StoreKey) KVStore {
-	return c.multiStore().GetKVStoreWithGas(c.GasMeter(), key)
+	return gaskv.NewStore(c.MultiStore().GetKVStore(key), c.GasMeter(), stypes.KVGasConfig())
 }
 
-//----------------------------------------
-// With* (setting a value)
-
-// nolint
-func (c Context) WithValue(key interface{}, value interface{}) Context {
-	return c.withValue(key, value)
-}
-func (c Context) WithCloner(key interface{}, value cloner) Context {
-	return c.withValue(key, value)
-}
-func (c Context) WithCacheWrapper(key interface{}, value CacheWrapper) Context {
-	return c.withValue(key, value)
-}
-func (c Context) WithProtoMsg(key interface{}, value proto.Message) Context {
-	return c.withValue(key, value)
-}
-func (c Context) WithString(key interface{}, value string) Context {
-	return c.withValue(key, value)
-}
-func (c Context) WithInt32(key interface{}, value int32) Context {
-	return c.withValue(key, value)
-}
-func (c Context) WithUint32(key interface{}, value uint32) Context {
-	return c.withValue(key, value)
-}
-func (c Context) WithUint64(key interface{}, value uint64) Context {
-	return c.withValue(key, value)
+// TransientStore fetches a TransientStore from the MultiStore.
+func (c Context) TransientStore(key StoreKey) KVStore {
+	return gaskv.NewStore(c.MultiStore().GetKVStore(key), c.GasMeter(), stypes.TransientGasConfig())
 }
 
-func (c Context) withValue(key interface{}, value interface{}) Context {
-	c.pst.bump(Op{
-		gen:   c.gen + 1,
-		key:   key,
-		value: value,
-	}) // increment version for all relatives.
-
-	return Context{
-		Context: context.WithValue(c.Context, key, value),
-		pst:     c.pst,
-		gen:     c.gen + 1,
-	}
-}
-
-//----------------------------------------
-// Values that require no key.
-
-type contextKey int // local to the context module
-
-const (
-	contextKeyMultiStore contextKey = iota
-	contextKeyBlockHeader
-	contextKeyBlockHeight
-	contextKeyChainID
-	contextKeyIsCheckTx
-	contextKeyTxBytes
-	contextKeyLogger
-	contextKeySigningValidators
-	contextKeyGasMeter
-)
-
-// NOTE: Do not expose MultiStore.
-// MultiStore exposes all the keys.
-// Instead, pass the context and the store key.
-func (c Context) multiStore() MultiStore {
-	return c.Value(contextKeyMultiStore).(MultiStore)
-}
-
-// nolint
-func (c Context) BlockHeader() abci.Header {
-	return c.Value(contextKeyBlockHeader).(abci.Header)
-}
-func (c Context) BlockHeight() int64 {
-	return c.Value(contextKeyBlockHeight).(int64)
-}
-func (c Context) ChainID() string {
-	return c.Value(contextKeyChainID).(string)
-}
-func (c Context) IsCheckTx() bool {
-	return c.Value(contextKeyIsCheckTx).(bool)
-}
-func (c Context) TxBytes() []byte {
-	return c.Value(contextKeyTxBytes).([]byte)
-}
-func (c Context) Logger() log.Logger {
-	return c.Value(contextKeyLogger).(log.Logger)
-}
-func (c Context) SigningValidators() []abci.SigningValidator {
-	return c.Value(contextKeySigningValidators).([]abci.SigningValidator)
-}
-func (c Context) GasMeter() GasMeter {
-	return c.Value(contextKeyGasMeter).(GasMeter)
-}
-func (c Context) WithMultiStore(ms MultiStore) Context {
-	return c.withValue(contextKeyMultiStore, ms)
-}
-func (c Context) WithBlockHeader(header abci.Header) Context {
-	var _ proto.Message = &header // for cloning.
-	return c.withValue(contextKeyBlockHeader, header)
-}
-func (c Context) WithBlockHeight(height int64) Context {
-	return c.withValue(contextKeyBlockHeight, height)
-}
-func (c Context) WithChainID(chainID string) Context {
-	return c.withValue(contextKeyChainID, chainID)
-}
-func (c Context) WithIsCheckTx(isCheckTx bool) Context {
-	return c.withValue(contextKeyIsCheckTx, isCheckTx)
-}
-func (c Context) WithTxBytes(txBytes []byte) Context {
-	return c.withValue(contextKeyTxBytes, txBytes)
-}
-func (c Context) WithLogger(logger log.Logger) Context {
-	return c.withValue(contextKeyLogger, logger)
-}
-func (c Context) WithSigningValidators(SigningValidators []abci.SigningValidator) Context {
-	return c.withValue(contextKeySigningValidators, SigningValidators)
-}
-func (c Context) WithGasMeter(meter GasMeter) Context {
-	return c.withValue(contextKeyGasMeter, meter)
-}
-
-// Cache the multistore and return a new cached context. The cached context is
-// written to the context when writeCache is called.
+// CacheContext returns a new Context with the multi-store cached and a new
+// EventManager. The cached context is written to the context when writeCache
+// is called.
 func (c Context) CacheContext() (cc Context, writeCache func()) {
-	cms := c.multiStore().CacheMultiStore()
-	cc = c.WithMultiStore(cms)
+	cms := c.MultiStore().CacheMultiStore()
+	cc = c.WithMultiStore(cms).WithEventManager(NewEventManager())
 	return cc, cms.Write
 }
 
-//----------------------------------------
-// thePast
+// ContextKey defines a type alias for a stdlib Context key.
+type ContextKey string
 
-// Returns false if ver <= 0 || ver > len(c.pst.ops).
-// The first operation is version 1.
-func (c Context) GetOp(ver int64) (Op, bool) {
-	return c.pst.getOp(ver)
+const sdkContextKey ContextKey = "sdk-context"
+
+// WrapSDKContext returns a stdlib context.Context with the provided sdk.Context's internal
+// context as a value. It is useful for passing an sdk.Context  through methods that take a
+// stdlib context.Context parameter such as generated gRPC methods. To get the original
+// sdk.Context back, call UnwrapSDKContext.
+func WrapSDKContext(ctx Context) context.Context {
+	return context.WithValue(ctx.ctx, sdkContextKey, ctx)
 }
 
-//----------------------------------------
-// Misc.
-
-type cloner interface {
-	Clone() interface{} // deep copy
-}
-
-// XXX add description
-type Op struct {
-	// type is always 'with'
-	gen   int
-	key   interface{}
-	value interface{}
-}
-
-type thePast struct {
-	mtx sync.RWMutex
-	ver int
-	ops []Op
-}
-
-func newThePast() *thePast {
-	return &thePast{
-		ver: 0,
-		ops: nil,
-	}
-}
-
-func (pst *thePast) bump(op Op) {
-	pst.mtx.Lock()
-	pst.ver++
-	pst.ops = append(pst.ops, op)
-	pst.mtx.Unlock()
-}
-
-func (pst *thePast) version() int {
-	pst.mtx.RLock()
-	defer pst.mtx.RUnlock()
-	return pst.ver
-}
-
-// Returns false if ver <= 0 || ver > len(pst.ops).
-// The first operation is version 1.
-func (pst *thePast) getOp(ver int64) (Op, bool) {
-	pst.mtx.RLock()
-	defer pst.mtx.RUnlock()
-	l := int64(len(pst.ops))
-	if l < ver || ver <= 0 {
-		return Op{}, false
-	}
-	return pst.ops[ver-1], true
+// UnwrapSDKContext retrieves a Context from a context.Context instance
+// attached with WrapSDKContext. It panics if a Context was not properly
+// attached
+func UnwrapSDKContext(ctx context.Context) Context {
+	return ctx.Value(sdkContextKey).(Context)
 }

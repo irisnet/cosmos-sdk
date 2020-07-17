@@ -3,16 +3,23 @@ package mock
 import (
 	"io"
 
-	dbm "github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 
+	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
+
+var _ sdk.MultiStore = multiStore{}
 
 type multiStore struct {
 	kv map[sdk.StoreKey]kvStore
 }
 
 func (ms multiStore) CacheMultiStore() sdk.CacheMultiStore {
+	panic("not implemented")
+}
+
+func (ms multiStore) CacheMultiStoreWithVersion(_ int64) (sdk.CacheMultiStore, error) {
 	panic("not implemented")
 }
 
@@ -24,19 +31,15 @@ func (ms multiStore) CacheWrapWithTrace(_ io.Writer, _ sdk.TraceContext) sdk.Cac
 	panic("not implemented")
 }
 
-func (ms multiStore) ResetTraceContext() sdk.MultiStore {
-	panic("not implemented")
-}
-
 func (ms multiStore) TracingEnabled() bool {
 	panic("not implemented")
 }
 
-func (ms multiStore) WithTracingContext(tc sdk.TraceContext) sdk.MultiStore {
+func (ms multiStore) SetTracingContext(tc sdk.TraceContext) sdk.MultiStore {
 	panic("not implemented")
 }
 
-func (ms multiStore) WithTracer(w io.Writer) sdk.MultiStore {
+func (ms multiStore) SetTracer(w io.Writer) sdk.MultiStore {
 	panic("not implemented")
 }
 
@@ -48,7 +51,7 @@ func (ms multiStore) LastCommitID() sdk.CommitID {
 	panic("not implemented")
 }
 
-func (ms multiStore) SetPruning(s sdk.PruningStrategy) {
+func (ms multiStore) SetPruning(opts sdk.PruningOptions) {
 	panic("not implemented")
 }
 
@@ -68,16 +71,20 @@ func (ms multiStore) LoadLatestVersion() error {
 	return nil
 }
 
+func (ms multiStore) LoadLatestVersionAndUpgrade(upgrades *store.StoreUpgrades) error {
+	return nil
+}
+
+func (ms multiStore) LoadVersionAndUpgrade(ver int64, upgrades *store.StoreUpgrades) error {
+	panic("not implemented")
+}
+
 func (ms multiStore) LoadVersion(ver int64) error {
 	panic("not implemented")
 }
 
 func (ms multiStore) GetKVStore(key sdk.StoreKey) sdk.KVStore {
 	return ms.kv[key]
-}
-
-func (ms multiStore) GetKVStoreWithGas(meter sdk.GasMeter, key sdk.StoreKey) sdk.KVStore {
-	panic("not implemented")
 }
 
 func (ms multiStore) GetStore(key sdk.StoreKey) sdk.Store {
@@ -87,6 +94,12 @@ func (ms multiStore) GetStore(key sdk.StoreKey) sdk.Store {
 func (ms multiStore) GetStoreType() sdk.StoreType {
 	panic("not implemented")
 }
+
+func (ms multiStore) SetInterBlockCache(_ sdk.MultiStorePersistentCache) {
+	panic("not implemented")
+}
+
+var _ sdk.KVStore = kvStore{}
 
 type kvStore struct {
 	store map[string][]byte
@@ -127,6 +140,10 @@ func (kv kvStore) Delete(key []byte) {
 
 func (kv kvStore) Prefix(prefix []byte) sdk.KVStore {
 	panic("not implemented")
+}
+
+func (kv kvStore) Gas(meter sdk.GasMeter, config sdk.GasConfig) sdk.KVStore {
+	panic("not implmeneted")
 }
 
 func (kv kvStore) Iterator(start, end []byte) sdk.Iterator {

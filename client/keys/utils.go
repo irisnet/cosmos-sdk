@@ -2,125 +2,97 @@ package keys
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 
-	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 
-	keys "github.com/cosmos/cosmos-sdk/crypto/keys"
-	"github.com/tendermint/tendermint/libs/cli"
-	dbm "github.com/tendermint/tendermint/libs/db"
-
-	"github.com/cosmos/cosmos-sdk/client"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	cryptokeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
 )
 
-// KeyDBName is the directory under root where we store the keys
-const KeyDBName = "keys"
+// available output formats.
+const (
+	OutputFormatText = "text"
+	OutputFormatJSON = "json"
 
-// keybase is used to make GetKeyBase a singleton
-var keybase keys.Keybase
+	// defaultKeyDBName is the client's subdirectory where keys are stored.
+	defaultKeyDBName = "keys"
+)
 
-// TODO make keybase take a database not load from the directory
+type bechKeyOutFn func(keyInfo cryptokeyring.Info) (cryptokeyring.KeyOutput, error)
 
-// initialize a keybase based on the configuration
-func GetKeyBase() (keys.Keybase, error) {
-	rootDir := viper.GetString(cli.HomeFlag)
-	return GetKeyBaseFromDir(rootDir)
+// NewLegacyKeyBaseFromDir initializes a legacy keybase at the rootDir directory. Keybase
+// options can be applied when generating this new Keybase.
+func NewLegacyKeyBaseFromDir(rootDir string, opts ...cryptokeyring.KeybaseOption) (cryptokeyring.LegacyKeybase, error) {
+	return getLegacyKeyBaseFromDir(rootDir, opts...)
 }
 
-// initialize a keybase based on the configuration
-func GetKeyBaseFromDir(rootDir string) (keys.Keybase, error) {
-	if keybase == nil {
-		db, err := dbm.NewGoLevelDB(KeyDBName, filepath.Join(rootDir, "keys"))
-		if err != nil {
-			return nil, err
-		}
-		keybase = client.GetKeyBase(db)
-	}
-	return keybase, nil
+func getLegacyKeyBaseFromDir(rootDir string, opts ...cryptokeyring.KeybaseOption) (cryptokeyring.LegacyKeybase, error) {
+	return cryptokeyring.NewLegacy(defaultKeyDBName, filepath.Join(rootDir, "keys"), opts...)
 }
 
-// used to set the keybase manually in test
-func SetKeyBase(kb keys.Keybase) {
-	keybase = kb
-}
-
-// used for outputting keys.Info over REST
-type KeyOutput struct {
-	Name    string         `json:"name"`
-	Type    string         `json:"type"`
-	Address sdk.AccAddress `json:"address"`
-	PubKey  string         `json:"pub_key"`
-	Seed    string         `json:"seed,omitempty"`
-}
-
-// create a list of KeyOutput in bech32 format
-func Bech32KeysOutput(infos []keys.Info) ([]KeyOutput, error) {
-	kos := make([]KeyOutput, len(infos))
-	for i, info := range infos {
-		ko, err := Bech32KeyOutput(info)
-		if err != nil {
-			return nil, err
-		}
-		kos[i] = ko
-	}
-	return kos, nil
-}
-
-// create a KeyOutput in bech32 format
-func Bech32KeyOutput(info keys.Info) (KeyOutput, error) {
-	account := sdk.AccAddress(info.GetPubKey().Address().Bytes())
-	bechPubKey, err := sdk.Bech32ifyAccPub(info.GetPubKey())
-	if err != nil {
-		return KeyOutput{}, err
-	}
-	return KeyOutput{
-		Name:    info.GetName(),
-		Type:    info.GetType(),
-		Address: account,
-		PubKey:  bechPubKey,
-	}, nil
-}
-
-func printInfo(info keys.Info) {
-	ko, err := Bech32KeyOutput(info)
+func printKeyInfo(w io.Writer, keyInfo cryptokeyring.Info, bechKeyOut bechKeyOutFn, output string) {
+	ko, err := bechKeyOut(keyInfo)
 	if err != nil {
 		panic(err)
 	}
-	switch viper.Get(cli.OutputFlag) {
-	case "text":
-		fmt.Printf("NAME:\tTYPE:\tADDRESS:\t\t\t\t\t\tPUBKEY:\n")
-		printKeyOutput(ko)
-	case "json":
-		out, err := MarshalJSON(ko)
+
+	switch output {
+	case OutputFormatText:
+		printTextInfos(w, []cryptokeyring.KeyOutput{ko})
+
+	case OutputFormatJSON:
+		out, err := KeysCdc.MarshalJSON(ko)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(string(out))
+
+		fmt.Fprintln(w, string(out))
 	}
 }
 
-func printInfos(infos []keys.Info) {
-	kos, err := Bech32KeysOutput(infos)
+func printInfos(w io.Writer, infos []cryptokeyring.Info, output string) {
+	kos, err := cryptokeyring.Bech32KeysOutput(infos)
 	if err != nil {
 		panic(err)
 	}
-	switch viper.Get(cli.OutputFlag) {
-	case "text":
-		fmt.Printf("NAME:\tTYPE:\tADDRESS:\t\t\t\t\t\tPUBKEY:\n")
-		for _, ko := range kos {
-			printKeyOutput(ko)
-		}
-	case "json":
-		out, err := MarshalJSON(kos)
+
+	switch output {
+	case OutputFormatText:
+		printTextInfos(w, kos)
+
+	case OutputFormatJSON:
+		out, err := KeysCdc.MarshalJSON(kos)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(string(out))
+
+		fmt.Fprintf(w, "%s", out)
 	}
 }
 
-func printKeyOutput(ko KeyOutput) {
-	fmt.Printf("%s\t%s\t%s\t%s\n", ko.Name, ko.Type, ko.Address, ko.PubKey)
+func printTextInfos(w io.Writer, kos []cryptokeyring.KeyOutput) {
+	out, err := yaml.Marshal(&kos)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintln(w, string(out))
+}
+
+func printKeyAddress(w io.Writer, info cryptokeyring.Info, bechKeyOut bechKeyOutFn) {
+	ko, err := bechKeyOut(info)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Fprintln(w, ko.Address)
+}
+
+func printPubKey(w io.Writer, info cryptokeyring.Info, bechKeyOut bechKeyOutFn) {
+	ko, err := bechKeyOut(info)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Fprintln(w, ko.PubKey)
 }

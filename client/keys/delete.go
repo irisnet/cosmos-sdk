@@ -1,92 +1,75 @@
 package keys
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
+	"bufio"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	keys "github.com/cosmos/cosmos-sdk/crypto/keys"
-	"github.com/gorilla/mux"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/input"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/spf13/cobra"
 )
 
-func deleteKeyCommand() *cobra.Command {
+const (
+	flagYes   = "yes"
+	flagForce = "force"
+)
+
+// DeleteKeyCommand deletes a key from the key store.
+func DeleteKeyCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete <name>",
-		Short: "Delete the given key",
-		RunE:  runDeleteCmd,
-		Args:  cobra.ExactArgs(1),
+		Use:   "delete <name>...",
+		Short: "Delete the given keys",
+		Long: `Delete keys from the Keybase backend.
+
+Note that removing offline or ledger keys will remove
+only the public key references stored locally, i.e.
+private keys stored in a ledger device cannot be deleted with the CLI.
+`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			buf := bufio.NewReader(cmd.InOrStdin())
+
+			backend, _ := cmd.Flags().GetString(flags.FlagKeyringBackend)
+			homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
+			kb, err := keyring.New(sdk.KeyringServiceName(), backend, homeDir, buf)
+			if err != nil {
+				return err
+			}
+
+			for _, name := range args {
+				info, err := kb.Key(name)
+				if err != nil {
+					return err
+				}
+
+				// confirm deletion, unless -y is passed
+				if skip, _ := cmd.Flags().GetBool(flagYes); !skip {
+					if yes, err := input.GetConfirmation("Key reference will be deleted. Continue?", buf, cmd.ErrOrStderr()); err != nil {
+						return err
+					} else if !yes {
+						continue
+					}
+				}
+
+				if err := kb.Delete(name); err != nil {
+					return err
+				}
+
+				if info.GetType() == keyring.TypeLedger || info.GetType() == keyring.TypeOffline {
+					cmd.PrintErrln("Public key reference deleted")
+					continue
+				}
+				cmd.PrintErrln("Key deleted forever (uh oh!)")
+			}
+
+			return nil
+		},
 	}
+
+	cmd.Flags().BoolP(flagYes, "y", false, "Skip confirmation prompt when deleting offline or ledger key references")
+	cmd.Flags().BoolP(flagForce, "f", false, "Remove the key unconditionally without asking for the passphrase. Deprecated.")
+
 	return cmd
-}
-
-func runDeleteCmd(cmd *cobra.Command, args []string) error {
-	name := args[0]
-
-	kb, err := GetKeyBase()
-	if err != nil {
-		return err
-	}
-
-	_, err = kb.Get(name)
-	if err != nil {
-		return err
-	}
-
-	buf := client.BufferStdin()
-	oldpass, err := client.GetPassword(
-		"DANGER - enter password to permanently delete key:", buf)
-	if err != nil {
-		return err
-	}
-
-	err = kb.Delete(name, oldpass)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Password deleted forever (uh oh!)")
-	return nil
-}
-
-////////////////////////
-// REST
-
-// delete key request REST body
-type DeleteKeyBody struct {
-	Password string `json:"password"`
-}
-
-// delete key REST handler
-func DeleteKeyRequestHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	name := vars["name"]
-	var kb keys.Keybase
-	var m DeleteKeyBody
-
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&m)
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	kb, err = GetKeyBase()
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	// TODO handle error if key is not available or pass is wrong
-	err = kb.Delete(name, m.Password)
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	w.WriteHeader(200)
 }

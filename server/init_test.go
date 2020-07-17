@@ -1,47 +1,69 @@
-package server
+package server_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tendermint/libs/log"
-
-	"github.com/cosmos/cosmos-sdk/server/mock"
-	"github.com/cosmos/cosmos-sdk/wire"
-	tcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/testutil"
+	"github.com/cosmos/cosmos-sdk/types"
 )
 
-// TODO update
-func TestInitCmd(t *testing.T) {
-	defer setupViper(t)()
-
-	logger := log.NewNopLogger()
-	cfg, err := tcmd.ParseConfig()
-	require.Nil(t, err)
-	ctx := NewContext(cfg, logger)
-	cdc := wire.NewCodec()
-	appInit := AppInit{
-		AppGenState: mock.AppGenState,
-		AppGenTx:    mock.AppGenTx,
-	}
-	cmd := InitCmd(ctx, cdc, appInit)
-	err = cmd.RunE(nil, nil)
+func TestGenerateCoinKey(t *testing.T) {
+	t.Parallel()
+	addr, mnemonic, err := server.GenerateCoinKey()
 	require.NoError(t, err)
+
+	// Test creation
+	info, err := keyring.NewInMemory().NewAccount("xxx", mnemonic, "", hd.NewFundraiserParams(0, types.GetConfig().GetCoinType(), 0).String(), hd.Secp256k1)
+	require.NoError(t, err)
+	require.Equal(t, addr, info.GetAddress())
 }
 
-func TestGenTxCmd(t *testing.T) {
-	// TODO
+func TestGenerateSaveCoinKey(t *testing.T) {
+	t.Parallel()
+	dir, cleanup := testutil.NewTestCaseDir(t)
+	t.Cleanup(cleanup)
+
+	kb, err := keyring.New(t.Name(), "test", dir, nil)
+	require.NoError(t, err)
+
+	addr, mnemonic, err := server.GenerateSaveCoinKey(kb, "keyname", "012345678", false)
+	require.NoError(t, err)
+
+	// Test key was actually saved
+	info, err := kb.Key("keyname")
+	require.NoError(t, err)
+	require.Equal(t, addr, info.GetAddress())
+
+	// Test in-memory recovery
+	info, err = keyring.NewInMemory().NewAccount("xxx", mnemonic, "", hd.NewFundraiserParams(0, types.GetConfig().GetCoinType(), 0).String(), hd.Secp256k1)
+	require.NoError(t, err)
+	require.Equal(t, addr, info.GetAddress())
 }
 
-func TestTestnetFilesCmd(t *testing.T) {
-	// TODO
-}
+func TestGenerateSaveCoinKeyOverwriteFlag(t *testing.T) {
+	t.Parallel()
+	dir, cleanup := testutil.NewTestCaseDir(t)
+	t.Cleanup(cleanup)
 
-func TestSimpleAppGenTx(t *testing.T) {
-	// TODO
-}
+	kb, err := keyring.New(t.Name(), "test", dir, nil)
+	require.NoError(t, err)
 
-func TestSimpleAppGenState(t *testing.T) {
-	// TODO
+	keyname := "justakey"
+	addr1, _, err := server.GenerateSaveCoinKey(kb, keyname, "012345678", false)
+	require.NoError(t, err)
+
+	// Test overwrite with overwrite=false
+	_, _, err = server.GenerateSaveCoinKey(kb, keyname, "012345678", false)
+	require.Error(t, err)
+
+	// Test overwrite with overwrite=true
+	addr2, _, err := server.GenerateSaveCoinKey(kb, keyname, "012345678", true)
+	require.NoError(t, err)
+
+	require.NotEqual(t, addr1, addr2)
 }

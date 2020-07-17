@@ -1,31 +1,51 @@
 package version
 
 import (
-	"fmt"
+	"encoding/json"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/libs/cli"
+	yaml "gopkg.in/yaml.v2"
 )
 
-var (
-	// VersionCmd prints out the current sdk version
-	VersionCmd = &cobra.Command{
+const flagLong = "long"
+
+func NewVersionCommand() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "Print the app version",
-		Run:   printVersion,
-	}
-)
+		Short: "Print the application binary version information",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			verInfo := NewInfo()
 
-// return version of CLI/node and commit hash
-func GetVersion() string {
-	v := Version
-	if GitCommit != "" {
-		v = v + "-" + GitCommit
-	}
-	return v
-}
+			if long, _ := cmd.Flags().GetBool(flagLong); !long {
+				cmd.Println(verInfo.Version)
+				return nil
+			}
 
-// CMD
-func printVersion(cmd *cobra.Command, args []string) {
-	v := GetVersion()
-	fmt.Println(v)
+			var bz []byte
+			var err error
+
+			output, _ := cmd.Flags().GetString(cli.OutputFlag)
+			switch strings.ToLower(output) {
+			case "json":
+				bz, err = json.Marshal(verInfo)
+
+			default:
+				bz, err = yaml.Marshal(&verInfo)
+			}
+
+			if err != nil {
+				return err
+			}
+
+			cmd.Println(string(bz))
+			return nil
+		},
+	}
+
+	cmd.Flags().Bool(flagLong, false, "Print long version information")
+	cmd.Flags().StringP(cli.OutputFlag, "o", "text", "Output format (text|json)")
+
+	return cmd
 }

@@ -3,6 +3,8 @@ package mock
 import (
 	"testing"
 
+	"github.com/tendermint/tendermint/types"
+
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -20,7 +22,7 @@ func TestInitApp(t *testing.T) {
 	require.NoError(t, err)
 
 	// initialize it future-way
-	appState, err := AppGenState(nil, nil)
+	appState, err := AppGenState(nil, types.GenesisDoc{}, nil)
 	require.NoError(t, err)
 
 	//TODO test validators in the init chain?
@@ -60,7 +62,7 @@ func TestDeliverTx(t *testing.T) {
 		Height:  1,
 	}
 	app.BeginBlock(abci.RequestBeginBlock{Header: header})
-	dres := app.DeliverTx(txBytes)
+	dres := app.DeliverTx(abci.RequestDeliverTx{Tx: txBytes})
 	require.Equal(t, uint32(0), dres.Code, dres.Log)
 	app.EndBlock(abci.RequestEndBlock{})
 	cres := app.Commit()

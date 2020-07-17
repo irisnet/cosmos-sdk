@@ -1,337 +1,172 @@
 package types
 
 import (
-	"fmt"
-	"io"
+	tmkv "github.com/tendermint/tendermint/libs/kv"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/cosmos/cosmos-sdk/store/types"
 )
 
-// NOTE: These are implemented in cosmos-sdk/store.
-
-// PruningStrategy specfies how old states will be deleted over time
-type PruningStrategy uint8
-
-const (
-	// PruneSyncable means only those states not needed for state syncing will be deleted (keeps last 100 + every 10000th)
-	PruneSyncable PruningStrategy = iota
-
-	// PruneEverything means all saved states will be deleted, storing only the current state
-	PruneEverything PruningStrategy = iota
-
-	// PruneNothing means all historic states will be saved, nothing will be deleted
-	PruneNothing PruningStrategy = iota
+type (
+	PruningOptions = types.PruningOptions
 )
 
-type Store interface { //nolint
-	GetStoreType() StoreType
-	CacheWrapper
-}
+type (
+	Store                     = types.Store
+	Committer                 = types.Committer
+	CommitStore               = types.CommitStore
+	Queryable                 = types.Queryable
+	MultiStore                = types.MultiStore
+	CacheMultiStore           = types.CacheMultiStore
+	CommitMultiStore          = types.CommitMultiStore
+	MultiStorePersistentCache = types.MultiStorePersistentCache
+	KVStore                   = types.KVStore
+	Iterator                  = types.Iterator
+)
 
-// something that can persist to disk
-type Committer interface {
-	Commit() CommitID
-	LastCommitID() CommitID
-	SetPruning(PruningStrategy)
-}
-
-// Stores of MultiStore must implement CommitStore.
-type CommitStore interface {
-	Committer
-	Store
-}
-
-// Queryable allows a Store to expose internal state to the abci.Query
-// interface. Multistore can route requests to the proper Store.
-//
-// This is an optional, but useful extension to any CommitStore
-type Queryable interface {
-	Query(abci.RequestQuery) abci.ResponseQuery
-}
-
-//----------------------------------------
-// MultiStore
-
-type MultiStore interface { //nolint
-	Store
-
-	// Cache wrap MultiStore.
-	// NOTE: Caller should probably not call .Write() on each, but
-	// call CacheMultiStore.Write().
-	CacheMultiStore() CacheMultiStore
-
-	// Convenience for fetching substores.
-	GetStore(StoreKey) Store
-	GetKVStore(StoreKey) KVStore
-	GetKVStoreWithGas(GasMeter, StoreKey) KVStore
-
-	// TracingEnabled returns if tracing is enabled for the MultiStore.
-	TracingEnabled() bool
-
-	// WithTracer sets the tracer for the MultiStore that the underlying
-	// stores will utilize to trace operations. A MultiStore is returned.
-	WithTracer(w io.Writer) MultiStore
-
-	// WithTracingContext sets the tracing context for a MultiStore. It is
-	// implied that the caller should update the context when necessary between
-	// tracing operations. A MultiStore is returned.
-	WithTracingContext(TraceContext) MultiStore
-
-	// ResetTraceContext resets the current tracing context.
-	ResetTraceContext() MultiStore
-}
-
-// From MultiStore.CacheMultiStore()....
-type CacheMultiStore interface {
-	MultiStore
-	Write() // Writes operations to underlying KVStore
-}
-
-// A non-cache MultiStore.
-type CommitMultiStore interface {
-	Committer
-	MultiStore
-
-	// Mount a store of type using the given db.
-	// If db == nil, the new store will use the CommitMultiStore db.
-	MountStoreWithDB(key StoreKey, typ StoreType, db dbm.DB)
-
-	// Panics on a nil key.
-	GetCommitStore(key StoreKey) CommitStore
-
-	// Panics on a nil key.
-	GetCommitKVStore(key StoreKey) CommitKVStore
-
-	// Load the latest persisted version.  Called once after all
-	// calls to Mount*Store() are complete.
-	LoadLatestVersion() error
-
-	// Load a specific persisted version.  When you load an old
-	// version, or when the last commit attempt didn't complete,
-	// the next commit after loading must be idempotent (return the
-	// same commit id).  Otherwise the behavior is undefined.
-	LoadVersion(ver int64) error
-}
-
-//---------subsp-------------------------------
-// KVStore
-
-// KVStore is a simple interface to get/set data
-type KVStore interface {
-	Store
-
-	// Get returns nil iff key doesn't exist. Panics on nil key.
-	Get(key []byte) []byte
-
-	// Has checks if a key exists. Panics on nil key.
-	Has(key []byte) bool
-
-	// Set sets the key. Panics on nil key.
-	Set(key, value []byte)
-
-	// Delete deletes the key. Panics on nil key.
-	Delete(key []byte)
-
-	// Prefix applied keys with the argument
-	Prefix(prefix []byte) KVStore
-
-	// Iterator over a domain of keys in ascending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	// To iterate over entire domain, use store.Iterator(nil, nil)
-	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
-	Iterator(start, end []byte) Iterator
-
-	// Iterator over a domain of keys in descending order. End is exclusive.
-	// Start must be greater than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
-	ReverseIterator(start, end []byte) Iterator
-
-	// TODO Not yet implemented.
-	// CreateSubKVStore(key *storeKey) (KVStore, error)
-
-	// TODO Not yet implemented.
-	// GetSubKVStore(key *storeKey) KVStore
-}
-
-// Alias iterator to db's Iterator for convenience.
-type Iterator = dbm.Iterator
+// StoreDecoderRegistry defines each of the modules store decoders. Used for ImportExport
+// simulation.
+type StoreDecoderRegistry map[string]func(kvA, kvB tmkv.Pair) string
 
 // Iterator over all the keys with a certain prefix in ascending order
 func KVStorePrefixIterator(kvs KVStore, prefix []byte) Iterator {
-	return kvs.Iterator(prefix, PrefixEndBytes(prefix))
+	return types.KVStorePrefixIterator(kvs, prefix)
 }
 
 // Iterator over all the keys with a certain prefix in descending order.
 func KVStoreReversePrefixIterator(kvs KVStore, prefix []byte) Iterator {
-	return kvs.ReverseIterator(prefix, PrefixEndBytes(prefix))
+	return types.KVStoreReversePrefixIterator(kvs, prefix)
 }
 
-// CacheKVStore cache-wraps a KVStore.  After calling .Write() on
-// the CacheKVStore, all previously created CacheKVStores on the
-// object expire.
-type CacheKVStore interface {
-	KVStore
-
-	// Writes operations to underlying KVStore
-	Write()
+// KVStorePrefixIteratorPaginated returns iterator over items in the selected page.
+// Items iterated and skipped in ascending order.
+func KVStorePrefixIteratorPaginated(kvs KVStore, prefix []byte, page, limit uint) Iterator {
+	return types.KVStorePrefixIteratorPaginated(kvs, prefix, page, limit)
 }
 
-// Stores of MultiStore must implement CommitStore.
-type CommitKVStore interface {
-	Committer
-	KVStore
+// KVStoreReversePrefixIteratorPaginated returns iterator over items in the selected page.
+// Items iterated and skipped in descending order.
+func KVStoreReversePrefixIteratorPaginated(kvs KVStore, prefix []byte, page, limit uint) Iterator {
+	return types.KVStorePrefixIteratorPaginated(kvs, prefix, page, limit)
 }
 
-// Wrapper for StoreKeys to get KVStores
-type KVStoreGetter interface {
-	KVStore(Context) KVStore
+// DiffKVStores compares two KVstores and returns all the key/value pairs
+// that differ from one another. It also skips value comparison for a set of provided prefixes
+func DiffKVStores(a KVStore, b KVStore, prefixesToSkip [][]byte) (kvAs, kvBs []tmkv.Pair) {
+	return types.DiffKVStores(a, b, prefixesToSkip)
 }
 
-//----------------------------------------
-// CacheWrap
-
-// CacheWrap makes the most appropriate cache-wrap. For example,
-// IAVLStore.CacheWrap() returns a CacheKVStore. CacheWrap should not return
-// a Committer, since Commit cache-wraps make no sense. It can return KVStore,
-// HeapStore, SpaceStore, etc.
-type CacheWrap interface {
-	// Write syncs with the underlying store.
-	Write()
-
-	// CacheWrap recursively wraps again.
-	CacheWrap() CacheWrap
-
-	// CacheWrapWithTrace recursively wraps again with tracing enabled.
-	CacheWrapWithTrace(w io.Writer, tc TraceContext) CacheWrap
-}
-
-type CacheWrapper interface { //nolint
-	// CacheWrap cache wraps.
-	CacheWrap() CacheWrap
-
-	// CacheWrapWithTrace cache wraps with tracing enabled.
-	CacheWrapWithTrace(w io.Writer, tc TraceContext) CacheWrap
-}
-
-//----------------------------------------
-// CommitID
-
-// CommitID contains the tree version number and its merkle root.
-type CommitID struct {
-	Version int64
-	Hash    []byte
-}
-
-func (cid CommitID) IsZero() bool { //nolint
-	return cid.Version == 0 && len(cid.Hash) == 0
-}
-
-func (cid CommitID) String() string {
-	return fmt.Sprintf("CommitID{%v:%X}", cid.Hash, cid.Version)
-}
-
-//----------------------------------------
-// Store types
-
-// kind of store
-type StoreType int
-
-const (
-	//nolint
-	StoreTypeMulti StoreType = iota
-	StoreTypeDB
-	StoreTypeIAVL
-	StoreTypePrefix
+type (
+	CacheKVStore  = types.CacheKVStore
+	CommitKVStore = types.CommitKVStore
+	CacheWrap     = types.CacheWrap
+	CacheWrapper  = types.CacheWrapper
+	CommitID      = types.CommitID
 )
 
-//----------------------------------------
-// Keys for accessing substores
+type StoreType = types.StoreType
 
-// StoreKey is a key used to index stores in a MultiStore.
-type StoreKey interface {
-	Name() string
-	String() string
-}
+const (
+	StoreTypeMulti     = types.StoreTypeMulti
+	StoreTypeDB        = types.StoreTypeDB
+	StoreTypeIAVL      = types.StoreTypeIAVL
+	StoreTypeTransient = types.StoreTypeTransient
+	StoreTypeMemory    = types.StoreTypeMemory
+)
 
-// KVStoreKey is used for accessing substores.
-// Only the pointer value should ever be used - it functions as a capabilities key.
-type KVStoreKey struct {
-	name string
-}
+type (
+	StoreKey          = types.StoreKey
+	CapabilityKey     = types.CapabilityKey
+	KVStoreKey        = types.KVStoreKey
+	TransientStoreKey = types.TransientStoreKey
+	MemoryStoreKey    = types.MemoryStoreKey
+)
 
 // NewKVStoreKey returns a new pointer to a KVStoreKey.
 // Use a pointer so keys don't collide.
 func NewKVStoreKey(name string) *KVStoreKey {
-	return &KVStoreKey{
-		name: name,
+	return types.NewKVStoreKey(name)
+}
+
+// NewKVStoreKeys returns a map of new  pointers to KVStoreKey's.
+// Uses pointers so keys don't collide.
+func NewKVStoreKeys(names ...string) map[string]*KVStoreKey {
+	keys := make(map[string]*KVStoreKey)
+	for _, name := range names {
+		keys[name] = NewKVStoreKey(name)
 	}
+
+	return keys
 }
 
-func (key *KVStoreKey) Name() string {
-	return key.name
+// Constructs new TransientStoreKey
+// Must return a pointer according to the ocap principle
+func NewTransientStoreKey(name string) *TransientStoreKey {
+	return types.NewTransientStoreKey(name)
 }
 
-func (key *KVStoreKey) String() string {
-	return fmt.Sprintf("KVStoreKey{%p, %s}", key, key.name)
+// NewTransientStoreKeys constructs a new map of TransientStoreKey's
+// Must return pointers according to the ocap principle
+func NewTransientStoreKeys(names ...string) map[string]*TransientStoreKey {
+	keys := make(map[string]*TransientStoreKey)
+	for _, name := range names {
+		keys[name] = NewTransientStoreKey(name)
+	}
+
+	return keys
 }
 
-// Implements KVStoreGetter
-func (key *KVStoreKey) KVStore(ctx Context) KVStore {
-	return ctx.KVStore(key)
+// NewMemoryStoreKeys constructs a new map matching store key names to their
+// respective MemoryStoreKey references.
+func NewMemoryStoreKeys(names ...string) map[string]*MemoryStoreKey {
+	keys := make(map[string]*MemoryStoreKey)
+	for _, name := range names {
+		keys[name] = types.NewMemoryStoreKey(name)
+	}
+
+	return keys
 }
 
 // PrefixEndBytes returns the []byte that would end a
 // range query for all []byte with a certain prefix
 // Deals with last byte of prefix being FF without overflowing
 func PrefixEndBytes(prefix []byte) []byte {
-	if prefix == nil {
-		return nil
-	}
-
-	end := make([]byte, len(prefix))
-	copy(end, prefix)
-
-	for {
-		if end[len(end)-1] != byte(255) {
-			end[len(end)-1]++
-			break
-		} else {
-			end = end[:len(end)-1]
-			if len(end) == 0 {
-				end = nil
-				break
-			}
-		}
-	}
-	return end
+	return types.PrefixEndBytes(prefix)
 }
 
-// Getter struct for prefixed stores
-type PrefixStoreGetter struct {
-	key    StoreKey
-	prefix []byte
-}
-
-func NewPrefixStoreGetter(key StoreKey, prefix []byte) PrefixStoreGetter {
-	return PrefixStoreGetter{key, prefix}
-}
-
-// Implements sdk.KVStoreGetter
-func (getter PrefixStoreGetter) KVStore(ctx Context) KVStore {
-	return ctx.KVStore(getter.key).Prefix(getter.prefix)
+// InclusiveEndBytes returns the []byte that would end a
+// range query such that the input would be included
+func InclusiveEndBytes(inclusiveBytes []byte) (exclusiveBytes []byte) {
+	return types.InclusiveEndBytes(inclusiveBytes)
 }
 
 //----------------------------------------
 
 // key-value result for iterator queries
-type KVPair cmn.KVPair
+type KVPair = types.KVPair
 
 //----------------------------------------
 
 // TraceContext contains TraceKVStore context data. It will be written with
 // every trace operation.
-type TraceContext map[string]interface{}
+type TraceContext = types.TraceContext
+
+// --------------------------------------
+
+type (
+	Gas       = types.Gas
+	GasMeter  = types.GasMeter
+	GasConfig = types.GasConfig
+)
+
+func NewGasMeter(limit Gas) GasMeter {
+	return types.NewGasMeter(limit)
+}
+
+type (
+	ErrorOutOfGas    = types.ErrorOutOfGas
+	ErrorGasOverflow = types.ErrorGasOverflow
+)
+
+func NewInfiniteGasMeter() GasMeter {
+	return types.NewInfiniteGasMeter()
+}

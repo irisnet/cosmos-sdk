@@ -7,13 +7,14 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/context"
-)
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/codec/legacy"
+	"github.com/cosmos/cosmos-sdk/types/rest"
 
-const (
-	flagSelect = "select"
+	tmliteProxy "github.com/tendermint/tendermint/lite/proxy"
 )
 
 //BlockCommand returns the verified block data for a given heights
@@ -24,21 +25,22 @@ func BlockCommand() *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  printBlock,
 	}
-	cmd.Flags().StringP(client.FlagNode, "n", "tcp://localhost:26657", "Node to connect to")
-	// TODO: change this to false when we can
-	cmd.Flags().Bool(client.FlagTrustNode, true, "Don't verify proofs for responses")
-	cmd.Flags().StringSlice(flagSelect, []string{"header", "tx"}, "Fields to return (header|txs|results)")
+	cmd.Flags().StringP(flags.FlagNode, "n", "tcp://localhost:26657", "Node to connect to")
+	viper.BindPFlag(flags.FlagNode, cmd.Flags().Lookup(flags.FlagNode))
+	cmd.Flags().Bool(flags.FlagTrustNode, false, "Trust connected full node (don't verify proofs for responses)")
+	viper.BindPFlag(flags.FlagTrustNode, cmd.Flags().Lookup(flags.FlagTrustNode))
+	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|kwallet|pass|test)")
+	viper.BindPFlag(flags.FlagKeyringBackend, cmd.Flags().Lookup(flags.FlagKeyringBackend))
 	return cmd
 }
 
-func getBlock(ctx context.CoreContext, height *int64) ([]byte, error) {
+func getBlock(clientCtx client.Context, height *int64) ([]byte, error) {
 	// get the node
-	node, err := ctx.GetNode()
+	node, err := clientCtx.GetNode()
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: actually honor the --select flag!
 	// header -> BlockchainInfo
 	// header, tx -> Block
 	// results -> BlockResults
@@ -47,25 +49,36 @@ func getBlock(ctx context.CoreContext, height *int64) ([]byte, error) {
 		return nil, err
 	}
 
-	// TODO move maarshalling into cmd/rest functions
-	// output, err := tmwire.MarshalJSON(res)
-	output, err := cdc.MarshalJSON(res)
-	if err != nil {
-		return nil, err
+	if !clientCtx.TrustNode {
+		check, err := clientCtx.Verify(res.Block.Height)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := tmliteProxy.ValidateHeader(&res.Block.Header, check); err != nil {
+			return nil, err
+		}
+
+		if err = tmliteProxy.ValidateBlock(res.Block, check); err != nil {
+			return nil, err
+		}
 	}
-	return output, nil
+
+	return legacy.Cdc.MarshalJSON(res)
 }
 
 // get the current blockchain height
-func GetChainHeight(ctx context.CoreContext) (int64, error) {
-	node, err := ctx.GetNode()
+func GetChainHeight(clientCtx client.Context) (int64, error) {
+	node, err := clientCtx.GetNode()
 	if err != nil {
 		return -1, err
 	}
+
 	status, err := node.Status()
 	if err != nil {
 		return -1, err
 	}
+
 	height := status.SyncInfo.LatestBlockHeight
 	return height, nil
 }
@@ -86,10 +99,11 @@ func printBlock(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	output, err := getBlock(context.NewCoreContextFromViper(), height)
+	output, err := getBlock(client.NewContext(), height)
 	if err != nil {
 		return err
 	}
+
 	fmt.Println(string(output))
 	return nil
 }
@@ -97,46 +111,45 @@ func printBlock(cmd *cobra.Command, args []string) error {
 // REST
 
 // REST handler to get a block
-func BlockRequestHandlerFn(ctx context.CoreContext) http.HandlerFunc {
+func BlockRequestHandlerFn(clientCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
+
 		height, err := strconv.ParseInt(vars["height"], 10, 64)
 		if err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte("ERROR: Couldn't parse block height. Assumed format is '/block/{height}'."))
+			rest.WriteErrorResponse(w, http.StatusBadRequest,
+				"couldn't parse block height. Assumed format is '/block/{height}'.")
 			return
 		}
-		chainHeight, err := GetChainHeight(ctx)
-		if height > chainHeight {
-			w.WriteHeader(404)
-			w.Write([]byte("ERROR: Requested block height is bigger then the chain length."))
-			return
-		}
-		output, err := getBlock(ctx, &height)
+
+		chainHeight, err := GetChainHeight(clientCtx)
 		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
+			rest.WriteErrorResponse(w, http.StatusInternalServerError, "failed to parse chain height")
 			return
 		}
-		w.Write(output)
+
+		if height > chainHeight {
+			rest.WriteErrorResponse(w, http.StatusNotFound, "requested block height is bigger then the chain length")
+			return
+		}
+
+		output, err := getBlock(clientCtx, &height)
+		if rest.CheckInternalServerError(w, err) {
+			return
+		}
+
+		rest.PostProcessResponseBare(w, clientCtx, output)
 	}
 }
 
 // REST handler to get the latest block
-func LatestBlockRequestHandlerFn(ctx context.CoreContext) http.HandlerFunc {
+func LatestBlockRequestHandlerFn(clientCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		height, err := GetChainHeight(ctx)
-		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
+		output, err := getBlock(clientCtx, nil)
+		if rest.CheckInternalServerError(w, err) {
 			return
 		}
-		output, err := getBlock(ctx, &height)
-		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		w.Write(output)
+
+		rest.PostProcessResponseBare(w, clientCtx, output)
 	}
 }

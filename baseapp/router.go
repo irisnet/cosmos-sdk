@@ -1,55 +1,41 @@
 package baseapp
 
 import (
-	"regexp"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// Router provides handlers for each transaction type.
-type Router interface {
-	AddRoute(r string, h sdk.Handler) (rtr Router)
-	Route(path string) (h sdk.Handler)
+type Router struct {
+	routes map[string]sdk.Handler
 }
 
-// map a transaction type to a handler and an initgenesis function
-type route struct {
-	r string
-	h sdk.Handler
-}
+var _ sdk.Router = NewRouter()
 
-type router struct {
-	routes []route
-}
-
-// nolint
-// NewRouter - create new router
-// TODO either make Function unexported or make return type (router) Exported
-func NewRouter() *router {
-	return &router{
-		routes: make([]route, 0),
+// NewRouter returns a reference to a new router.
+func NewRouter() *Router {
+	return &Router{
+		routes: make(map[string]sdk.Handler),
 	}
 }
 
-var isAlpha = regexp.MustCompile(`^[a-zA-Z]+$`).MatchString
-
-// AddRoute - TODO add description
-func (rtr *router) AddRoute(r string, h sdk.Handler) Router {
-	if !isAlpha(r) {
-		panic("route expressions can only contain alphabet characters")
+// AddRoute adds a route path to the router with a given handler. The route must
+// be alphanumeric.
+func (rtr *Router) AddRoute(route sdk.Route) sdk.Router {
+	if !sdk.IsAlphaNumeric(route.Path()) {
+		panic("route expressions can only contain alphanumeric characters")
 	}
-	rtr.routes = append(rtr.routes, route{r, h})
+	if rtr.routes[route.Path()] != nil {
+		panic(fmt.Sprintf("route %s has already been initialized", route.Path()))
+	}
 
+	rtr.routes[route.Path()] = route.Handler()
 	return rtr
 }
 
-// Route - TODO add description
-// TODO handle expressive matches.
-func (rtr *router) Route(path string) (h sdk.Handler) {
-	for _, route := range rtr.routes {
-		if route.r == path {
-			return route.h
-		}
-	}
-	return nil
+// Route returns a handler for a given route path.
+//
+// TODO: Handle expressive matches.
+func (rtr *Router) Route(_ sdk.Context, path string) sdk.Handler {
+	return rtr.routes[path]
 }

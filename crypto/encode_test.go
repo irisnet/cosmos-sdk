@@ -15,12 +15,14 @@ type byter interface {
 	Bytes() []byte
 }
 
-func checkAminoBinary(t *testing.T, src byter, dst interface{}, size int) {
+func checkAminoBinary(t *testing.T, src, dst interface{}, size int) {
 	// Marshal to binary bytes.
 	bz, err := cdc.MarshalBinaryBare(src)
 	require.Nil(t, err, "%+v", err)
-	// Make sure this is compatible with current (Bytes()) encoding.
-	require.Equal(t, src.Bytes(), bz, "Amino binary vs Bytes() mismatch")
+	if byterSrc, ok := src.(byter); ok {
+		// Make sure this is compatible with current (Bytes()) encoding.
+		require.Equal(t, byterSrc.Bytes(), bz, "Amino binary vs Bytes() mismatch")
+	}
 	// Make sure we have the expected length.
 	if size != -1 {
 		require.Equal(t, size, len(bz), "Amino binary size mismatch")
@@ -45,18 +47,19 @@ func checkAminoJSON(t *testing.T, src interface{}, dst interface{}, isNil bool) 
 	require.Nil(t, err, "%+v", err)
 }
 
-//nolint
+// nolint: govet
 func ExamplePrintRegisteredTypes() {
 	cdc.PrintTypes(os.Stdout)
 	// Output: | Type | Name | Prefix | Length | Notes |
 	//| ---- | ---- | ------ | ----- | ------ |
 	//| PrivKeyLedgerSecp256k1 | tendermint/PrivKeyLedgerSecp256k1 | 0x10CAB393 | variable |  |
 	//| PubKeyEd25519 | tendermint/PubKeyEd25519 | 0x1624DE64 | 0x20 |  |
+	//| PubKeySr25519 | tendermint/PubKeySr25519 | 0x0DFB1005 | 0x20 |  |
 	//| PubKeySecp256k1 | tendermint/PubKeySecp256k1 | 0xEB5AE987 | 0x21 |  |
+	//| PubKeyMultisigThreshold | tendermint/PubKeyMultisigThreshold | 0x22C1F7E2 | variable |  |
 	//| PrivKeyEd25519 | tendermint/PrivKeyEd25519 | 0xA3288910 | 0x40 |  |
+	//| PrivKeySr25519 | tendermint/PrivKeySr25519 | 0x2F82D78B | 0x20 |  |
 	//| PrivKeySecp256k1 | tendermint/PrivKeySecp256k1 | 0xE1B0F79B | 0x20 |  |
-	//| SignatureEd25519 | tendermint/SignatureEd25519 | 0x2031EA53 | 0x40 |  |
-	//| SignatureSecp256k1 | tendermint/SignatureSecp256k1 | 0x7FC4A495 | variable |  |
 }
 
 func TestKeyEncodings(t *testing.T) {
@@ -86,13 +89,11 @@ func TestKeyEncodings(t *testing.T) {
 		require.EqualValues(t, tc.privKey, priv3)
 
 		// Check (de/en)codings of Signatures.
-		var sig1, sig2, sig3 tcrypto.Signature
+		var sig1, sig2 []byte
 		sig1, err := tc.privKey.Sign([]byte("something"))
 		require.NoError(t, err)
 		checkAminoBinary(t, sig1, &sig2, -1) // Signature size changes for Secp anyways.
 		require.EqualValues(t, sig1, sig2)
-		checkAminoJSON(t, sig1, &sig3, false) // TODO also check Prefix bytes.
-		require.EqualValues(t, sig1, sig3)
 
 		// Check (de/en)codings of PubKeys.
 		pubKey := tc.privKey.PubKey()
@@ -107,7 +108,7 @@ func TestKeyEncodings(t *testing.T) {
 func TestNilEncodings(t *testing.T) {
 
 	// Check nil Signature.
-	var a, b tcrypto.Signature
+	var a, b []byte
 	checkAminoJSON(t, &a, &b, true)
 	require.EqualValues(t, a, b)
 

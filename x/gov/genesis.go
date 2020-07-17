@@ -1,41 +1,81 @@
 package gov
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	"github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
-// GenesisState - all staking state that must be provided at genesis
-type GenesisState struct {
-	StartingProposalID int64 `json:"starting_proposalID"`
-}
-
-func NewGenesisState(startingProposalID int64) GenesisState {
-	return GenesisState{
-		StartingProposalID: startingProposalID,
-	}
-}
-
-// get raw genesis raw message for testing
-func DefaultGenesisState() GenesisState {
-	return GenesisState{
-		StartingProposalID: 1,
-	}
-}
-
 // InitGenesis - store genesis parameters
-func InitGenesis(ctx sdk.Context, k Keeper, data GenesisState) {
-	err := k.setInitialProposalID(ctx, data.StartingProposalID)
-	if err != nil {
-		// TODO: Handle this with #870
-		panic(err)
+func InitGenesis(ctx sdk.Context, ak types.AccountKeeper, bk types.BankKeeper, k keeper.Keeper, data types.GenesisState) {
+	k.SetProposalID(ctx, data.StartingProposalID)
+	k.SetDepositParams(ctx, data.DepositParams)
+	k.SetVotingParams(ctx, data.VotingParams)
+	k.SetTallyParams(ctx, data.TallyParams)
+
+	// check if the deposits pool account exists
+	moduleAcc := k.GetGovernanceAccount(ctx)
+	if moduleAcc == nil {
+		panic(fmt.Sprintf("%s module account has not been set", types.ModuleName))
+	}
+
+	var totalDeposits sdk.Coins
+	for _, deposit := range data.Deposits {
+		k.SetDeposit(ctx, deposit)
+		totalDeposits = totalDeposits.Add(deposit.Amount...)
+	}
+
+	for _, vote := range data.Votes {
+		k.SetVote(ctx, vote)
+	}
+
+	for _, proposal := range data.Proposals {
+		switch proposal.Status {
+		case types.StatusDepositPeriod:
+			k.InsertInactiveProposalQueue(ctx, proposal.ProposalID, proposal.DepositEndTime)
+		case types.StatusVotingPeriod:
+			k.InsertActiveProposalQueue(ctx, proposal.ProposalID, proposal.VotingEndTime)
+		}
+		k.SetProposal(ctx, proposal)
+	}
+
+	// add coins if not provided on genesis
+	if bk.GetAllBalances(ctx, moduleAcc.GetAddress()).IsZero() {
+		if err := bk.SetBalances(ctx, moduleAcc.GetAddress(), totalDeposits); err != nil {
+			panic(err)
+		}
+
+		ak.SetModuleAccount(ctx, moduleAcc)
 	}
 }
 
-// WriteGenesis - output genesis parameters
-func WriteGenesis(ctx sdk.Context, k Keeper) GenesisState {
-	initalProposalID, _ := k.getNewProposalID(ctx)
+// ExportGenesis - output genesis parameters
+func ExportGenesis(ctx sdk.Context, k keeper.Keeper) types.GenesisState {
+	startingProposalID, _ := k.GetProposalID(ctx)
+	depositParams := k.GetDepositParams(ctx)
+	votingParams := k.GetVotingParams(ctx)
+	tallyParams := k.GetTallyParams(ctx)
+	proposals := k.GetProposals(ctx)
 
-	return GenesisState{
-		initalProposalID,
+	var proposalsDeposits types.Deposits
+	var proposalsVotes types.Votes
+	for _, proposal := range proposals {
+		deposits := k.GetDeposits(ctx, proposal.ProposalID)
+		proposalsDeposits = append(proposalsDeposits, deposits...)
+
+		votes := k.GetVotes(ctx, proposal.ProposalID)
+		proposalsVotes = append(proposalsVotes, votes...)
+	}
+
+	return types.GenesisState{
+		StartingProposalID: startingProposalID,
+		Deposits:           proposalsDeposits,
+		Votes:              proposalsVotes,
+		Proposals:          proposals,
+		DepositParams:      depositParams,
+		VotingParams:       votingParams,
+		TallyParams:        tallyParams,
 	}
 }
