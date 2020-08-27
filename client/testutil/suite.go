@@ -3,41 +3,40 @@ package testutil
 import (
 	"bytes"
 
-	"github.com/cosmos/cosmos-sdk/codec/testdata"
-	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
-	"github.com/cosmos/cosmos-sdk/x/auth/signing"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
+	"github.com/cosmos/cosmos-sdk/testutil/testdata"
+	"github.com/cosmos/cosmos-sdk/x/auth/signing"
 
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// TxGeneratorTestSuite provides a test suite that can be used to test that a TxGenerator implementation is correct
-//nolint:golint  // type name will be used as tx.TxGeneratorTestSuite by other packages, and that stutters; consider calling this GeneratorTestSuite
-type TxGeneratorTestSuite struct {
+// TxConfigTestSuite provides a test suite that can be used to test that a TxConfig implementation is correct
+//nolint:golint  // type name will be used as tx.TxConfigTestSuite by other packages, and that stutters; consider calling this GeneratorTestSuite
+type TxConfigTestSuite struct {
 	suite.Suite
-	TxGenerator client.TxGenerator
+	TxConfig client.TxConfig
 }
 
-// NewTxGeneratorTestSuite returns a new TxGeneratorTestSuite with the provided TxGenerator implementation
-func NewTxGeneratorTestSuite(txGenerator client.TxGenerator) *TxGeneratorTestSuite {
-	return &TxGeneratorTestSuite{TxGenerator: txGenerator}
+// NewTxConfigTestSuite returns a new TxConfigTestSuite with the provided TxConfig implementation
+func NewTxConfigTestSuite(txConfig client.TxConfig) *TxConfigTestSuite {
+	return &TxConfigTestSuite{TxConfig: txConfig}
 }
 
-func (s *TxGeneratorTestSuite) TestTxBuilderGetTx() {
-	txBuilder := s.TxGenerator.NewTxBuilder()
+func (s *TxConfigTestSuite) TestTxBuilderGetTx() {
+	txBuilder := s.TxConfig.NewTxBuilder()
 	tx := txBuilder.GetTx()
 	s.Require().NotNil(tx)
 	s.Require().Equal(len(tx.GetMsgs()), 0)
 }
 
-func (s *TxGeneratorTestSuite) TestTxBuilderSetFeeAmount() {
-	txBuilder := s.TxGenerator.NewTxBuilder()
+func (s *TxConfigTestSuite) TestTxBuilderSetFeeAmount() {
+	txBuilder := s.TxConfig.NewTxBuilder()
 	feeAmount := sdk.Coins{
 		sdk.NewInt64Coin("atom", 20000000),
 	}
@@ -46,30 +45,30 @@ func (s *TxGeneratorTestSuite) TestTxBuilderSetFeeAmount() {
 	s.Require().Equal(feeAmount, feeTx.GetFee())
 }
 
-func (s *TxGeneratorTestSuite) TestTxBuilderSetGasLimit() {
+func (s *TxConfigTestSuite) TestTxBuilderSetGasLimit() {
 	const newGas uint64 = 300000
-	txBuilder := s.TxGenerator.NewTxBuilder()
+	txBuilder := s.TxConfig.NewTxBuilder()
 	txBuilder.SetGasLimit(newGas)
 	feeTx := txBuilder.GetTx()
 	s.Require().Equal(newGas, feeTx.GetGas())
 }
 
-func (s *TxGeneratorTestSuite) TestTxBuilderSetMemo() {
+func (s *TxConfigTestSuite) TestTxBuilderSetMemo() {
 	const newMemo string = "newfoomemo"
-	txBuilder := s.TxGenerator.NewTxBuilder()
+	txBuilder := s.TxConfig.NewTxBuilder()
 	txBuilder.SetMemo(newMemo)
 	txWithMemo := txBuilder.GetTx()
 	s.Require().Equal(txWithMemo.GetMemo(), newMemo)
 }
 
-func (s *TxGeneratorTestSuite) TestTxBuilderSetMsgs() {
-	_, _, addr1 := authtypes.KeyTestPubAddr()
-	_, _, addr2 := authtypes.KeyTestPubAddr()
+func (s *TxConfigTestSuite) TestTxBuilderSetMsgs() {
+	_, _, addr1 := testdata.KeyTestPubAddr()
+	_, _, addr2 := testdata.KeyTestPubAddr()
 	msg1 := testdata.NewTestMsg(addr1)
 	msg2 := testdata.NewTestMsg(addr2)
 	msgs := []sdk.Msg{msg1, msg2}
 
-	txBuilder := s.TxGenerator.NewTxBuilder()
+	txBuilder := s.TxConfig.NewTxBuilder()
 
 	err := txBuilder.SetMsgs(msgs...)
 	s.Require().NoError(err)
@@ -80,12 +79,12 @@ func (s *TxGeneratorTestSuite) TestTxBuilderSetMsgs() {
 	s.Require().Error(tx.ValidateBasic()) // should fail because of no signatures
 }
 
-func (s *TxGeneratorTestSuite) TestTxBuilderSetSignatures() {
-	privKey, pubkey, addr := authtypes.KeyTestPubAddr()
-	privKey2, pubkey2, _ := authtypes.KeyTestPubAddr()
+func (s *TxConfigTestSuite) TestTxBuilderSetSignatures() {
+	privKey, pubkey, addr := testdata.KeyTestPubAddr()
+	privKey2, pubkey2, _ := testdata.KeyTestPubAddr()
 	multisigPk := multisig.NewPubKeyMultisigThreshold(2, []crypto.PubKey{pubkey, pubkey2})
 
-	txBuilder := s.TxGenerator.NewTxBuilder()
+	txBuilder := s.TxConfig.NewTxBuilder()
 
 	// set test msg
 	msg := testdata.NewTestMsg(addr)
@@ -97,17 +96,19 @@ func (s *TxGeneratorTestSuite) TestTxBuilderSetSignatures() {
 	// check that validation fails
 	s.Require().Error(txBuilder.GetTx().ValidateBasic())
 
-	signModeHandler := s.TxGenerator.SignModeHandler()
+	signModeHandler := s.TxConfig.SignModeHandler()
 	s.Require().Contains(signModeHandler.Modes(), signModeHandler.DefaultMode())
 
 	// set SignatureV2 without actual signature bytes
+	seq1 := uint64(2) // Arbitrary account sequence
 	sigData1 := &signingtypes.SingleSignatureData{SignMode: signModeHandler.DefaultMode()}
-	sig1 := signingtypes.SignatureV2{PubKey: pubkey, Data: sigData1}
+	sig1 := signingtypes.SignatureV2{PubKey: pubkey, Data: sigData1, Sequence: seq1}
 
+	mseq := uint64(4) // Arbitrary account sequence
 	msigData := multisig.NewMultisig(2)
 	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{SignMode: signModeHandler.DefaultMode()}, 0)
 	multisig.AddSignature(msigData, &signingtypes.SingleSignatureData{SignMode: signModeHandler.DefaultMode()}, 1)
-	msig := signingtypes.SignatureV2{PubKey: multisigPk, Data: msigData}
+	msig := signingtypes.SignatureV2{PubKey: multisigPk, Data: msigData, Sequence: mseq}
 
 	// fail validation without required signers
 	err = txBuilder.SetSignatures(sig1)
@@ -129,9 +130,9 @@ func (s *TxGeneratorTestSuite) TestTxBuilderSetSignatures() {
 
 	// sign transaction
 	signerData := signing.SignerData{
-		ChainID:         "test",
-		AccountNumber:   1,
-		AccountSequence: 2,
+		ChainID:       "test",
+		AccountNumber: 1,
+		Sequence:      seq1,
 	}
 	signBytes, err := signModeHandler.GetSignBytes(signModeHandler.DefaultMode(), signerData, sigTx)
 	s.Require().NoError(err)
@@ -139,9 +140,9 @@ func (s *TxGeneratorTestSuite) TestTxBuilderSetSignatures() {
 	s.Require().NoError(err)
 
 	signerData = signing.SignerData{
-		ChainID:         "test",
-		AccountNumber:   3,
-		AccountSequence: 4,
+		ChainID:       "test",
+		AccountNumber: 3,
+		Sequence:      mseq,
 	}
 	mSignBytes, err := signModeHandler.GetSignBytes(signModeHandler.DefaultMode(), signerData, sigTx)
 	s.Require().NoError(err)
@@ -157,8 +158,8 @@ func (s *TxGeneratorTestSuite) TestTxBuilderSetSignatures() {
 
 	// set signature
 	sigData1.Signature = sigBz
-	sig1 = signingtypes.SignatureV2{PubKey: pubkey, Data: sigData1}
-	msig = signingtypes.SignatureV2{PubKey: multisigPk, Data: msigData}
+	sig1 = signingtypes.SignatureV2{PubKey: pubkey, Data: sigData1, Sequence: seq1}
+	msig = signingtypes.SignatureV2{PubKey: multisigPk, Data: msigData, Sequence: mseq}
 	err = txBuilder.SetSignatures(sig1, msig)
 	s.Require().NoError(err)
 	sigTx = txBuilder.GetTx()
@@ -227,8 +228,8 @@ func sigDataEquals(data1, data2 signingtypes.SignatureData) bool {
 	}
 }
 
-func (s *TxGeneratorTestSuite) TestTxEncodeDecode() {
-	_, pubkey, addr := authtypes.KeyTestPubAddr()
+func (s *TxConfigTestSuite) TestTxEncodeDecode() {
+	_, pubkey, addr := testdata.KeyTestPubAddr()
 	feeAmount := sdk.Coins{sdk.NewInt64Coin("atom", 150)}
 	gasLimit := uint64(50000)
 	memo := "foomemo"
@@ -242,7 +243,7 @@ func (s *TxGeneratorTestSuite) TestTxEncodeDecode() {
 		},
 	}
 
-	txBuilder := s.TxGenerator.NewTxBuilder()
+	txBuilder := s.TxConfig.NewTxBuilder()
 	txBuilder.SetFeeAmount(feeAmount)
 	txBuilder.SetGasLimit(gasLimit)
 	txBuilder.SetMemo(memo)
@@ -253,14 +254,14 @@ func (s *TxGeneratorTestSuite) TestTxEncodeDecode() {
 	tx := txBuilder.GetTx()
 
 	s.T().Log("encode transaction")
-	txBytes, err := s.TxGenerator.TxEncoder()(tx)
+	txBytes, err := s.TxConfig.TxEncoder()(tx)
 	s.Require().NoError(err)
 	s.Require().NotNil(txBytes)
 
 	s.T().Log("decode transaction")
-	tx2, err := s.TxGenerator.TxDecoder()(txBytes)
+	tx2, err := s.TxConfig.TxDecoder()(txBytes)
 	s.Require().NoError(err)
-	tx3, ok := tx2.(signing.SigFeeMemoTx)
+	tx3, ok := tx2.(signing.Tx)
 	s.Require().True(ok)
 	s.Require().Equal([]sdk.Msg{msg}, tx3.GetMsgs())
 	s.Require().Equal(feeAmount, tx3.GetFee())
@@ -270,14 +271,14 @@ func (s *TxGeneratorTestSuite) TestTxEncodeDecode() {
 	s.Require().Equal([]crypto.PubKey{pubkey}, tx3.GetPubKeys())
 
 	s.T().Log("JSON encode transaction")
-	jsonTxBytes, err := s.TxGenerator.TxJSONEncoder()(tx)
+	jsonTxBytes, err := s.TxConfig.TxJSONEncoder()(tx)
 	s.Require().NoError(err)
 	s.Require().NotNil(jsonTxBytes)
 
 	s.T().Log("JSON decode transaction")
-	tx2, err = s.TxGenerator.TxJSONDecoder()(jsonTxBytes)
+	tx2, err = s.TxConfig.TxJSONDecoder()(jsonTxBytes)
 	s.Require().NoError(err)
-	tx3, ok = tx2.(signing.SigFeeMemoTx)
+	tx3, ok = tx2.(signing.Tx)
 	s.Require().True(ok)
 	s.Require().Equal([]sdk.Msg{msg}, tx3.GetMsgs())
 	s.Require().Equal(feeAmount, tx3.GetFee())
@@ -285,4 +286,23 @@ func (s *TxGeneratorTestSuite) TestTxEncodeDecode() {
 	s.Require().Equal(memo, tx3.GetMemo())
 	s.Require().Equal([][]byte{dummySig}, tx3.GetSignatures())
 	s.Require().Equal([]crypto.PubKey{pubkey}, tx3.GetPubKeys())
+}
+
+func (s *TxConfigTestSuite) TestWrapTxBuilder() {
+	_, _, addr := testdata.KeyTestPubAddr()
+	feeAmount := sdk.Coins{sdk.NewInt64Coin("atom", 150)}
+	gasLimit := uint64(50000)
+	memo := "foomemo"
+	msg := testdata.NewTestMsg(addr)
+
+	txBuilder := s.TxConfig.NewTxBuilder()
+	txBuilder.SetFeeAmount(feeAmount)
+	txBuilder.SetGasLimit(gasLimit)
+	txBuilder.SetMemo(memo)
+	err := txBuilder.SetMsgs(msg)
+	s.Require().NoError(err)
+
+	newTxBldr, err := s.TxConfig.WrapTxBuilder(txBuilder.GetTx())
+	s.Require().NoError(err)
+	s.Require().Equal(txBuilder, newTxBldr)
 }

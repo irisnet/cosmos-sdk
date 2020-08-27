@@ -8,14 +8,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/codec/testdata"
+	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func TestGRPCRouter(t *testing.T) {
 	qr := NewGRPCQueryRouter()
 	interfaceRegistry := testdata.NewTestInterfaceRegistry()
-	qr.SetAnyUnpacker(interfaceRegistry)
+	qr.SetInterfaceRegistry(interfaceRegistry)
 	testdata.RegisterTestServiceServer(qr, testdata.TestServiceImpl{})
 	helper := &QueryServiceTestHelper{
 		GRPCQueryRouter: qr,

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
-	abci "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/simapp"
@@ -29,7 +29,7 @@ type SlashingTestSuite struct {
 
 func (suite *SlashingTestSuite) SetupTest() {
 	app := simapp.Setup(false)
-	ctx := app.BaseApp.NewContext(false, abci.Header{})
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
 	app.AccountKeeper.SetParams(ctx, authtypes.DefaultParams())
 	app.BankKeeper.SetParams(ctx, banktypes.DefaultParams())
@@ -92,17 +92,17 @@ func (suite *SlashingTestSuite) TestGRPCSigningInfos() {
 
 	// verify all values are returned without pagination
 	var infoResp, err = queryClient.SigningInfos(gocontext.Background(),
-		&types.QuerySigningInfosRequest{Req: nil})
+		&types.QuerySigningInfosRequest{Pagination: nil})
 	suite.NoError(err)
 	suite.Equal(signingInfos, infoResp.Info)
 
 	infoResp, err = queryClient.SigningInfos(gocontext.Background(),
-		&types.QuerySigningInfosRequest{Req: &query.PageRequest{Limit: 1, CountTotal: true}})
+		&types.QuerySigningInfosRequest{Pagination: &query.PageRequest{Limit: 1, CountTotal: true}})
 	suite.NoError(err)
 	suite.Len(infoResp.Info, 1)
 	suite.Equal(signingInfos[0], infoResp.Info[0])
-	suite.NotNil(infoResp.Res.NextKey)
-	suite.Equal(uint64(2), infoResp.Res.Total)
+	suite.NotNil(infoResp.Pagination.NextKey)
+	suite.Equal(uint64(2), infoResp.Pagination.Total)
 }
 
 func TestSlashingTestSuite(t *testing.T) {

@@ -7,9 +7,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/ibc/02-client/exported"
 	"github.com/cosmos/cosmos-sdk/x/ibc/02-client/types"
-	tendermint "github.com/cosmos/cosmos-sdk/x/ibc/07-tendermint"
-	ibctmtypes "github.com/cosmos/cosmos-sdk/x/ibc/07-tendermint/types"
-	localhosttypes "github.com/cosmos/cosmos-sdk/x/ibc/09-localhost/types"
 )
 
 // CreateClient creates a new client state and populates it with a given consensus
@@ -17,9 +14,8 @@ import (
 //
 // CONTRACT: ClientState was constructed correctly from given initial consensusState
 func (k Keeper) CreateClient(
-	ctx sdk.Context, clientState exported.ClientState, consensusState exported.ConsensusState,
+	ctx sdk.Context, clientID string, clientState exported.ClientState, consensusState exported.ConsensusState,
 ) (exported.ClientState, error) {
-	clientID := clientState.GetID()
 	_, found := k.GetClientState(ctx, clientID)
 	if found {
 		return nil, sdkerrors.Wrapf(types.ErrClientExists, "cannot create client with ID %s", clientID)
@@ -34,7 +30,7 @@ func (k Keeper) CreateClient(
 		k.SetClientConsensusState(ctx, clientID, consensusState.GetHeight(), consensusState)
 	}
 
-	k.SetClientState(ctx, clientState)
+	k.SetClientState(ctx, clientID, clientState)
 	k.SetClientType(ctx, clientID, clientState.ClientType())
 	k.Logger(ctx).Info(fmt.Sprintf("client %s created at height %d", clientID, clientState.GetLatestHeight()))
 
@@ -59,8 +55,8 @@ func (k Keeper) UpdateClient(ctx sdk.Context, clientID string, header exported.H
 		return nil, sdkerrors.Wrapf(types.ErrClientNotFound, "cannot update client with ID %s", clientID)
 	}
 
-	// addition to spec: prevent update if the client is frozen
-	if clientState.IsFrozen() {
+	// prevent update if the client is frozen before or at header height
+	if clientState.IsFrozen() && clientState.GetFrozenHeight() <= header.GetHeight() {
 		return nil, sdkerrors.Wrapf(types.ErrClientFrozen, "cannot update client with ID %s", clientID)
 	}
 
@@ -70,27 +66,13 @@ func (k Keeper) UpdateClient(ctx sdk.Context, clientID string, header exported.H
 		err             error
 	)
 
-	switch clientType {
-	case exported.Tendermint:
-		clientState, consensusState, err = tendermint.CheckValidityAndUpdateState(
-			clientState, header, ctx.BlockTime(),
-		)
-	case exported.Localhost:
-		// override client state and update the block height
-		clientState = localhosttypes.NewClientState(
-			ctx.ChainID(), // use the chain ID from context since the client is from the running chain (i.e self).
-			ctx.BlockHeight(),
-		)
-		consensusHeight = uint64(ctx.BlockHeight())
-	default:
-		err = types.ErrInvalidClientType
-	}
+	clientState, consensusState, err = clientState.CheckHeaderAndUpdateState(ctx, k.cdc, k.ClientStore(ctx, clientID), header)
 
 	if err != nil {
 		return nil, sdkerrors.Wrapf(err, "cannot update client with ID %s", clientID)
 	}
 
-	k.SetClientState(ctx, clientState)
+	k.SetClientState(ctx, clientID, clientState)
 
 	// we don't set consensus state for localhost client
 	if header != nil && clientType != exported.Localhost {
@@ -100,7 +82,7 @@ func (k Keeper) UpdateClient(ctx sdk.Context, clientID string, header exported.H
 
 	k.Logger(ctx).Info(fmt.Sprintf("client %s updated to height %d", clientID, clientState.GetLatestHeight()))
 
-	// Emit events in keeper so antehandler emits them as well
+	// emitting events in the keeper emits for both begin block and handler client updates
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			types.EventTypeUpdateClient,
@@ -109,16 +91,6 @@ func (k Keeper) UpdateClient(ctx sdk.Context, clientID string, header exported.H
 			sdk.NewAttribute(types.AttributeKeyConsensusHeight, fmt.Sprintf("%d", consensusHeight)),
 		),
 	)
-
-	// localhost client is not updated though messages
-	if clientType != exported.Localhost {
-		ctx.EventManager().EmitEvent(
-			sdk.NewEvent(
-				sdk.EventTypeMessage,
-				sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			),
-		)
-	}
 
 	return clientState, nil
 }
@@ -130,38 +102,18 @@ func (k Keeper) CheckMisbehaviourAndUpdateState(ctx sdk.Context, misbehaviour ex
 	if !found {
 		return sdkerrors.Wrapf(types.ErrClientNotFound, "cannot check misbehaviour for client with ID %s", misbehaviour.GetClientID())
 	}
-
-	consensusState, found := k.GetClientConsensusStateLTE(ctx, misbehaviour.GetClientID(), uint64(misbehaviour.GetHeight()))
-	if !found {
-		return sdkerrors.Wrapf(types.ErrConsensusStateNotFound, "cannot check misbehaviour for client with ID %s", misbehaviour.GetClientID())
+	if err := misbehaviour.ValidateBasic(); err != nil {
+		return sdkerrors.Wrap(err, "IBC misbehaviour failed validate basic")
 	}
 
-	var err error
-	switch e := misbehaviour.(type) {
-	case ibctmtypes.Evidence:
-		clientState, err = tendermint.CheckMisbehaviourAndUpdateState(
-			clientState, consensusState, misbehaviour, consensusState.GetHeight(), ctx.BlockTime(), ctx.ConsensusParams(),
-		)
-
-	default:
-		err = sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized IBC client evidence type: %T", e)
-	}
+	clientState, err := clientState.CheckMisbehaviourAndUpdateState(ctx, k.cdc, k.ClientStore(ctx, misbehaviour.GetClientID()), misbehaviour)
 
 	if err != nil {
 		return err
 	}
 
-	k.SetClientState(ctx, clientState)
+	k.SetClientState(ctx, misbehaviour.GetClientID(), clientState)
 	k.Logger(ctx).Info(fmt.Sprintf("client %s frozen due to misbehaviour", misbehaviour.GetClientID()))
-
-	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			types.EventTypeSubmitMisbehaviour,
-			sdk.NewAttribute(types.AttributeKeyClientID, misbehaviour.GetClientID()),
-			sdk.NewAttribute(types.AttributeKeyClientType, misbehaviour.ClientType().String()),
-			sdk.NewAttribute(types.AttributeKeyConsensusHeight, fmt.Sprintf("%d", consensusState.GetHeight())),
-		),
-	)
 
 	return nil
 }

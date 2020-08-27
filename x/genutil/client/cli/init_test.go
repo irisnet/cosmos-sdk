@@ -1,4 +1,4 @@
-package cli
+package cli_test
 
 import (
 	"bytes"
@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	abci_server "github.com/tendermint/tendermint/abci/server"
-	tmcfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -25,46 +24,67 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
+	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	genutiltest "github.com/cosmos/cosmos-sdk/x/genutil/client/testutil"
 )
 
 var testMbm = module.NewBasicManager(genutil.AppModuleBasic{})
 
-func createDefaultTendermintConfig(rootDir string) (*tmcfg.Config, error) {
-	conf := tmcfg.DefaultConfig()
-	conf.SetRoot(rootDir)
-	tmcfg.EnsureRoot(rootDir)
+func TestInitCmd(t *testing.T) {
+	tests := []struct {
+		name      string
+		flags     func(dir string) []string
+		shouldErr bool
+		err       error
+	}{
+		{
+			name: "happy path",
+			flags: func(dir string) []string {
+				return []string{
+					"appnode-test",
+				}
+			},
+			shouldErr: false,
 
-	if err := conf.ValidateBasic(); err != nil {
-		return nil, fmt.Errorf("error in config file: %v", err)
+			err: nil,
+		},
 	}
 
-	return conf, nil
-}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			home, cleanup := testutil.NewTestCaseDir(t)
+			defer cleanup()
 
-func TestInitCmd(t *testing.T) {
-	home, cleanup := testutil.NewTestCaseDir(t)
-	t.Cleanup(cleanup)
+			logger := log.NewNopLogger()
+			cfg, err := genutiltest.CreateDefaultTendermintConfig(home)
+			require.NoError(t, err)
 
-	logger := log.NewNopLogger()
-	cfg, err := createDefaultTendermintConfig(home)
-	require.NoError(t, err)
+			serverCtx := server.NewContext(viper.New(), cfg, logger)
+			clientCtx := client.Context{}.WithJSONMarshaler(makeCodec()).WithHomeDir(home)
 
-	serverCtx := server.NewContext(viper.New(), cfg, logger)
-	clientCtx := client.Context{}.WithJSONMarshaler(makeCodec()).WithHomeDir(home)
+			ctx := context.Background()
+			ctx = context.WithValue(ctx, client.ClientContextKey, &clientCtx)
+			ctx = context.WithValue(ctx, server.ServerContextKey, serverCtx)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, client.ClientContextKey, &clientCtx)
-	ctx = context.WithValue(ctx, server.ServerContextKey, serverCtx)
+			cmd := genutilcli.InitCmd(testMbm, home)
+			cmd.SetArgs(
+				tt.flags(home),
+			)
 
-	cmd := InitCmd(testMbm, home)
-	cmd.SetArgs([]string{"appnode-test"})
+			if tt.shouldErr {
+				err := cmd.ExecuteContext(ctx)
+				require.EqualError(t, err, tt.err.Error())
+			} else {
+				require.NoError(t, cmd.ExecuteContext(ctx))
+			}
+		})
+	}
 
-	require.NoError(t, cmd.ExecuteContext(ctx))
 }
 
 func setupClientHome(t *testing.T) func() {
-	clientDir, cleanup := testutil.NewTestCaseDir(t)
-	viper.Set(cli.HomeFlag, clientDir)
+	_, cleanup := testutil.NewTestCaseDir(t)
 	return cleanup
 }
 
@@ -75,7 +95,7 @@ func TestEmptyState(t *testing.T) {
 	t.Cleanup(cleanup)
 
 	logger := log.NewNopLogger()
-	cfg, err := createDefaultTendermintConfig(home)
+	cfg, err := genutiltest.CreateDefaultTendermintConfig(home)
 	require.NoError(t, err)
 
 	serverCtx := server.NewContext(viper.New(), cfg, logger)
@@ -85,7 +105,7 @@ func TestEmptyState(t *testing.T) {
 	ctx = context.WithValue(ctx, client.ClientContextKey, &clientCtx)
 	ctx = context.WithValue(ctx, server.ServerContextKey, serverCtx)
 
-	cmd := InitCmd(testMbm, home)
+	cmd := genutilcli.InitCmd(testMbm, home)
 	cmd.SetArgs([]string{"appnode-test", fmt.Sprintf("--%s=%s", cli.HomeFlag, home)})
 
 	require.NoError(t, cmd.ExecuteContext(ctx))
@@ -94,7 +114,7 @@ func TestEmptyState(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	cmd = server.ExportCmd(nil)
+	cmd = server.ExportCmd(nil, home)
 	cmd.SetArgs([]string{fmt.Sprintf("--%s=%s", cli.HomeFlag, home)})
 	require.NoError(t, cmd.ExecuteContext(ctx))
 
@@ -122,20 +142,8 @@ func TestStartStandAlone(t *testing.T) {
 	t.Cleanup(setupClientHome(t))
 
 	logger := log.NewNopLogger()
-	cfg, err := createDefaultTendermintConfig(home)
+	err := genutiltest.ExecInitCmd(testMbm, home, makeCodec())
 	require.NoError(t, err)
-
-	serverCtx := server.NewContext(viper.New(), cfg, logger)
-	clientCtx := client.Context{}.WithJSONMarshaler(makeCodec()).WithHomeDir(home)
-
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, client.ClientContextKey, &clientCtx)
-	ctx = context.WithValue(ctx, server.ServerContextKey, serverCtx)
-
-	cmd := InitCmd(testMbm, home)
-	cmd.SetArgs([]string{"appnode-test"})
-
-	require.NoError(t, cmd.ExecuteContext(ctx))
 
 	app, err := mock.NewApp(home, logger)
 	require.NoError(t, err)
@@ -160,7 +168,7 @@ func TestStartStandAlone(t *testing.T) {
 
 func TestInitNodeValidatorFiles(t *testing.T) {
 	home, cleanup := testutil.NewTestCaseDir(t)
-	cfg, err := createDefaultTendermintConfig(home)
+	cfg, err := genutiltest.CreateDefaultTendermintConfig(home)
 	t.Cleanup(cleanup)
 	nodeID, valPubKey, err := genutil.InitializeNodeValidatorFiles(cfg)
 	require.Nil(t, err)
@@ -169,7 +177,7 @@ func TestInitNodeValidatorFiles(t *testing.T) {
 }
 
 // custom tx codec
-func makeCodec() *codec.Codec {
+func makeCodec() *codec.LegacyAmino {
 	var cdc = codec.New()
 	sdk.RegisterCodec(cdc)
 	cryptocodec.RegisterCrypto(cdc)

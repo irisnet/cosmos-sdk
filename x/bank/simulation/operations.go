@@ -24,7 +24,7 @@ const (
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simtypes.AppParams, cdc *codec.Codec, ak types.AccountKeeper, bk keeper.Keeper,
+	appParams simtypes.AppParams, cdc codec.JSONMarshaler, ak types.AccountKeeper, bk keeper.Keeper,
 ) simulation.WeightedOperations {
 
 	var weightMsgSend, weightMsgMultiSend int
@@ -103,7 +103,7 @@ func sendMsgSend(
 			return err
 		}
 	}
-	txGen := simappparams.MakeEncodingConfig().TxGenerator
+	txGen := simappparams.MakeEncodingConfig().TxConfig
 	tx, err := helpers.GenTx(
 		txGen,
 		[]sdk.Msg{msg},
@@ -251,7 +251,7 @@ func sendMsgMultiSend(
 		}
 	}
 
-	txGen := simappparams.MakeEncodingConfig().TxGenerator
+	txGen := simappparams.MakeEncodingConfig().TxConfig
 	tx, err := helpers.GenTx(
 		txGen,
 		[]sdk.Msg{msg},
