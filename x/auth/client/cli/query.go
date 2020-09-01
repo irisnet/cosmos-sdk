@@ -3,6 +3,8 @@ package cli
 import (
 	"context"
 	"fmt"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	gogotypes "github.com/gogo/protobuf/types"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -201,6 +203,16 @@ func QueryTxCmd() *cobra.Command {
 			}
 
 			output, err := authclient.QueryTx(clientCtx, args[0])
+			if err != nil {
+				return err
+			}
+
+			bz, err := clientCtx.TxConfig.TxJSONEncoder()(output.GetTx())
+			if err != nil {
+				return err
+			}
+
+			output.Tx, err = codectypes.NewAnyWithValue(&gogotypes.StringValue{Value: string(bz)})
 			if err != nil {
 				return err
 			}
